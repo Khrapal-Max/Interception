@@ -1,0 +1,68 @@
+version: "3.9"
+
+services:
+  interception.ui:
+    image: ${DOCKER_REGISTRY-}interceptionui
+    build:
+      context: .
+      dockerfile: src/Interception.UI/Dockerfile
+      args:
+        BUILD_CONFIGURATION: Release
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://0.0.0.0:8080"
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=eraven;Username=postgres;Password=postgres"
+      TZ: Europe/Kyiv
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - ./data-protection-keys:/data-protection-keys
+
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: eraven
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: Europe/Kyiv
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d eraven || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "5432:5432"  
+  
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4:latest    
+    restart: always
+    # A different set of environment variables, but the structure is the same.
+    environment:
+      PGADMIN_DEFAULT_EMAIL: postgres@dpostgres.com
+      PGADMIN_DEFAULT_PASSWORD: Norsk4741
+    ports:
+    #outside port:host in docker
+    - 5200:80
+    volumes:
+    - pgadmin:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  dpkeys:
+  pgadmin:
