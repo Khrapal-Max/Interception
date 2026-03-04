@@ -2,13 +2,15 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
+using Interception.UI.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.UI.Infrastructure;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-
+    public DbSet<Observation> Observations { get; set; }
+    public DbSet<ObservationParticipant> ObservationParticipants { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

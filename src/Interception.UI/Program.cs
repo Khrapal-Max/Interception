@@ -2,6 +2,8 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
+using Interception.UI.Application.Observations;
+using Interception.UI.Application.Observations.Import;
 using Interception.UI.Components;
 using Interception.UI.Infrastructure;
 using Microsoft.AspNetCore.DataProtection;
@@ -21,6 +23,9 @@ builder.Services.AddDbContextFactory<AppDbContext>(options =>
 // DataProtection keys must survive restarts and be shared across instances
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo("/data-protection-keys"));
+
+builder.Services.AddScoped<IObservationRegistryService, ObservationRegistryService>();
+builder.Services.AddScoped<ObservationImportService>();
 
 var app = builder.Build();
 
