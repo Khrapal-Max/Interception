@@ -1,0 +1,80 @@
+@using Interception.UI.Application.Observations.Models
+@using Interception.UI.Components.Shared.Drawer
+
+<Drawer IsOpen="IsOpen"
+        IsOpenChanged="OnIsOpenChanged"
+        Title="Фільтр"
+        CloseOnBackdrop="true"
+        CloseOnEscape="true"
+        FooterContent="FilterFooter">
+
+    <div class="row g-2">
+        <div class="col-12 col-md-6">
+            <label class="form-label">Дата з:</label>
+            <InputDate @bind-Value="Draft.DateFrom" class="form-control" />
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label">Дата по:</label>
+            <InputDate @bind-Value="Draft.DateTo" class="form-control" />
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label">Ч</label>
+            <select class="form-select" @bind="Draft.DayPart">
+                <option value="1">AM</option>
+                <option value="2">PM</option>
+            </select>
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label">ПОЗИВНОЙ</label>
+            <input class="form-control" @bind="Draft.Person" @bind:event="oninput" placeholder="КЛИМ / НВ" />
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label">ДІЯ</label>
+            <input class="form-control" @bind="Draft.Action" @bind:event="oninput" placeholder="Перевезення..." />
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label">ТОЧКА</label>
+            <input class="form-control" @bind="Draft.Location" @bind:event="oninput" placeholder="Степове..." />
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label">ВЕКТОР</label>
+            <input class="form-control" @bind="Draft.District" @bind:event="oninput" placeholder="..." />
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label">R/M</label>
+            <input class="form-control" @bind="Draft.Rm" @bind:event="oninput" placeholder="..." />
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label">К СТ</label>
+            <select class="form-select" @bind="Draft.Take">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+    </div>
+</Drawer>
+
+@code {
+    private RenderFragment FilterFooter => @<div>
+        <button class="btn btn-primary rounded-0" @onclick="Apply">Apply</button>
+        <button class="btn btn-outline-secondary rounded-0" @onclick="Clear">Clear</button>
+        <button class="btn btn-outline-secondary rounded-0" @onclick="OnClose">Close</button>
+    </div>;
+
+    private async Task OnIsOpenChanged(bool value)
+    {
+        // Drawer tries to set IsOpen=false when closed via X/backdrop/esc.
+        if (!value && OnClose.HasDelegate)
+            await OnClose.InvokeAsync();
+    }
+}

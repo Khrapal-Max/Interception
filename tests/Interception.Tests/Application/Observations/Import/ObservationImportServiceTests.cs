@@ -13,8 +13,8 @@ public sealed class ObservationImportServiceTests
     [Fact]
     public async Task ImportAsync_SkipsInvalidRowsWithEmptyAction()
     {
-        await using var db = TestDbFactory.CreateContext();
-        var svc = new ObservationImportService(db);
+        var factory = TestDbFactory.CreateFactory();
+        var svc = new ObservationImportService(factory);
 
         var rows = new[]
         {
@@ -44,8 +44,8 @@ public sealed class ObservationImportServiceTests
     [Fact]
     public async Task ImportAsync_DeduplicatesInsideBatch_ByContentHash()
     {
-        await using var db = TestDbFactory.CreateContext();
-        var svc = new ObservationImportService(db);
+        var factory = TestDbFactory.CreateFactory();
+        var svc = new ObservationImportService(factory);
 
         var participants = new[]
         {
@@ -55,8 +55,8 @@ public sealed class ObservationImportServiceTests
 
         var rows = new[]
         {
-            new ObservationImportRow(new DateOnly(2026, 3, 1), (short)DayPart.FirstHalf, "Перевезення", 136.2550m, "фірма A", "коорд", "Степове", "Р1", null, null, participants),
-            new ObservationImportRow(new DateOnly(2026, 3, 1), (short)DayPart.FirstHalf, "Перевезення", 136.2550m, "фірма A", "коорд", "Степове", "Р1", null, null, participants),
+            new ObservationImportRow(new DateOnly(2026, 3, 1), (short)DayPart.FirstHalf, "Перевезення", "136.2550", "фірма A", "коорд", "Степове", "Р1", null, null, participants),
+            new ObservationImportRow(new DateOnly(2026, 3, 1), (short)DayPart.FirstHalf, "Перевезення", "136.2550", "фірма A", "коорд", "Степове", "Р1", null, null, participants),
         };
 
         var result = await svc.ImportAsync(rows, new ObservationImportOptions(), CancellationToken.None);
@@ -65,22 +65,26 @@ public sealed class ObservationImportServiceTests
         Assert.Equal(1, result.Inserted);
         Assert.Equal(1, result.DuplicatesSkipped);
 
-        Assert.Equal(1, db.Observations.Count());
-        Assert.Equal(2, db.ObservationParticipants.Count());
+        await using var verify = factory.CreateDbContext();
+        Assert.Equal(1, verify.Observations.Count());
+        Assert.Equal(2, verify.ObservationParticipants.Count());
     }
 
     [Fact]
     public async Task ImportAsync_DeduplicatesAgainstDatabase_ByContentHash()
     {
-        await using var db = TestDbFactory.CreateContext();
+        var factory = TestDbFactory.CreateFactory();
 
         // seed existing observation
-        var existing = Observation.Create(new DateOnly(2026, 3, 1), DayPart.FirstHalf, "Перевезення", layer: 1.1m, locationRaw: "Степове");
-        existing.AddParticipant("КЛИМ", false, ordinal: 1);
-        db.Add(existing);
-        await db.SaveChangesAsync(CancellationToken.None);
+        await using (var seed = factory.CreateDbContext())
+        {
+            var existing = Observation.Create(new DateOnly(2026, 3, 1), DayPart.FirstHalf, "Перевезення", layer: "1.1", locationRaw: "Степове");
+            existing.AddParticipant("КЛИМ", false, ordinal: 1);
+            seed.Add(existing);
+            await seed.SaveChangesAsync(CancellationToken.None);
+        }
 
-        var svc = new ObservationImportService(db);
+        var svc = new ObservationImportService(factory);
 
         var rows = new[]
         {
@@ -88,7 +92,7 @@ public sealed class ObservationImportServiceTests
                 new DateOnly(2026, 3, 1),
                 (short)DayPart.FirstHalf,
                 "Перевезення",
-                1.1m,
+                "1.1",
                 null,
                 null,
                 "Степове",
@@ -105,21 +109,25 @@ public sealed class ObservationImportServiceTests
         Assert.Equal(1, result.DuplicatesSkipped);
         Assert.Equal(0, result.InvalidSkipped);
 
-        Assert.Equal(1, db.Observations.Count());
+        await using var verify = factory.CreateDbContext();
+        Assert.Equal(1, verify.Observations.Count());
     }
 
     [Fact]
     public async Task ImportAsync_WhenDeduplicateByHashFalse_DoesNotCheckDb()
     {
-        await using var db = TestDbFactory.CreateContext();
+        var factory = TestDbFactory.CreateFactory();
 
         // seed existing observation
-        var existing = Observation.Create(new DateOnly(2026, 3, 1), DayPart.FirstHalf, "Перевезення", layer: 1.1m, locationRaw: "Степове");
-        existing.AddParticipant("КЛИМ", false, ordinal: 1);
-        db.Add(existing);
-        await db.SaveChangesAsync(CancellationToken.None);
+        await using (var seed = factory.CreateDbContext())
+        {
+            var existing = Observation.Create(new DateOnly(2026, 3, 1), DayPart.FirstHalf, "Перевезення", layer: "1.1", locationRaw: "Степове");
+            existing.AddParticipant("КЛИМ", false, ordinal: 1);
+            seed.Add(existing);
+            await seed.SaveChangesAsync(CancellationToken.None);
+        }
 
-        var svc = new ObservationImportService(db);
+        var svc = new ObservationImportService(factory);
 
         var rows = new[]
         {
@@ -127,7 +135,7 @@ public sealed class ObservationImportServiceTests
                 new DateOnly(2026, 3, 1),
                 (short)DayPart.FirstHalf,
                 "Перевезення",
-                1.1m,
+                "1.1",
                 null,
                 null,
                 "Степове",
@@ -147,8 +155,8 @@ public sealed class ObservationImportServiceTests
     [Fact]
     public async Task ImportAsync_MarksRowInvalid_WhenParticipantsContainDuplicateKnownLabels()
     {
-        await using var db = TestDbFactory.CreateContext();
-        var svc = new ObservationImportService(db);
+        var factory = TestDbFactory.CreateFactory();
+        var svc = new ObservationImportService(factory);
 
         var rows = new[]
         {
@@ -178,17 +186,17 @@ public sealed class ObservationImportServiceTests
         Assert.Contains("already exists", result.Errors[0].Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static readonly string[] value = new[]
-        {
+    private static readonly string[] value =
+        [
             "час;особа 1;особа 2;локація;район;дія",
             "04.03.2026 AM;КЛИМ;НВ;Степове;Р1;Перевезення"
-        };
+        ];
 
     [Fact]
     public async Task ImportCsvAsync_ParsesAndImports()
     {
-        await using var db = TestDbFactory.CreateContext();
-        var svc = new ObservationImportService(db);
+        var factory = TestDbFactory.CreateFactory();
+        var svc = new ObservationImportService(factory);
 
         // Semicolon CSV (common for UA locale)
         var csv = string.Join("\n", value);
@@ -202,12 +210,13 @@ public sealed class ObservationImportServiceTests
         Assert.Equal(0, result.InvalidSkipped);
         Assert.Equal(0, result.DuplicatesSkipped);
 
-        var obs = db.Observations.Single();
+        await using var verify = factory.CreateDbContext();
+        var obs = verify.Observations.Single();
         Assert.Equal(new DateOnly(2026, 3, 4), obs.ObservedDate);
         Assert.Equal(DayPart.FirstHalf, obs.DayPart);
         Assert.Equal("Перевезення", obs.ActionRaw);
         Assert.Equal("Степове", obs.LocationRaw);
 
-        Assert.Equal(2, db.ObservationParticipants.Count());
+        Assert.Equal(2, verify.ObservationParticipants.Count());
     }
 }

@@ -1,0 +1,71 @@
+﻿<div class="card shadow-sm">
+    <div class="card-header">
+        Імпорт Excel (.xlsx)
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-12 col-md-8">
+                <InputFile OnChange="OnFileSelected" accept=".xlsx" />
+                @if (_selectedFile is not null)
+                {
+                    <div class="text-muted mt-1">
+                        Обрано: @_selectedFile.Name (@FormatSize(_selectedFile.Size))
+                    </div>
+                }
+            </div>
+
+            <div class="col-12 col-md-2">
+                <label class="form-label">Перший номер рядка</label>
+                <input class="form-control" type="number" min="1" @bind="_firstRowNumber" />
+            </div>
+
+            <div class="col-12 col-md-2 d-flex align-items-end">
+                <button class="btn btn-success w-100" @onclick="ImportAsync" disabled="@(_selectedFile is null || _importing)">
+                    @(_importing ? "Імпорт…" : "Імпортувати")
+                </button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <div class="alert alert-danger mt-3">@_error</div>
+        }
+
+        @if (_result is not null)
+        {
+            <div class="alert alert-info mt-2">
+                <div><strong>Всього:</strong> @_result.TotalRows</div>
+                <div><strong>Додано:</strong> @_result.Inserted</div>
+                <div><strong>Дублі пропущено:</strong> @_result.DuplicatesSkipped</div>
+                <div><strong>Некоректні пропущено:</strong> @_result.InvalidSkipped</div>
+            </div>
+
+            @if (_result.Errors.Count > 0)
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th style="white-space:nowrap;">Рядок</th>
+                                <th>Помилка</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var e in _result.Errors.Take(50))
+                            {
+                                <tr>
+                                    <td style="white-space:nowrap;">@e.RowNumber</td>
+                                    <td>@e.Message</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    @if (_result.Errors.Count > 50)
+                    {
+                        <div class="text-muted">Показано перші 50 помилок.</div>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>

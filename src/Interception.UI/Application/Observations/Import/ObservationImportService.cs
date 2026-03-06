@@ -1,15 +1,16 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Domain;
+using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.UI.Application.Observations.Import;
 
-public sealed class ObservationImportService(DbContext db)
+public sealed class ObservationImportService(IDbContextFactory<AppDbContext> dbFactory)
 {
-    private readonly DbContext _db = db;
+    private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
 
     public async Task<ObservationImportResult> ImportCsvAsync(
         Stream csvStream,
@@ -21,11 +22,24 @@ public sealed class ObservationImportService(DbContext db)
         return await ImportAsync(rows, options, ct);
     }
 
-    public async Task<ObservationImportResult> ImportAsync(
-        IReadOnlyList<ObservationImportRow> rows,
+
+    public async Task<ObservationImportResult> ImportXlsxAsync(
+        Stream xlsxStream,
         ObservationImportOptions options,
         CancellationToken ct)
     {
+        var parser = new XlsxObservationImportParser();
+        var rows = await parser.ParseAsync(xlsxStream, ct);
+        return await ImportAsync(rows, options, ct);
+    }
+
+    public async Task<ObservationImportResult> ImportAsync(
+            IReadOnlyList<ObservationImportRow> rows,
+            ObservationImportOptions options,
+            CancellationToken ct)
+    {
+        await using var db = _dbFactory.CreateDbContext();
+
         var result = new ObservationImportResult { TotalRows = rows.Count };
 
         // 1) Build observations & hash list
@@ -48,7 +62,7 @@ public sealed class ObservationImportService(DbContext db)
             {
                 var obs = Observation.Create(
                     r.ObservedDate,
-                    (Domain.Enums.DayPart)r.DayPart,
+                    (Interception.UI.Domain.Enums.DayPart)r.DayPart,
                     r.ActionRaw,
                     layer: r.Layer,
                     rmRaw: r.RmRaw,
@@ -104,7 +118,7 @@ public sealed class ObservationImportService(DbContext db)
         {
             var hashes = unique.Select(x => x.hash).ToList();
 
-            var existingHashes = await _db.Set<Observation>()
+            var existingHashes = await db.Observations
                 .AsNoTracking()
                 .Where(o => hashes.Contains(o.ContentHash))
                 .Select(o => o.ContentHash)
@@ -123,33 +137,33 @@ public sealed class ObservationImportService(DbContext db)
             return result;
 
         // 4) Insert. We still keep a safety net for race conditions (unique index on content_hash).
-        _db.AddRange(toInsert.Select(x => x.obs));
+        db.AddRange(toInsert.Select(x => x.obs));
 
         try
         {
-            await _db.SaveChangesAsync(ct);
+            await db.SaveChangesAsync(ct);
             result.Inserted += toInsert.Count;
             return result;
         }
         catch (DbUpdateException ex) when (IsUniqueViolation(ex))
         {
             // Fallback: retry per row to isolate duplicates
-            _db.ChangeTracker.Clear();
+            db.ChangeTracker.Clear();
 
             foreach (var (obs, hash, rowNo) in toInsert)
             {
                 ct.ThrowIfCancellationRequested();
 
-                _db.Add(obs);
+                db.Add(obs);
                 try
                 {
-                    await _db.SaveChangesAsync(ct);
+                    await db.SaveChangesAsync(ct);
                     result.Inserted++;
                 }
                 catch (DbUpdateException ex2) when (IsUniqueViolation(ex2))
                 {
                     result.DuplicatesSkipped++;
-                    _db.ChangeTracker.Clear();
+                    db.ChangeTracker.Clear();
                 }
             }
 

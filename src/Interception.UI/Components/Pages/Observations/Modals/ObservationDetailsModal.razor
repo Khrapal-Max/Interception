@@ -1,0 +1,116 @@
+@if (ObservationId is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,.35);">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Деталі</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    @if (_loading)
+                    {
+                        <div class="text-muted">Завантаження…</div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(_error))
+                    {
+                        <div class="alert alert-danger">@_error</div>
+                    }
+                    else if (_dto is null)
+                    {
+                        <div class="text-muted">Не знайдено</div>
+                    }
+                    else
+                    {
+                        <div class="row g-2">
+                            <div class="col-6 col-md-3">
+                                <div class="text-muted">Дата</div>
+                                <div><strong>@_dto.ObservedDate.ToString("yyyy-MM-dd")</strong> (@(_dto.DayPart == 2 ? "PM" : "AM"))</div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="text-muted">Шар</div>
+                                <div>@(_dto.Layer ?? "—")</div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="text-muted">Р/М</div>
+                                <div>@(_dto.RmRaw ?? "—")</div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="text-muted">Точка</div>
+                                <div>@(_dto.PointRaw ?? "—")</div>
+                            </div>
+
+                            <div class="col-6 col-md-4">
+                                <div class="text-muted">Локація</div>
+                                <div>@(_dto.LocationRaw ?? "—")</div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="text-muted">Район</div>
+                                <div>@(_dto.DistrictRaw ?? "—")</div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="text-muted">Дія</div>
+                                <div><strong>@_dto.ActionRaw</strong></div>
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(_dto.Note))
+                            {
+                                <div class="col-12">
+                                    <div class="text-muted">Примітка</div>
+                                    <div class="border rounded p-2">@_dto.Note</div>
+                                </div>
+                            }
+
+                            <div class="col-12 mt-2">
+                                <div class="text-muted">Особи</div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th style="white-space:nowrap;">#</th>
+                                                <th>Позивний</th>
+                                                <th style="white-space:nowrap;">НВ</th>
+                                                <th>Роль</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var p in _dto.Participants.OrderBy(x => x.Ordinal))
+                                            {
+                                                <tr>
+                                                    <td style="white-space:nowrap;">@p.Ordinal</td>
+                                                    <td>@(string.IsNullOrWhiteSpace(p.LabelRaw) ? "НВ" : p.LabelRaw)</td>
+                                                    <td style="white-space:nowrap;">@(p.IsUnknown ? "Так" : "Ні")</td>
+                                                    <td>@(p.RoleRaw ?? "—")</td>
+                                                </tr>
+                                            }
+                                            @if (_dto.Participants.Count == 0)
+                                            {
+                                                <tr><td colspan="4" class="text-muted">—</td></tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="text-muted">Source / Row</div>
+                                <div>@_dto.Source @if (_dto.SourceRow is not null) { <span class="text-muted">(@_dto.SourceRow)</span> }</div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="text-muted">ContentHash</div>
+                                <div><code>@_dto.ContentHash</code></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="Close">Закрити</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}

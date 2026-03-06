@@ -40,11 +40,6 @@ namespace Interception.UI.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("action_raw");
 
-                    b.Property<string>("CompanyRaw")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("company_raw");
-
                     b.Property<string>("ContentHash")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -69,9 +64,9 @@ namespace Interception.UI.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("district_raw");
 
-                    b.Property<decimal?>("Layer")
-                        .HasPrecision(10, 4)
-                        .HasColumnType("numeric(10,4)")
+                    b.Property<string>("Layer")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
                         .HasColumnName("layer");
 
                     b.Property<string>("LocationRaw")

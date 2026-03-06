@@ -1,0 +1,114 @@
+@page "/observations"
+@using Interception.UI.Application.Observations.Dtos
+
+@namespace Interception.UI.Components.Pages.Observations
+
+<PageTitle>Перехвати</PageTitle>
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <strong>Перехвати</strong>
+
+        <div class="btn-group">
+            <button class="btn btn-sm btn-outline-secondary" @onclick="ResetAsync" disabled="@_loading">Reset</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="OpenFilter" disabled="@_loading">Filter</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="OpenImport" disabled="@_loading">Import</button>
+            <button class="btn btn-sm btn-outline-primary" @onclick="OpenCreate" disabled="@_loading">Create</button>
+        </div>
+    </div>
+
+    <div class="card-body">
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <div class="alert alert-danger">@_error</div>
+        }
+
+        <div class="registry-table-container">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="registry-thead">
+                    <tr>
+                        <th class="text-black">Дата</th>
+                        <th class="text-black">Ч</th>
+                        <th class="text-black">ЧС</th>
+                        <th class="text-black">Р/M</th>
+                        <th class="text-black">Точка</th>
+                        <th class="text-black">ВЕКТОР</th>
+
+                        <th class="text-black">УЧАСТНИКИ</th>
+
+                        <th class="text-black">ДІЯ</th>
+                        <th class="text-black">КОМІТ</th>
+
+                        <th class="text-black">ІНФО</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (_loading)
+                    {
+                        <tr><td colspan="12" class="text-muted">Loading…</td></tr>
+                    }
+                    else if (_page is null || _page.Items.Count == 0)
+                    {
+                        <tr><td colspan="12" class="text-muted">No data</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in _page.Items)
+                        {
+                            <tr>
+                                <td class="border" style="white-space:nowrap;">@item.ObservedDate.ToString("dd-MM-yyyy")</td>
+                                <td class="border" style="white-space:nowrap;">
+                                    <span class="daypart-badge @(item.DayPart == 2 ? "daypart-pm" : "daypart-am")">
+                                        @(item.DayPart == 2 ? "PM" : "AM")
+                                    </span>
+                                </td>
+                                <td class="border" style="white-space:nowrap;">@(item.Layer ?? "—")</td>
+                                <td class="border">@item.RmRaw</td>
+                                <td class="border">@item.PointRaw</td>
+                                <td class ="border">@item.DistrictRaw</td>
+                                <td class="border" style="white-space:nowrap;">
+                                    @foreach (var p in item.Participants.OrderBy(x => x.Ordinal).Take(3))
+                                    {
+                                        <span class="badge me-1 @(p.IsUnknown ? "text-bg-warning" : "text-bg-secondary")">
+                                            @(string.IsNullOrWhiteSpace(p.LabelRaw) ? "НВ" : p.LabelRaw)
+                                        </span>
+                                    }
+                                    @if (item.ParticipantsCount > 3)
+                                    {
+                                        <span class="text-muted">+@(item.ParticipantsCount - 3)</span>
+                                    }
+                                </td>
+                                <td class="border">@item.ActionRaw</td>
+                                <td class="border">@item.Note</td>
+
+                                <td style="white-space:nowrap;">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenDetailsAsync(item.Id)">
+                                        Деталі
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between mt-3">
+            <div class="text-muted">Total: @_page?.Total</div>
+
+            <div class="btn-group">
+                <button class="btn btn-outline-secondary btn-sm" @onclick="PrevPageAsync" disabled="@(!CanPrev || _loading)">Prev</button>
+                <button class="btn btn-outline-secondary btn-sm" disabled>@($"{_pageIndex + 1} / {TotalPages}")</button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="NextPageAsync" disabled="@(!CanNext || _loading)">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<ObservationDetailsModal ObservationId="_detailsId" OnClose="CloseDetails" />
+
+<!-- Drawers: only one is open at a time -->
+<ObservationFilterDrawer IsOpen="@IsFilterOpen" Draft="_filterDraft" OnApply="ApplyFilterAsync" OnClear="ClearFilterAsync" OnClose="CloseDrawer" />
+<ObservationImportDrawer IsOpen="@IsImportOpen" OnImported="OnImportedAsync" OnClose="CloseDrawer" />
+<ObservationCreateDrawer IsOpen="@IsCreateOpen" OnCreated="OnCreatedAsync" OnClose="CloseDrawer" />

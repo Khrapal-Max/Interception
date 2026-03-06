@@ -9,7 +9,7 @@ namespace Interception.Tests;
 
 internal static class TestDbFactory
 {
-    public static AppDbContext CreateContext(string? dbName = null)
+    public static IDbContextFactory<AppDbContext> CreateFactory(string? dbName = null)
     {
         dbName ??= Guid.NewGuid().ToString("N");
 
@@ -18,6 +18,13 @@ internal static class TestDbFactory
             .EnableSensitiveDataLogging()
             .Options;
 
-        return new AppDbContext(options);
+        return new TestAppDbContextFactory(options);
+    }
+
+    private sealed class TestAppDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+    {
+        private readonly DbContextOptions<AppDbContext> _options = options;
+
+        public AppDbContext CreateDbContext() => new(_options);
     }
 }

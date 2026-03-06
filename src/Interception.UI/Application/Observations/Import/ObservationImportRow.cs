@@ -8,7 +8,7 @@ public sealed record ObservationImportRow(
     DateOnly ObservedDate,
     short DayPart,
     string ActionRaw,
-    decimal? Layer,
+    string? Layer,
     string? RmRaw,
     string? PointRaw,
     string? LocationRaw,

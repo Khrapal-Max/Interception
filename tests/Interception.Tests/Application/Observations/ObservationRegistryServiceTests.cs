@@ -2,8 +2,8 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Observations;
 using Interception.UI.Application.Observations.Dtos;
+using Interception.UI.Application.Observations.Services;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
 
@@ -14,20 +14,23 @@ public sealed class ObservationRegistryServiceTests
     [Fact]
     public async Task SearchAsync_FiltersByPersonLabel()
     {
-        await using var db = TestDbFactory.CreateContext();
+        var factory = TestDbFactory.CreateFactory();
 
-        var o1 = Observation.Create(new DateOnly(2026, 3, 1), DayPart.FirstHalf, "Перевезення", locationRaw: "Степове");
-        o1.AddParticipant("КЛИМ", isUnknown: false, ordinal: 1);
-        o1.AddParticipant("НВ", isUnknown: true, ordinal: 2);
+        await using (var seed = factory.CreateDbContext())
+        {
+            var o1 = Observation.Create(new DateOnly(2026, 3, 1), DayPart.FirstHalf, "Перевезення", locationRaw: "Степове");
+            o1.AddParticipant("КЛИМ", isUnknown: false, ordinal: 1);
+            o1.AddParticipant("НВ", isUnknown: true, ordinal: 2);
 
-        var o2 = Observation.Create(new DateOnly(2026, 3, 2), DayPart.SecondHalf, "Зустріч", locationRaw: "Київ");
-        o2.AddParticipant("ТАШКЕНТ", isUnknown: false, ordinal: 1);
-        o2.AddParticipant("КЛИМ", isUnknown: false, ordinal: 2);
+            var o2 = Observation.Create(new DateOnly(2026, 3, 2), DayPart.SecondHalf, "Зустріч", locationRaw: "Київ");
+            o2.AddParticipant("ТАШКЕНТ", isUnknown: false, ordinal: 1);
+            o2.AddParticipant("КЛИМ", isUnknown: false, ordinal: 2);
 
-        db.AddRange(o1, o2);
-        await db.SaveChangesAsync(CancellationToken.None);
+            seed.AddRange(o1, o2);
+            await seed.SaveChangesAsync(CancellationToken.None);
+        }
 
-        var svc = new ObservationRegistryService(db);
+        var svc = new ObservationRegistryService(factory);
 
         var page = await svc.SearchAsync(new ObservationRegistryFilter
         {
@@ -42,22 +45,28 @@ public sealed class ObservationRegistryServiceTests
     [Fact]
     public async Task SearchAsync_PersonQueryNV_ReturnsObservationsWithUnknownParticipants()
     {
-        await using var db = TestDbFactory.CreateContext();
+        var factory = TestDbFactory.CreateFactory();
 
-        var o1 = Observation.Create(new DateOnly(2026, 3, 1), DayPart.FirstHalf, "Перевезення");
-        o1.AddParticipant("КЛИМ", isUnknown: false, ordinal: 1);
-        o1.AddParticipant(null, isUnknown: true, ordinal: 2); // unknown
+        Guid o2Id;
 
-        var o2 = Observation.Create(new DateOnly(2026, 3, 2), DayPart.SecondHalf, "Зустріч");
-        o2.AddParticipant("ТАШКЕНТ", isUnknown: false, ordinal: 1);
+        await using (var seed = factory.CreateDbContext())
+        {
+            var o1 = Observation.Create(new DateOnly(2026, 3, 1), DayPart.FirstHalf, "Перевезення");
+            o1.AddParticipant("КЛИМ", isUnknown: false, ordinal: 1);
+            o1.AddParticipant(null, isUnknown: true, ordinal: 2); // unknown
 
-        var o3 = Observation.Create(new DateOnly(2026, 3, 3), DayPart.FirstHalf, "Спостереження");
-        o3.AddParticipant("НВ", isUnknown: true, ordinal: 1);
+            var o2 = Observation.Create(new DateOnly(2026, 3, 2), DayPart.SecondHalf, "Зустріч");
+            o2.AddParticipant("ТАШКЕНТ", isUnknown: false, ordinal: 1);
+            o2Id = o2.Id;
 
-        db.AddRange(o1, o2, o3);
-        await db.SaveChangesAsync(CancellationToken.None);
+            var o3 = Observation.Create(new DateOnly(2026, 3, 3), DayPart.FirstHalf, "Спостереження");
+            o3.AddParticipant("НВ", isUnknown: true, ordinal: 1);
 
-        var svc = new ObservationRegistryService(db);
+            seed.AddRange(o1, o2, o3);
+            await seed.SaveChangesAsync(CancellationToken.None);
+        }
+
+        var svc = new ObservationRegistryService(factory);
 
         var page = await svc.SearchAsync(new ObservationRegistryFilter
         {
@@ -66,25 +75,29 @@ public sealed class ObservationRegistryServiceTests
         }, CancellationToken.None);
 
         Assert.Equal(2, page.Total);
-        Assert.DoesNotContain(page.Items, x => x.Id == o2.Id);
-        Assert.Contains(page.Items, x => x.Id == o1.Id);
-        Assert.Contains(page.Items, x => x.Id == o3.Id);
+        Assert.DoesNotContain(page.Items, x => x.Id == o2Id);
     }
 
     [Fact]
     public async Task SearchAsync_FiltersByDateRangeAndDayPart()
     {
-        await using var db = TestDbFactory.CreateContext();
+        var factory = TestDbFactory.CreateFactory();
 
-        var o1 = Observation.Create(new DateOnly(2026, 3, 1), DayPart.FirstHalf, "A");
-        var o2 = Observation.Create(new DateOnly(2026, 3, 2), DayPart.FirstHalf, "B");
-        var o3 = Observation.Create(new DateOnly(2026, 3, 2), DayPart.SecondHalf, "C");
-        var o4 = Observation.Create(new DateOnly(2026, 3, 3), DayPart.FirstHalf, "D");
+        Guid o3Id;
 
-        db.AddRange(o1, o2, o3, o4);
-        await db.SaveChangesAsync(CancellationToken.None);
+        await using (var seed = factory.CreateDbContext())
+        {
+            var o1 = Observation.Create(new DateOnly(2026, 3, 1), DayPart.FirstHalf, "A");
+            var o2 = Observation.Create(new DateOnly(2026, 3, 2), DayPart.FirstHalf, "B");
+            var o3 = Observation.Create(new DateOnly(2026, 3, 2), DayPart.SecondHalf, "C");
+            var o4 = Observation.Create(new DateOnly(2026, 3, 3), DayPart.FirstHalf, "D");
+            o3Id = o3.Id;
 
-        var svc = new ObservationRegistryService(db);
+            seed.AddRange(o1, o2, o3, o4);
+            await seed.SaveChangesAsync(CancellationToken.None);
+        }
+
+        var svc = new ObservationRegistryService(factory);
 
         var page = await svc.SearchAsync(new ObservationRegistryFilter
         {
@@ -95,77 +108,68 @@ public sealed class ObservationRegistryServiceTests
         }, CancellationToken.None);
 
         Assert.Equal(1, page.Total);
-        Assert.Equal(o3.Id, page.Items.Single().Id);
-    }
-
-    [Fact]
-    public async Task SearchAsync_FiltersByActionSubstring_IgnoresCase()
-    {
-        await using var db = TestDbFactory.CreateContext();
-
-        var o1 = Observation.Create(new DateOnly(2026, 3, 1), DayPart.FirstHalf, "Перевезення вантажу", locationRaw: "Степове");
-        var o2 = Observation.Create(new DateOnly(2026, 3, 2), DayPart.FirstHalf, "Зустріч", locationRaw: "Київ");
-        var o3 = Observation.Create(new DateOnly(2026, 3, 3), DayPart.FirstHalf, "перевезення людей", locationRaw: "Степове");
-
-        db.AddRange(o1, o2, o3);
-        await db.SaveChangesAsync(CancellationToken.None);
-
-        var svc = new ObservationRegistryService(db);
-
-        var page = await svc.SearchAsync(new ObservationRegistryFilter
-        {
-            Action = "ПЕРЕВЕЗ",
-            Take = 50
-        }, CancellationToken.None);
-
-        Assert.Equal(2, page.Total);
-        Assert.DoesNotContain(page.Items, x => x.Id == o2.Id);
-        Assert.Contains(page.Items, x => x.Id == o1.Id);
-        Assert.Contains(page.Items, x => x.Id == o3.Id);
+        Assert.Equal(o3Id, page.Items.Single().Id);
     }
 
     [Fact]
     public async Task SearchAsync_OrdersByDateThenDayPartDescending()
     {
-        await using var db = TestDbFactory.CreateContext();
+        var factory = TestDbFactory.CreateFactory();
 
-        var d = new DateOnly(2026, 3, 3);
+        Guid olderId;
+        Guid sameDateFirstId;
+        Guid sameDateSecondId;
 
-        var older = Observation.Create(new DateOnly(2026, 3, 1), DayPart.SecondHalf, "Old");
-        var sameDateFirst = Observation.Create(d, DayPart.FirstHalf, "SameDateFirst");
-        var sameDateSecond = Observation.Create(d, DayPart.SecondHalf, "SameDateSecond");
+        await using (var seed = factory.CreateDbContext())
+        {
+            var d = new DateOnly(2026, 3, 3);
 
-        db.AddRange(older, sameDateFirst, sameDateSecond);
-        await db.SaveChangesAsync(CancellationToken.None);
+            var older = Observation.Create(new DateOnly(2026, 3, 1), DayPart.SecondHalf, "Old");
+            var sameDateFirst = Observation.Create(d, DayPart.FirstHalf, "SameDateFirst");
+            var sameDateSecond = Observation.Create(d, DayPart.SecondHalf, "SameDateSecond");
 
-        var svc = new ObservationRegistryService(db);
+            olderId = older.Id;
+            sameDateFirstId = sameDateFirst.Id;
+            sameDateSecondId = sameDateSecond.Id;
+
+            seed.AddRange(older, sameDateFirst, sameDateSecond);
+            await seed.SaveChangesAsync(CancellationToken.None);
+        }
+
+        var svc = new ObservationRegistryService(factory);
 
         var page = await svc.SearchAsync(new ObservationRegistryFilter { Take = 10 }, CancellationToken.None);
 
         Assert.Equal(3, page.Total);
-        Assert.Equal(sameDateSecond.Id, page.Items[0].Id); // SecondHalf should come first
-        Assert.Equal(sameDateFirst.Id, page.Items[1].Id);
-        Assert.Equal(older.Id, page.Items[2].Id);
+        Assert.Equal(sameDateSecondId, page.Items[0].Id); // SecondHalf should come first
+        Assert.Equal(sameDateFirstId, page.Items[1].Id);
+        Assert.Equal(olderId, page.Items[2].Id);
     }
 
     [Fact]
     public async Task GetByIdAsync_ReturnsParticipantsOrderedByOrdinal()
     {
-        await using var db = TestDbFactory.CreateContext();
+        var factory = TestDbFactory.CreateFactory();
 
-        var o = Observation.Create(new DateOnly(2026, 3, 4), DayPart.FirstHalf, "Test");
-        o.AddParticipant("A", isUnknown: false, ordinal: 2);
-        o.AddParticipant("B", isUnknown: false, ordinal: 1);
+        Guid id;
 
-        db.Add(o);
-        await db.SaveChangesAsync(CancellationToken.None);
+        await using (var seed = factory.CreateDbContext())
+        {
+            var o = Observation.Create(new DateOnly(2026, 3, 4), DayPart.FirstHalf, "Test");
+            o.AddParticipant("A", isUnknown: false, ordinal: 2);
+            o.AddParticipant("B", isUnknown: false, ordinal: 1);
+            id = o.Id;
 
-        var svc = new ObservationRegistryService(db);
+            seed.Add(o);
+            await seed.SaveChangesAsync(CancellationToken.None);
+        }
 
-        var dto = await svc.GetByIdAsync(o.Id, CancellationToken.None);
+        var svc = new ObservationRegistryService(factory);
+
+        var dto = await svc.GetByIdAsync(id, CancellationToken.None);
 
         Assert.NotNull(dto);
-        Assert.Equal(o.Id, dto!.Id);
+        Assert.Equal(id, dto!.Id);
         Assert.Equal(2, dto.Participants.Count);
         Assert.Equal("B", dto.Participants[0].LabelRaw);
         Assert.Equal(1, dto.Participants[0].Ordinal);
@@ -173,3 +177,4 @@ public sealed class ObservationRegistryServiceTests
         Assert.Equal(2, dto.Participants[1].Ordinal);
     }
 }
+

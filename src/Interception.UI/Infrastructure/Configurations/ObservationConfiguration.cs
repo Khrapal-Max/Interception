@@ -35,7 +35,7 @@ public sealed class ObservationConfiguration : IEntityTypeConfiguration<Observat
 
         b.Property(x => x.Layer)
             .HasColumnName("layer")
-            .HasPrecision(10, 4);
+            .HasMaxLength(8);
 
         b.Property(x => x.RmRaw)
             .HasColumnName("rm_raw")
@@ -51,10 +51,6 @@ public sealed class ObservationConfiguration : IEntityTypeConfiguration<Observat
 
         b.Property(x => x.DistrictRaw)
             .HasColumnName("district_raw")
-            .HasMaxLength(256);
-
-        b.Property(x => x.CompanyRaw)
-            .HasColumnName("company_raw")
             .HasMaxLength(256);
 
         b.Property(x => x.ActionRaw)

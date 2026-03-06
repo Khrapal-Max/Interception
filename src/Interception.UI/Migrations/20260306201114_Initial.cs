@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -20,12 +21,11 @@ namespace Interception.UI.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     observed_date = table.Column<DateOnly>(type: "date", nullable: false),
                     day_part = table.Column<short>(type: "smallint", nullable: false),
-                    layer = table.Column<decimal>(type: "numeric(10,4)", precision: 10, scale: 4, nullable: true),
+                    layer = table.Column<string>(type: "character varying(8)", maxLength: 8, nullable: true),
                     rm_raw = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     point_raw = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     location_raw = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     district_raw = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    company_raw = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     action_raw = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
                     action_norm = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
                     note = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),

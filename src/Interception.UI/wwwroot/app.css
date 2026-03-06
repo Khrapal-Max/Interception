@@ -58,3 +58,81 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* =========================
+   Drawer
+   ========================= */
+.drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease-in-out;
+    z-index: 1040;
+}
+
+    .drawer-backdrop.show {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+.drawer-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: min(920px, 96vw); /* близько до modal-xl */
+    background: var(--bs-body-bg);
+    border-left: 1px solid rgba(0,0,0,.125);
+    transform: translateX(100%);
+    transition: transform .2s ease-in-out;
+    z-index: 1045;
+    display: flex;
+    flex-direction: column;
+}
+
+    .drawer-panel.show {
+        transform: translateX(0);
+    }
+
+.drawer-header {
+    padding: .75rem 1rem;
+    border-bottom: 1px solid rgba(0,0,0,.125);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.drawer-title {
+    font-weight: 600;
+}
+
+.drawer-body {
+    padding: 1rem;
+    flex: 1 1 auto; /* ✅ займає весь простір між header/footer */
+    min-height: 0; /* ✅ must-have для overflow у flex */
+    overflow: auto; /* ✅ єдиний скрол */
+}
+
+.drawer-footer {
+    padding: .75rem 1rem;
+    border-top: 1px solid rgba(0,0,0,.125);
+    display: flex;
+    gap: .5rem;
+    justify-content: flex-end;
+}
+
+.drawer-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0; /* критично */
+}
+
+.drawer-grow {
+    flex: 1 1 auto;
+    min-height: 0; /* критично */
+    display: flex;
+    flex-direction: column;
+}

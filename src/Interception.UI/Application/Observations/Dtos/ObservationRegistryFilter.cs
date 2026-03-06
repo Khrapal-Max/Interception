@@ -14,7 +14,6 @@ public sealed class ObservationRegistryFilter
     public string? Action { get; init; }
     public string? Location { get; init; }
     public string? District { get; init; }
-    public string? Company { get; init; }
     public string? Rm { get; init; }
 
     public int Skip { get; init; } = 0;

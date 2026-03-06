@@ -2,9 +2,11 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Observations;
+using Interception.UI.Application.Observations.Abstractions;
 using Interception.UI.Application.Observations.Import;
+using Interception.UI.Application.Observations.Services;
 using Interception.UI.Components;
+using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -24,8 +26,9 @@ builder.Services.AddDbContextFactory<AppDbContext>(options =>
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo("/data-protection-keys"));
 
-builder.Services.AddScoped<IObservationRegistryService, ObservationRegistryService>();
 builder.Services.AddScoped<ObservationImportService>();
+builder.Services.AddScoped<IObservationWriteService, ObservationWriteService>();
+builder.Services.AddScoped<IObservationRegistryService, ObservationRegistryService>();
 
 var app = builder.Build();
 
@@ -52,4 +55,6 @@ app.Use(async (ctx, next) =>
     await next();
 });
 
+// після Build(), до Run()
+await app.AddMigrationDb();
 app.Run();

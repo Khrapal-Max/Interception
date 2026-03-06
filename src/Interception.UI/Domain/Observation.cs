@@ -22,13 +22,12 @@ public class Observation
     public DayPart DayPart { get; private set; }
 
     // Raw location/company snapshots (may be unknown).
-    public decimal? Layer { get; private set; }          // e.g. "шар"
+    public string? Layer { get; private set; }          // e.g. "шар"
     public string? RmRaw { get; private set; }           // e.g. "р/м"
     public string? PointRaw { get; private set; }        // e.g. "точка" / coords
 
     public string? LocationRaw { get; private set; }     // e.g. "локація"
     public string? DistrictRaw { get; private set; }     // e.g. "район"
-    public string? CompanyRaw { get; private set; }      // e.g. "фірма"
 
     // Action is the minimal required field for the record.
     public string ActionRaw { get; private set; } = default!;
@@ -61,7 +60,7 @@ public class Observation
         DateOnly observedDate,
         DayPart dayPart,
         string actionRaw,
-        decimal? layer = null,
+        string? layer = null,
         string? rmRaw = null,
         string? pointRaw = null,
         string? locationRaw = null,
@@ -85,7 +84,6 @@ public class Observation
             PointRaw = string.IsNullOrWhiteSpace(pointRaw) ? null : pointRaw.Trim(),
             LocationRaw = string.IsNullOrWhiteSpace(locationRaw) ? null : locationRaw.Trim(),
             DistrictRaw = string.IsNullOrWhiteSpace(districtRaw) ? null : districtRaw.Trim(),
-            CompanyRaw = string.IsNullOrWhiteSpace(companyRaw) ? null : companyRaw.Trim(),
             ActionRaw = actionRaw.Trim(),
             ActionNorm = TextNorm.NormalizeRequired(actionRaw),
             Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
@@ -129,10 +127,9 @@ public class Observation
         sb.Append(ActionNorm).Append('|');
         sb.Append(TextNorm.Normalize(LocationRaw) ?? "").Append('|');
         sb.Append(TextNorm.Normalize(DistrictRaw) ?? "").Append('|');
-        sb.Append(TextNorm.Normalize(CompanyRaw) ?? "").Append('|');
         sb.Append(TextNorm.Normalize(RmRaw) ?? "").Append('|');
         sb.Append(TextNorm.Normalize(PointRaw) ?? "").Append('|');
-        sb.Append(Layer?.ToString("0.####", CultureInfo.InvariantCulture) ?? "").Append('|');
+        sb.Append(TextNorm.Normalize(Layer) ?? "").Append('|');
 
         foreach (var p in Participants.OrderBy(x => x.Ordinal))
         {

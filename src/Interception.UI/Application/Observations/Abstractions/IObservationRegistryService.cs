@@ -4,7 +4,7 @@
 
 using Interception.UI.Application.Observations.Dtos;
 
-namespace Interception.UI.Application.Observations;
+namespace Interception.UI.Application.Observations.Abstractions;
 
 public interface IObservationRegistryService
 {

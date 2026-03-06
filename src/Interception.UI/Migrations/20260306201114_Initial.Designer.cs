@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Interception.UI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260304215704_Initial")]
+    [Migration("20260306201114_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -43,11 +43,6 @@ namespace Interception.UI.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("action_raw");
 
-                    b.Property<string>("CompanyRaw")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("company_raw");
-
                     b.Property<string>("ContentHash")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -72,9 +67,9 @@ namespace Interception.UI.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("district_raw");
 
-                    b.Property<decimal?>("Layer")
-                        .HasPrecision(10, 4)
-                        .HasColumnType("numeric(10,4)")
+                    b.Property<string>("Layer")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
                         .HasColumnName("layer");
 
                     b.Property<string>("LocationRaw")
