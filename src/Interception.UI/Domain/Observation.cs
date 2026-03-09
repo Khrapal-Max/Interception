@@ -1,10 +1,9 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Domain.Enums;
 using Interception.UI.Extensions;
-using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -79,7 +78,7 @@ public class Observation
         {
             ObservedDate = observedDate,
             DayPart = dayPart,
-            Layer = layer,
+            Layer = string.IsNullOrWhiteSpace(layer) ? null : layer.Trim(),
             RmRaw = string.IsNullOrWhiteSpace(rmRaw) ? null : rmRaw.Trim(),
             PointRaw = string.IsNullOrWhiteSpace(pointRaw) ? null : pointRaw.Trim(),
             LocationRaw = string.IsNullOrWhiteSpace(locationRaw) ? null : locationRaw.Trim(),
@@ -105,9 +104,10 @@ public class Observation
     {
         var nextOrdinal = ordinal ?? (Participants.Count == 0 ? 1 : Participants.Max(p => p.Ordinal) + 1);
 
-        // prevent duplicates by normalized label when known
+        // Для unknown дозволяємо кілька записів навіть із подібними ярликами.
+        // Заборона дублікатів працює лише для відомих осіб у межах одного observation.
         var norm = TextNorm.Normalize(labelRaw);
-        if (norm is not null && Participants.Any(p => p.LabelNorm == norm))
+        if (!isUnknown && norm is not null && Participants.Any(p => !p.IsUnknown && p.LabelNorm == norm))
             throw new InvalidOperationException($"Participant '{labelRaw}' already exists in this observation.");
 
         var p = new ObservationParticipant(Id, labelRaw, isUnknown, roleRaw, nextOrdinal);
@@ -120,7 +120,7 @@ public class Observation
 
     private string ComputeContentHash()
     {
-        // Canonical string: date|dayPart|actionNorm|locationNorm|districtNorm|companyNorm|rmNorm|pointNorm|layer|participants(sorted by ordinal)
+        // Canonical string: date|dayPart|actionNorm|locationNorm|districtNorm|rmNorm|pointNorm|layer|participants(sorted by ordinal)
         var sb = new StringBuilder();
         sb.Append(ObservedDate.ToString("yyyy-MM-dd")).Append('|');
         sb.Append((short)DayPart).Append('|');
@@ -133,8 +133,26 @@ public class Observation
 
         foreach (var p in Participants.OrderBy(x => x.Ordinal))
         {
-            sb.Append(p.IsUnknown ? "u:" : "k:");
-            sb.Append(p.LabelNorm ?? "").Append(';');
+            var roleNorm = TextNorm.Normalize(p.RoleRaw) ?? "";
+
+            if (p.IsUnknown)
+            {
+                // Для unknown не використовуємо label як identity-ознаку,
+                // бо "НВ 1"/"НВ 2" — це операторські ярлики, а не стабільна особа.
+                sb.Append("u:")
+                    .Append(p.Ordinal)
+                    .Append(':')
+                    .Append(roleNorm)
+                    .Append(';');
+
+                continue;
+            }
+
+            sb.Append("k:")
+                .Append(p.LabelNorm ?? "")
+                .Append(':')
+                .Append(roleNorm)
+                .Append(';');
         }
 
         var bytes = Encoding.UTF8.GetBytes(sb.ToString());

@@ -1,0 +1,70 @@
+/*-----------------------------------------------------------------------------
+  All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
+-----------------------------------------------------------------------------*/
+
+.observation-create-page {
+    min-height: calc(100vh - 7.5rem);
+}
+
+.observation-create-page .create-page-dropdown {
+    max-height: 16rem;
+    overflow-y: auto;
+    z-index: 1030;
+}
+
+.observation-create-page .compact-card .card-header {
+    font-weight: 600;
+}
+
+.observation-create-page .compact-note {
+    resize: vertical;
+    min-height: 4rem;
+}
+
+.observation-create-page .participant-compact-row {
+    background: #fff;
+}
+
+.observation-create-page .create-context-body {
+    overflow-y: auto;
+}
+
+.observation-create-page .list-group-item {
+    border-left: 0;
+    border-right: 0;
+}
+
+.observation-create-page code {
+    color: inherit;
+}
+
+@media (min-width: 1200px) {
+    .observation-create-page .create-page-layout {
+        min-height: calc(100vh - 11.5rem);
+    }
+
+    .observation-create-page .create-main-column {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .observation-create-page .compact-card {
+        flex: 0 0 auto;
+    }
+
+    .observation-create-page .create-context-column {
+        display: flex;
+    }
+
+    .observation-create-page .create-context-card {
+        width: 100%;
+        height: calc(100vh - 11.5rem);
+        position: sticky;
+        top: 1rem;
+    }
+
+    .observation-create-page .create-context-body {
+        height: calc(100vh - 15.5rem);
+    }
+}

@@ -24,53 +24,54 @@
                     else
                     {
                         <div class="row g-2">
-                            <div class="col-6 col-md-3">
+                            <div class="col-6 col-md-4 border">
                                 <div class="text-muted">Дата</div>
                                 <div><strong>@_dto.ObservedDate.ToString("yyyy-MM-dd")</strong> (@(_dto.DayPart == 2 ? "PM" : "AM"))</div>
                             </div>
-                            <div class="col-6 col-md-3">
+                            <div class="col-6 col-md-4 border">
                                 <div class="text-muted">Шар</div>
                                 <div>@(_dto.Layer ?? "—")</div>
                             </div>
-                            <div class="col-6 col-md-3">
+                            <div class="col-6 col-md-4 border">
                                 <div class="text-muted">Р/М</div>
                                 <div>@(_dto.RmRaw ?? "—")</div>
                             </div>
-                            <div class="col-6 col-md-3">
+                            <div class="col-6 col-md-4 border">
                                 <div class="text-muted">Точка</div>
                                 <div>@(_dto.PointRaw ?? "—")</div>
                             </div>
 
-                            <div class="col-6 col-md-4">
+                            <div class="col-6 col-md-4 border">
                                 <div class="text-muted">Локація</div>
                                 <div>@(_dto.LocationRaw ?? "—")</div>
                             </div>
-                            <div class="col-6 col-md-4">
-                                <div class="text-muted">Район</div>
+                            <div class="col-6 col-md-4 border">
+                                <div class="text-muted">Вектор сигналу</div>
                                 <div>@(_dto.DistrictRaw ?? "—")</div>
                             </div>
 
-                            <div class="col-12">
+                            <div class="col-12 border">
                                 <div class="text-muted">Дія</div>
                                 <div><strong>@_dto.ActionRaw</strong></div>
                             </div>
 
                             @if (!string.IsNullOrWhiteSpace(_dto.Note))
                             {
-                                <div class="col-12">
+                                <div class="col-12 border">
                                     <div class="text-muted">Примітка</div>
                                     <div class="border rounded p-2">@_dto.Note</div>
                                 </div>
                             }
 
-                            <div class="col-12 mt-2">
+                            <div class="col-12 mt-2 border">
                                 <div class="text-muted">Особи</div>
                                 <div class="table-responsive">
                                     <table class="table table-sm">
                                         <thead>
                                             <tr>
                                                 <th style="white-space:nowrap;">#</th>
-                                                <th>Позивний</th>
+                                                <th>Raw</th>
+                                                <th>Ефективний вузол</th>
                                                 <th style="white-space:nowrap;">НВ</th>
                                                 <th>Роль</th>
                                             </tr>
@@ -80,14 +81,18 @@
                                             {
                                                 <tr>
                                                     <td style="white-space:nowrap;">@p.Ordinal</td>
-                                                    <td>@(string.IsNullOrWhiteSpace(p.LabelRaw) ? "НВ" : p.LabelRaw)</td>
+                                                    <td>@(string.IsNullOrWhiteSpace(p.LabelRaw) ? $"НВ {p.Ordinal}" : p.LabelRaw)</td>
+                                                    <td>
+                                                        <div>@p.EffectiveDisplayName</div>
+                                                        <div class="small text-muted"><code>@p.EffectiveIdentityKey</code></div>
+                                                    </td>
                                                     <td style="white-space:nowrap;">@(p.IsUnknown ? "Так" : "Ні")</td>
                                                     <td>@(p.RoleRaw ?? "—")</td>
                                                 </tr>
                                             }
                                             @if (_dto.Participants.Count == 0)
                                             {
-                                                <tr><td colspan="4" class="text-muted">—</td></tr>
+                                                <tr><td colspan="5" class="text-muted">—</td></tr>
                                             }
                                         </tbody>
                                     </table>

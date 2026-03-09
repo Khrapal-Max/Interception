@@ -13,6 +13,7 @@ namespace Interception.UI.Components.Pages.Observations;
 public partial class ObservationsRegistry : ComponentBase
 {
     [Inject] public IObservationRegistryService RegistryService { get; set; } = default!;
+    [Inject] public NavigationManager Navigation { get; set; } = default!;
 
     private ObservationRegistryPageDto? _page;
     private bool _loading;
@@ -35,7 +36,6 @@ public partial class ObservationsRegistry : ComponentBase
 
     private bool IsFilterOpen => _activeDrawer == DrawerKind.Filter;
     private bool IsImportOpen => _activeDrawer == DrawerKind.Import;
-    private bool IsCreateOpen => _activeDrawer == DrawerKind.Create;
 
     protected override async Task OnInitializedAsync()
     {
@@ -110,7 +110,8 @@ public partial class ObservationsRegistry : ComponentBase
 
     private void OpenFilter() => _activeDrawer = DrawerKind.Filter;
     private void OpenImport() => _activeDrawer = DrawerKind.Import;
-    private void OpenCreate() => _activeDrawer = DrawerKind.Create;
+
+    private void OpenCreatePage() => Navigation.NavigateTo("/observations/create");
 
     private void CloseDrawer() => _activeDrawer = DrawerKind.None;
 

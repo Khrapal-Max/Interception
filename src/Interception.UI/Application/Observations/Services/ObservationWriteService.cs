@@ -6,7 +6,6 @@ using Interception.UI.Application.Observations.Abstractions;
 using Interception.UI.Application.Observations.Dtos;
 using Interception.UI.Domain;
 using Interception.UI.Infrastructure;
-using Interception.UI.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.UI.Application.Observations.Services;
@@ -19,58 +18,48 @@ public sealed class ObservationWriteService(IDbContextFactory<AppDbContext> dbFa
     {
         await using var db = _dbFactory.CreateDbContext();
 
-        // Normalize/sanitize user input here (UI should be dumb).
-        var actionRaw = (request.ActionRaw ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(actionRaw))
-            throw new ArgumentException("Поле 'Дія' є обов'язковим.", nameof(request));        
+        var action = NormalizeRequired(request.ActionRaw, "Action");
+        var layer = NormalizeOptional(request.Layer);
+        var rm = NormalizeOptional(request.RmRaw);
+        var point = NormalizeOptional(request.PointRaw);
+        var location = NormalizeOptional(request.LocationRaw);
+        var district = NormalizeOptional(request.DistrictRaw);
+        var note = NormalizeOptional(request.Note);
 
-        var normalizedParticipants = (request.Participants ?? [])
-            .Select(p =>
-            {
-                var label = Norm(p.LabelRaw);
-                var role = Norm(p.RoleRaw);
-
-                // Detect unknown by checkbox OR by "НВ"/"NV"/"unknown" label.
-                var labelNorm = TextNorm.Normalize(label);
-                var unknownByLabel = labelNorm is "нв" or "nv" or "unknown";
-                var isUnknown = p.IsUnknown || unknownByLabel;
-
-                // Canonical display for unknown.
-                if (isUnknown)
-                    label = "НВ";
-
-                // Skip completely empty rows (no signal at all).
-                if (label is null && role is null && !isUnknown)
-                    return null;
-
-                return new ObservationCreateParticipantDto(label, isUnknown, role);
-            })
-            .Where(x => x is not null)
-            .Select(x => x!)
-            .ToList();
-
-        // Build domain entity
         var obs = Observation.Create(
             request.ObservedDate,
             (Domain.Enums.DayPart)request.DayPart,
-            actionRaw,
-            layer: Norm(request.Layer),
-            rmRaw: Norm(request.RmRaw),
-            pointRaw: Norm(request.PointRaw),
-            locationRaw: Norm(request.LocationRaw),
-            districtRaw: Norm(request.DistrictRaw),
-            note: Norm(request.Note),
+            action,
+            layer: layer,
+            rmRaw: rm,
+            pointRaw: point,
+            locationRaw: location,
+            districtRaw: district,
+            companyRaw: null,
+            note: note,
             source: "manual",
             sourceFileId: null,
             sourceRow: null,
             createdBy: null);
 
-        if (normalizedParticipants.Count > 0)
+        if (request.Participants is not null)
         {
             var ord = 1;
-            foreach (var p in normalizedParticipants)
+            foreach (var p in request.Participants)
             {
-                obs.AddParticipant(p.LabelRaw, p.IsUnknown, p.RoleRaw, ord);
+                var label = NormalizeOptional(p.LabelRaw);
+
+                // Unknown визначається на бекенді, але operator raw-label зберігаємо як є.
+                // Не перетираємо "НВ 1" / "НВ 2" / "НВ 4" в одне значення "НВ".
+                var isUnknown = p.IsUnknown || IsUnknownLabel(label);
+
+                var role = NormalizeOptional(p.RoleRaw);
+
+                // Skip fully empty participant rows
+                if (label is null && role is null && !isUnknown)
+                    continue;
+
+                obs.AddParticipant(label, isUnknown, role, ord);
                 ord++;
             }
         }
@@ -82,13 +71,46 @@ public sealed class ObservationWriteService(IDbContextFactory<AppDbContext> dbFa
             await db.SaveChangesAsync(ct);
             return new ObservationCreateResultDto(obs.Id, IsDuplicate: false);
         }
-        catch (DbUpdateException ex)
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
         {
-            // Duplicate by ContentHash (unique index)
-            return new ObservationCreateResultDto(null, IsDuplicate: true);
+            // Unique violation on content_hash -> duplicate
+            return new ObservationCreateResultDto(Guid.Empty, IsDuplicate: true);
         }
     }
 
-    private static string? Norm(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
-}
+    private static string NormalizeRequired(string? value, string field)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException($"{field} is required.");
+        return value.Trim();
+    }
 
+    private static string? NormalizeOptional(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static bool IsUnknownLabel(string? label)
+    {
+        if (string.IsNullOrWhiteSpace(label)) return false;
+        var x = label.Trim();
+        return string.Equals(x, "НВ", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(x, "NV", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(x, "UNKNOWN", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(x, "UNK", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(x, "?", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsUniqueViolation(DbUpdateException ex)
+    {
+        var inner = ex.InnerException;
+        if (inner is null) return false;
+
+        var t = inner.GetType();
+        if (!t.Name.Contains("Postgres", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var prop = t.GetProperty("SqlState");
+        var sqlState = prop?.GetValue(inner) as string;
+
+        return string.Equals(sqlState, "23505", StringComparison.OrdinalIgnoreCase);
+    }
+}

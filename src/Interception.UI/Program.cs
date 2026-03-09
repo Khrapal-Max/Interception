@@ -28,7 +28,9 @@ builder.Services.AddDataProtection()
 
 builder.Services.AddScoped<ObservationImportService>();
 builder.Services.AddScoped<IObservationWriteService, ObservationWriteService>();
+builder.Services.AddScoped<IObservationLookupService, ObservationLookupService>();
 builder.Services.AddScoped<IObservationRegistryService, ObservationRegistryService>();
+
 
 var app = builder.Build();
 

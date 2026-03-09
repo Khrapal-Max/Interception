@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
@@ -11,6 +11,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<Observation> Observations { get; set; }
     public DbSet<ObservationParticipant> ObservationParticipants { get; set; }
+    public DbSet<UnknownCluster> UnknownClusters { get; set; }
+    public DbSet<UnknownClusterMember> UnknownClusterMembers { get; set; }
+    public DbSet<ResolvedActor> ResolvedActors { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -8,6 +8,5 @@ public enum DrawerKind
 {
     None = 0,
     Filter = 1,
-    Import = 2,
-    Create = 3
+    Import = 2
 }

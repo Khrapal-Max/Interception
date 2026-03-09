@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Interception.UI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260306201114_Initial")]
+    [Migration("20260308193522_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -174,11 +174,152 @@ namespace Interception.UI.Migrations
                     b.HasIndex("ObservationId", "LabelNorm")
                         .IsUnique()
                         .HasDatabaseName("ux_link_obs_participants_observation_label_norm")
-                        .HasFilter("label_norm is not null");
+                        .HasFilter("is_unknown = false and label_norm is not null");
 
                     b.ToTable("link_observation_participants", null, t =>
                         {
                             t.HasCheckConstraint("ck_link_obs_participants_ordinal", "ordinal >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("Interception.UI.Domain.ResolvedActor", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Callsign")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("callsign");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("note");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DisplayName")
+                        .HasDatabaseName("ix_link_resolved_actors_display_name");
+
+                    b.ToTable("link_resolved_actors", (string)null);
+                });
+
+            modelBuilder.Entity("Interception.UI.Domain.UnknownCluster", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("display_name");
+
+                    b.Property<Guid?>("ResolvedActorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resolved_actor_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ux_link_unknown_clusters_code");
+
+                    b.HasIndex("ResolvedActorId")
+                        .HasDatabaseName("ix_link_unknown_clusters_resolved_actor_id");
+
+                    b.ToTable("link_unknown_clusters", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_link_unknown_clusters_status", "status in ('open', 'resolved', 'merged', 'archived')");
+                        });
+                });
+
+            modelBuilder.Entity("Interception.UI.Domain.UnknownClusterMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AddedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("added_at_utc");
+
+                    b.Property<string>("AddedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("added_by");
+
+                    b.Property<decimal?>("Confidence")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)")
+                        .HasColumnName("confidence");
+
+                    b.Property<Guid>("ObservationParticipantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("observation_participant_id");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("UnknownClusterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("unknown_cluster_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ObservationParticipantId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_link_unknown_cluster_members_participant_id");
+
+                    b.HasIndex("UnknownClusterId")
+                        .HasDatabaseName("ix_link_unknown_cluster_members_cluster_id");
+
+                    b.ToTable("link_unknown_cluster_members", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_link_unknown_cluster_members_confidence", "confidence is null or (confidence >= 0 and confidence <= 1)");
                         });
                 });
 
@@ -193,9 +334,48 @@ namespace Interception.UI.Migrations
                     b.Navigation("Observation");
                 });
 
+            modelBuilder.Entity("Interception.UI.Domain.UnknownCluster", b =>
+                {
+                    b.HasOne("Interception.UI.Domain.ResolvedActor", "ResolvedActor")
+                        .WithMany("UnknownClusters")
+                        .HasForeignKey("ResolvedActorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ResolvedActor");
+                });
+
+            modelBuilder.Entity("Interception.UI.Domain.UnknownClusterMember", b =>
+                {
+                    b.HasOne("Interception.UI.Domain.ObservationParticipant", "ObservationParticipant")
+                        .WithMany()
+                        .HasForeignKey("ObservationParticipantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Interception.UI.Domain.UnknownCluster", "UnknownCluster")
+                        .WithMany("Members")
+                        .HasForeignKey("UnknownClusterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ObservationParticipant");
+
+                    b.Navigation("UnknownCluster");
+                });
+
             modelBuilder.Entity("Interception.UI.Domain.Observation", b =>
                 {
                     b.Navigation("Participants");
+                });
+
+            modelBuilder.Entity("Interception.UI.Domain.ResolvedActor", b =>
+                {
+                    b.Navigation("UnknownClusters");
+                });
+
+            modelBuilder.Entity("Interception.UI.Domain.UnknownCluster", b =>
+                {
+                    b.Navigation("Members");
                 });
 #pragma warning restore 612, 618
         }

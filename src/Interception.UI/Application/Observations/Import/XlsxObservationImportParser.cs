@@ -91,22 +91,22 @@ public sealed class XlsxObservationImportParser
             throw new InvalidOperationException("XLSX: не знайдено колонку 'дія' / 'action' у заголовку.");
 
         // participants columns: "особа 1..N" / "person 1..N"
-var participantCols = headers
-    .Select((h, i) => new HeaderCol(h, i))
-    .Where(x => x.Header.StartsWith("особа") || x.Header.StartsWith("person"))
-    .OrderBy(x => x.Number)
-    .ThenBy(x => x.Index)
-    .ToList();
+        var participantCols = headers
+            .Select((h, i) => new HeaderCol(h, i))
+            .Where(x => x.Header.StartsWith("особа") || x.Header.StartsWith("person"))
+            .OrderBy(x => x.Number)
+            .ThenBy(x => x.Index)
+            .ToList();
 
-// optional role columns: "роль 1..N" / "role 1..N"
-var roleCols = headers
-    .Select((h, i) => new HeaderCol(h, i))
-    .Where(x => x.Header.StartsWith("роль") || x.Header.StartsWith("role"))
-    .OrderBy(x => x.Number)
-    .ThenBy(x => x.Index)
-    .ToList();
+        // optional role columns: "роль 1..N" / "role 1..N"
+        var roleCols = headers
+            .Select((h, i) => new HeaderCol(h, i))
+            .Where(x => x.Header.StartsWith("роль") || x.Header.StartsWith("role"))
+            .OrderBy(x => x.Number)
+            .ThenBy(x => x.Index)
+            .ToList();
 
-var roleMap = BuildRoleMap(participantCols, roleCols);
+        var roleMap = BuildRoleMap(participantCols, roleCols);
 
         var colLayer = FindCol("шар", "layer");
         var colRm = FindCol("р/м", "rm");
@@ -143,31 +143,31 @@ var roleMap = BuildRoleMap(participantCols, roleCols);
             var note = Get(cells, colNote);
 
             var participants = new List<ObservationImportParticipant>();
-foreach (var pc in participantCols)
-{
-    var rawCell = pc.Index < cells.Count ? cells[pc.Index]?.Trim() : null;
-    if (string.IsNullOrWhiteSpace(rawCell))
-        continue;
+            foreach (var pc in participantCols)
+            {
+                var rawCell = pc.Index < cells.Count ? cells[pc.Index]?.Trim() : null;
+                if (string.IsNullOrWhiteSpace(rawCell))
+                    continue;
 
-    // If role is not provided in a dedicated column, allow formats:
-    // "КЛИМ (водій)", "КЛИМ - водій", "КЛИМ: водій"
-    var (labelRaw, roleFromCell) = TrySplitLabelAndRole(rawCell);
+                // If role is not provided in a dedicated column, allow formats:
+                // "КЛИМ (водій)", "КЛИМ - водій", "КЛИМ: водій"
+                var (labelRaw, roleFromCell) = TrySplitLabelAndRole(rawCell);
 
-    string? roleRaw = null;
-    if (roleMap.TryGetValue(pc.Index, out var roleCol) && roleCol >= 0 && roleCol < cells.Count)
-    {
-        var roleCell = cells[roleCol]?.Trim();
-        if (!string.IsNullOrWhiteSpace(roleCell))
-            roleRaw = roleCell;
-    }
+                string? roleRaw = null;
+                if (roleMap.TryGetValue(pc.Index, out var roleCol) && roleCol >= 0 && roleCol < cells.Count)
+                {
+                    var roleCell = cells[roleCol]?.Trim();
+                    if (!string.IsNullOrWhiteSpace(roleCell))
+                        roleRaw = roleCell;
+                }
 
-    roleRaw ??= roleFromCell;
+                roleRaw ??= roleFromCell;
 
-    var norm = Normalize(labelRaw);
-    var isUnknown = norm is "нв" or "nv" or "unknown" or "unk" or "?";
+                var norm = Normalize(labelRaw);
+                var isUnknown = norm is "нв" or "nv" or "unknown" or "unk" or "?";
 
-    participants.Add(new ObservationImportParticipant(labelRaw, isUnknown, roleRaw));
-}
+                participants.Add(new ObservationImportParticipant(labelRaw, isUnknown, roleRaw));
+            }
 
             rows.Add(new ObservationImportRow(
                 date, (short)part, action.Trim(), layer, rm, point, location, district, company, note, participants));
@@ -381,97 +381,97 @@ foreach (var pc in participantCols)
         return (DateOnly.FromDateTime(DateTime.UtcNow), part);
     }
 
-    
-private sealed record HeaderCol(string Header, int Index)
-{
-    public int Number { get; } = ExtractNumber(Header);
-}
 
-private static Dictionary<int, int> BuildRoleMap(
-    IReadOnlyList<HeaderCol> participantCols,
-    IReadOnlyList<HeaderCol> roleCols)
-{
-    // map: participant column index -> role column index
-    var map = new Dictionary<int, int>();
+    private sealed record HeaderCol(string Header, int Index)
+    {
+        public int Number { get; } = ExtractNumber(Header);
+    }
 
-    if (participantCols.Count == 0 || roleCols.Count == 0)
+    private static Dictionary<int, int> BuildRoleMap(
+        IReadOnlyList<HeaderCol> participantCols,
+        IReadOnlyList<HeaderCol> roleCols)
+    {
+        // map: participant column index -> role column index
+        var map = new Dictionary<int, int>();
+
+        if (participantCols.Count == 0 || roleCols.Count == 0)
+            return map;
+
+        // Build role lookup by extracted number
+        var roleByNum = new Dictionary<int, int>();
+        foreach (var rc in roleCols)
+        {
+            if (rc.Number != int.MaxValue && !roleByNum.ContainsKey(rc.Number))
+                roleByNum[rc.Number] = rc.Index;
+        }
+
+        foreach (var pc in participantCols)
+        {
+            // Pair by same number if present
+            if (pc.Number != int.MaxValue && roleByNum.TryGetValue(pc.Number, out var roleIndex))
+            {
+                map[pc.Index] = roleIndex;
+                continue;
+            }
+
+            // Fallback 1: role column immediately to the right with generic header ("роль"/"role")
+            var rightIndex = pc.Index + 1;
+            var rightRole = roleCols.FirstOrDefault(x => x.Index == rightIndex);
+            if (rightRole is not null && rightRole.Number == int.MaxValue)
+            {
+                map[pc.Index] = rightIndex;
+            }
+        }
+
+        // Fallback 2: if counts match, pair sequentially
+        if (map.Count == 0 && roleCols.Count == participantCols.Count)
+        {
+            for (var i = 0; i < participantCols.Count; i++)
+                map[participantCols[i].Index] = roleCols[i].Index;
+        }
+
         return map;
-
-    // Build role lookup by extracted number
-    var roleByNum = new Dictionary<int, int>();
-    foreach (var rc in roleCols)
-    {
-        if (rc.Number != int.MaxValue && !roleByNum.ContainsKey(rc.Number))
-            roleByNum[rc.Number] = rc.Index;
     }
 
-    foreach (var pc in participantCols)
+    private static (string labelRaw, string? roleRaw) TrySplitLabelAndRole(string raw)
     {
-        // Pair by same number if present
-        if (pc.Number != int.MaxValue && roleByNum.TryGetValue(pc.Number, out var roleIndex))
+        var s = raw.Trim();
+
+        // Parentheses form: "КЛИМ (водій)"
+        var open = s.LastIndexOf('(');
+        var close = s.LastIndexOf(')');
+        if (open >= 1 && close > open)
         {
-            map[pc.Index] = roleIndex;
-            continue;
+            var label = s[..open].Trim();
+            var role = s[(open + 1)..close].Trim();
+            if (!string.IsNullOrWhiteSpace(label) && !string.IsNullOrWhiteSpace(role))
+                return (label, role);
         }
 
-        // Fallback 1: role column immediately to the right with generic header ("роль"/"role")
-        var rightIndex = pc.Index + 1;
-        var rightRole = roleCols.FirstOrDefault(x => x.Index == rightIndex);
-        if (rightRole is not null && rightRole.Number == int.MaxValue)
+        // "label - role"
+        var dash = s.IndexOf(" - ", StringComparison.Ordinal);
+        if (dash > 0)
         {
-            map[pc.Index] = rightIndex;
+            var label = s[..dash].Trim();
+            var role = s[(dash + 3)..].Trim();
+            if (!string.IsNullOrWhiteSpace(label) && !string.IsNullOrWhiteSpace(role))
+                return (label, role);
         }
+
+        // "label: role"
+        var colon = s.IndexOf(": ", StringComparison.Ordinal);
+        if (colon > 0)
+        {
+            var label = s[..colon].Trim();
+            var role = s[(colon + 2)..].Trim();
+            if (!string.IsNullOrWhiteSpace(label) && !string.IsNullOrWhiteSpace(role))
+                return (label, role);
+        }
+
+        return (s, null);
     }
 
-    // Fallback 2: if counts match, pair sequentially
-    if (map.Count == 0 && roleCols.Count == participantCols.Count)
-    {
-        for (var i = 0; i < participantCols.Count; i++)
-            map[participantCols[i].Index] = roleCols[i].Index;
-    }
-
-    return map;
-}
-
-private static (string labelRaw, string? roleRaw) TrySplitLabelAndRole(string raw)
-{
-    var s = raw.Trim();
-
-    // Parentheses form: "КЛИМ (водій)"
-    var open = s.LastIndexOf('(');
-    var close = s.LastIndexOf(')');
-    if (open >= 1 && close > open)
-    {
-        var label = s[..open].Trim();
-        var role = s[(open + 1)..close].Trim();
-        if (!string.IsNullOrWhiteSpace(label) && !string.IsNullOrWhiteSpace(role))
-            return (label, role);
-    }
-
-    // "label - role"
-    var dash = s.IndexOf(" - ", StringComparison.Ordinal);
-    if (dash > 0)
-    {
-        var label = s[..dash].Trim();
-        var role = s[(dash + 3)..].Trim();
-        if (!string.IsNullOrWhiteSpace(label) && !string.IsNullOrWhiteSpace(role))
-            return (label, role);
-    }
-
-    // "label: role"
-    var colon = s.IndexOf(": ", StringComparison.Ordinal);
-    if (colon > 0)
-    {
-        var label = s[..colon].Trim();
-        var role = s[(colon + 2)..].Trim();
-        if (!string.IsNullOrWhiteSpace(label) && !string.IsNullOrWhiteSpace(role))
-            return (label, role);
-    }
-
-    return (s, null);
-}
-
-internal enum DayPart : short
+    internal enum DayPart : short
     {
         FirstHalf = 1,
         SecondHalf = 2

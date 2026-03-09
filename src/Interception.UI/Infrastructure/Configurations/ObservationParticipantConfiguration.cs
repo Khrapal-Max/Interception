@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
@@ -54,10 +54,10 @@ public sealed class ObservationParticipantConfiguration : IEntityTypeConfigurati
         b.HasIndex(x => x.LabelNorm)
             .HasDatabaseName("ix_link_obs_participants_label_norm");
 
-        // Унікальність учасника в межах одного observation — тільки для відомих (label_norm != null)
+        // Унікальність у межах одного observation — тільки для відомих осіб.
         b.HasIndex(x => new { x.ObservationId, x.LabelNorm })
             .IsUnique()
-            .HasFilter("label_norm is not null")
+            .HasFilter("is_unknown = false and label_norm is not null")
             .HasDatabaseName("ux_link_obs_participants_observation_label_norm");
     }
 }

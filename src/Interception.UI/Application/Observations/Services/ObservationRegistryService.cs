@@ -19,7 +19,6 @@ public sealed class ObservationRegistryService(IDbContextFactory<AppDbContext> d
     {
         await using var db = _dbFactory.CreateDbContext();
 
-        // IMPORTANT: do NOT Include() for Count() and do NOT materialize nested collections inside Select().
         var q = db.Set<Observation>()
             .AsNoTracking()
             .AsQueryable();
@@ -33,7 +32,6 @@ public sealed class ObservationRegistryService(IDbContextFactory<AppDbContext> d
         if (filter.DayPart is not null)
             q = q.Where(x => (short)x.DayPart == filter.DayPart.Value);
 
-        // normalized search
         var actionNorm = TextNorm.Normalize(filter.Action);
         if (actionNorm is not null)
             q = q.Where(x => x.ActionNorm.Contains(actionNorm));
@@ -57,7 +55,6 @@ public sealed class ObservationRegistryService(IDbContextFactory<AppDbContext> d
             q = q.Where(x => x.Participants.Any(p => unknownQuery ? p.IsUnknown : p.LabelNorm == personNorm));
         }
 
-        // newest first
         q = q.OrderByDescending(x => x.ObservedDate)
              .ThenByDescending(x => x.DayPart)
              .ThenByDescending(x => x.CreatedAtUtc);
@@ -70,6 +67,12 @@ public sealed class ObservationRegistryService(IDbContextFactory<AppDbContext> d
             .Include(x => x.Participants)
             .AsSplitQuery()
             .ToListAsync(ct);
+
+        var participants = pageEntities
+            .SelectMany(x => x.Participants)
+            .ToList();
+
+        var participantResolutionMap = await LoadResolutionMapAsync(db, participants.Select(x => x.Id).ToList(), ct);
 
         var items = pageEntities
             .Select(x => new ObservationRegistryItemDto(
@@ -86,7 +89,7 @@ public sealed class ObservationRegistryService(IDbContextFactory<AppDbContext> d
                 x.Participants.Count,
                 [.. x.Participants
                     .OrderBy(p => p.Ordinal)
-                    .Select(p => new ObservationParticipantDto(p.LabelRaw, p.IsUnknown, p.RoleRaw, p.Ordinal))]
+                    .Select(p => CreateParticipantDto(p, participantResolutionMap))]
             ))
             .ToList();
 
@@ -103,7 +106,10 @@ public sealed class ObservationRegistryService(IDbContextFactory<AppDbContext> d
             .AsSplitQuery()
             .FirstOrDefaultAsync(o => o.Id == id, ct);
 
-        if (x is null) return null;
+        if (x is null)
+            return null;
+
+        var participantResolutionMap = await LoadResolutionMapAsync(db, x.Participants.Select(p => p.Id).ToList(), ct);
 
         return new ObservationDetailsDto(
             x.Id,
@@ -124,7 +130,124 @@ public sealed class ObservationRegistryService(IDbContextFactory<AppDbContext> d
             x.CreatedBy,
             [.. x.Participants
                 .OrderBy(p => p.Ordinal)
-                .Select(p => new ObservationParticipantDto(p.LabelRaw, p.IsUnknown, p.RoleRaw, p.Ordinal))]
+                .Select(p => CreateParticipantDto(p, participantResolutionMap))]
         );
     }
+
+    /// <summary>
+    /// Завантажує шар резолюції для raw-учасників: participant → cluster → actor.
+    /// Якщо даних ще нема, query-шар коректно впаде у fallback-ідентичність.
+    /// </summary>
+    private static async Task<Dictionary<Guid, ParticipantResolutionReadModel>> LoadResolutionMapAsync(
+        AppDbContext db,
+        IReadOnlyCollection<Guid> participantIds,
+        CancellationToken ct)
+    {
+        if (participantIds.Count == 0)
+            return [];
+
+        var rows = await db.UnknownClusterMembers
+            .AsNoTracking()
+            .Where(x => participantIds.Contains(x.ObservationParticipantId))
+            .Select(x => new ParticipantResolutionReadModel(
+                x.ObservationParticipantId,
+                x.UnknownClusterId,
+                x.UnknownCluster.Code,
+                x.UnknownCluster.DisplayName,
+                x.UnknownCluster.ResolvedActorId,
+                x.UnknownCluster.ResolvedActor != null ? x.UnknownCluster.ResolvedActor.DisplayName : null))
+            .ToListAsync(ct);
+
+        return rows
+            .GroupBy(x => x.ObservationParticipantId)
+            .ToDictionary(x => x.Key, x => x.First());
+    }
+
+    /// <summary>
+    /// Обчислює ефективну ідентичність учасника без зміни raw-історії.
+    /// </summary>
+    private static ObservationParticipantDto CreateParticipantDto(
+        ObservationParticipant participant,
+        IReadOnlyDictionary<Guid, ParticipantResolutionReadModel> resolutionMap)
+    {
+        if (participant.IsUnknown && resolutionMap.TryGetValue(participant.Id, out var resolution))
+        {
+            if (resolution.ResolvedActorId is not null)
+            {
+                var actorDisplay = string.IsNullOrWhiteSpace(resolution.ResolvedActorDisplayName)
+                    ? resolution.ClusterDisplayName ?? resolution.ClusterCode
+                    : resolution.ResolvedActorDisplayName;
+
+                return new ObservationParticipantDto(
+                    participant.Id,
+                    participant.LabelRaw,
+                    participant.IsUnknown,
+                    participant.RoleRaw,
+                    participant.Ordinal,
+                    $"actor:{resolution.ResolvedActorId}",
+                    actorDisplay ?? $"Актор {resolution.ResolvedActorId}",
+                    resolution.UnknownClusterId,
+                    resolution.ClusterCode,
+                    resolution.ResolvedActorId,
+                    resolution.ResolvedActorDisplayName);
+            }
+
+            var clusterDisplay = resolution.ClusterDisplayName ?? resolution.ClusterCode ?? FallbackUnknownDisplay(participant);
+            return new ObservationParticipantDto(
+                participant.Id,
+                participant.LabelRaw,
+                participant.IsUnknown,
+                participant.RoleRaw,
+                participant.Ordinal,
+                $"cluster:{resolution.UnknownClusterId}",
+                clusterDisplay,
+                resolution.UnknownClusterId,
+                resolution.ClusterCode,
+                null,
+                null);
+        }
+
+        if (participant.IsUnknown)
+        {
+            return new ObservationParticipantDto(
+                participant.Id,
+                participant.LabelRaw,
+                participant.IsUnknown,
+                participant.RoleRaw,
+                participant.Ordinal,
+                $"unknown-participant:{participant.Id}",
+                FallbackUnknownDisplay(participant),
+                null,
+                null,
+                null,
+                null);
+        }
+
+        return new ObservationParticipantDto(
+            participant.Id,
+            participant.LabelRaw,
+            participant.IsUnknown,
+            participant.RoleRaw,
+            participant.Ordinal,
+            $"known:{participant.LabelNorm}",
+            participant.LabelRaw ?? participant.LabelNorm ?? $"known:{participant.Id}",
+            null,
+            null,
+            null,
+            null);
+    }
+
+    private static string FallbackUnknownDisplay(ObservationParticipant participant)
+        => string.IsNullOrWhiteSpace(participant.LabelRaw) ? $"НВ {participant.Ordinal}" : participant.LabelRaw!;
+
+    /// <summary>
+    /// Легка read-модель для переходу participant → cluster → actor.
+    /// </summary>
+    private sealed record ParticipantResolutionReadModel(
+        Guid ObservationParticipantId,
+        Guid UnknownClusterId,
+        string? ClusterCode,
+        string? ClusterDisplayName,
+        Guid? ResolvedActorId,
+        string? ResolvedActorDisplayName);
 }

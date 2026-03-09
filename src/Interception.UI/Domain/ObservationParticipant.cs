@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ public class ObservationParticipant
 
     /// <summary>
     /// Operator-entered label (callsign/name). Can be null/empty if unknown.
-    /// Example: "КЛИМ", "ТАШКЕНТ", "НВ".
+    /// Example: "КЛИМ", "ТАШКЕНТ", "НВ", "НВ 4".
     /// </summary>
     public string? LabelRaw { get; private set; }
 
@@ -29,7 +29,7 @@ public class ObservationParticipant
     public string? LabelNorm { get; private set; }
 
     /// <summary>
-    /// True when the participant is unknown (НВ).
+    /// True when the participant is unknown (НВ / НВ 1 / НВ 4 / тощо).
     /// </summary>
     public bool IsUnknown { get; private set; }
 
@@ -52,7 +52,7 @@ public class ObservationParticipant
         ObservationId = observationId;
         LabelRaw = string.IsNullOrWhiteSpace(labelRaw) ? null : labelRaw.Trim();
         LabelNorm = TextNorm.Normalize(LabelRaw);
-        IsUnknown = isUnknown || LabelNorm is null; // if label missing, treat as unknown
+        IsUnknown = isUnknown || LabelNorm is null; // якщо ярлик відсутній — це unknown
         RoleRaw = string.IsNullOrWhiteSpace(roleRaw) ? null : roleRaw.Trim();
         Ordinal = ordinal;
     }

@@ -43,11 +43,6 @@ main {
     color: rgba(0,0,0,0.78);
 }
 
-article.content {
-    padding-top: 1rem;
-    padding-bottom: 2rem;
-}
-
 /* Error UI - acceptable on light background */
 #blazor-error-ui {
     color-scheme: light only;

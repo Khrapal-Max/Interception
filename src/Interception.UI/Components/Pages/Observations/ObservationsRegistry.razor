@@ -13,7 +13,7 @@
             <button class="btn btn-sm btn-outline-secondary" @onclick="ResetAsync" disabled="@_loading">Reset</button>
             <button class="btn btn-sm btn-outline-secondary" @onclick="OpenFilter" disabled="@_loading">Filter</button>
             <button class="btn btn-sm btn-outline-secondary" @onclick="OpenImport" disabled="@_loading">Import</button>
-            <button class="btn btn-sm btn-outline-primary" @onclick="OpenCreate" disabled="@_loading">Create</button>
+            <button class="btn btn-sm btn-outline-primary" @onclick="OpenCreatePage" disabled="@_loading">Create</button>
         </div>
     </div>
 
@@ -111,4 +111,3 @@
 <!-- Drawers: only one is open at a time -->
 <ObservationFilterDrawer IsOpen="@IsFilterOpen" Draft="_filterDraft" OnApply="ApplyFilterAsync" OnClear="ClearFilterAsync" OnClose="CloseDrawer" />
 <ObservationImportDrawer IsOpen="@IsImportOpen" OnImported="OnImportedAsync" OnClose="CloseDrawer" />
-<ObservationCreateDrawer IsOpen="@IsCreateOpen" OnCreated="OnCreatedAsync" OnClose="CloseDrawer" />
