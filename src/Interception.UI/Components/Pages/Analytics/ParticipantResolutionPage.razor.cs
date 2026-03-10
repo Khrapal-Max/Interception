@@ -4,6 +4,8 @@
 
 using Interception.UI.Application.Analytics.Abstractions;
 using Interception.UI.Application.Analytics.Dtos;
+using Interception.UI.Application.Analytics.Enums;
+using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.UI.Components.Pages.Analytics;
@@ -16,6 +18,7 @@ public partial class ParticipantResolutionPage : ComponentBase
 {
     [Inject] public IAnalyticsParticipantResolutionService AnalyticsService { get; set; } = default!;
     [Inject] public NavigationManager Navigation { get; set; } = default!;
+    [Inject] public ToastService ToastService { get; set; } = default!;
 
     [Parameter] public Guid ParticipantId { get; set; }
 
@@ -26,8 +29,6 @@ public partial class ParticipantResolutionPage : ComponentBase
     protected bool _loading;
     protected bool _savingAction;
     protected bool _clusterLoading;
-    protected string? _error;
-    protected string? _message;
 
     protected string? _newClusterDisplayName;
     protected string? _reason;
@@ -55,7 +56,6 @@ public partial class ParticipantResolutionPage : ComponentBase
     protected async Task SearchClustersAsync()
     {
         _clusterLoading = true;
-        _error = null;
 
         try
         {
@@ -64,7 +64,7 @@ public partial class ParticipantResolutionPage : ComponentBase
         }
         catch (Exception ex)
         {
-            _error = ex.Message;
+            ToastService.Error(ex.Message);
         }
         finally
         {
@@ -80,7 +80,7 @@ public partial class ParticipantResolutionPage : ComponentBase
         await ExecuteActionAsync(async () =>
         {
             await AnalyticsService.CreateUnknownClusterAsync(_dto.ParticipantId, _newClusterDisplayName, _reason, CancellationToken.None);
-            _message = "Гипотезу створено.";
+            ToastService.Success("Гипотезу створено.");
         });
     }
 
@@ -92,7 +92,7 @@ public partial class ParticipantResolutionPage : ComponentBase
         await ExecuteActionAsync(async () =>
         {
             await AnalyticsService.AddToUnknownClusterAsync(_dto.ParticipantId, _selectedClusterId.Value, _reason, CancellationToken.None);
-            _message = "Учасника додано до existing cluster.";
+            ToastService.Success("Учасника додано до existing cluster.");
         });
     }
 
@@ -104,15 +104,13 @@ public partial class ParticipantResolutionPage : ComponentBase
         await ExecuteActionAsync(async () =>
         {
             await AnalyticsService.ResolveAsActorAsync(_dto.ParticipantId, _actorDisplayName ?? string.Empty, _actorCallsign, _actorNote, CancellationToken.None);
-            _message = "Учасника позначено як actor.";
+            ToastService.Success("Учасника позначено як actor.");
         });
     }
 
     private async Task ExecuteActionAsync(Func<Task> action)
     {
         _savingAction = true;
-        _error = null;
-        _message = null;
 
         try
         {
@@ -122,7 +120,7 @@ public partial class ParticipantResolutionPage : ComponentBase
         }
         catch (Exception ex)
         {
-            _error = ex.Message;
+            ToastService.Error(ex.Message);
         }
         finally
         {
@@ -133,7 +131,6 @@ public partial class ParticipantResolutionPage : ComponentBase
     private async Task LoadAsync()
     {
         _loading = true;
-        _error = null;
 
         try
         {
@@ -143,7 +140,7 @@ public partial class ParticipantResolutionPage : ComponentBase
         }
         catch (Exception ex)
         {
-            _error = ex.Message;
+            ToastService.Error(ex.Message);
         }
         finally
         {
@@ -159,15 +156,5 @@ public partial class ParticipantResolutionPage : ComponentBase
         _actorDisplayName = null;
         _actorCallsign = null;
         _actorNote = null;
-    }
-
-    /// <summary>
-    /// Поточна дія аналітика на сторінці резолюції.
-    /// </summary>
-    protected enum ResolutionAction
-    {
-        CreateCluster,
-        AddToCluster,
-        ResolveActor
     }
 }

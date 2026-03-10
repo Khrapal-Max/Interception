@@ -16,11 +16,6 @@
         </div>
     </div>
 
-    @if (!string.IsNullOrWhiteSpace(_error))
-    {
-        <div class="alert alert-danger py-2 px-3 mb-2 rounded-0">@_error</div>
-    }
-
     @if (_duplicate)
     {
         <div class="alert alert-warning py-2 px-3 mb-2 rounded-0">Дублікат: такий запис вже існує.</div>

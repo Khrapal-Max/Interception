@@ -6,6 +6,7 @@ using Interception.UI.Application.Observations.Abstractions;
 using Interception.UI.Application.Observations.Dtos;
 using Interception.UI.Application.Observations.Enums;
 using Interception.UI.Application.Observations.Models;
+using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.UI.Components.Pages.Observations;
@@ -14,10 +15,10 @@ public partial class ObservationsRegistry : ComponentBase
 {
     [Inject] public IObservationRegistryService RegistryService { get; set; } = default!;
     [Inject] public NavigationManager Navigation { get; set; } = default!;
+    [Inject] public ToastService ToastService { get; set; } = default!;
 
     private ObservationRegistryPageDto? _page;
     private bool _loading;
-    private string? _error;
 
     private int _pageIndex = 0;
 
@@ -44,7 +45,6 @@ public partial class ObservationsRegistry : ComponentBase
 
     private async Task SearchAsync()
     {
-        _error = null;
         _loading = true;
         StateHasChanged();
 
@@ -55,7 +55,7 @@ public partial class ObservationsRegistry : ComponentBase
         }
         catch (Exception ex)
         {
-            _error = ex.Message;
+            ToastService.Error(ex.Message);
         }
         finally
         {
@@ -138,5 +138,4 @@ public partial class ObservationsRegistry : ComponentBase
         _pageIndex = 0;
         await SearchAsync();
     }
-
 }

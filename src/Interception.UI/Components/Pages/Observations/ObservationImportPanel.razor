@@ -26,11 +26,6 @@
             </div>
         </div>
 
-        @if (!string.IsNullOrWhiteSpace(_error))
-        {
-            <div class="alert alert-danger mt-3">@_error</div>
-        }
-
         @if (_result is not null)
         {
             <div class="alert alert-info mt-2">

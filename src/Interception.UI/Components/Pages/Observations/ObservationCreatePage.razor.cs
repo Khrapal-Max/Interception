@@ -4,6 +4,7 @@
 
 using Interception.UI.Application.Observations.Abstractions;
 using Interception.UI.Application.Observations.Dtos;
+using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
@@ -22,6 +23,7 @@ public partial class ObservationCreatePage : ComponentBase, IDisposable
     [Inject] public IObservationWriteService WriteService { get; set; } = default!;
     [Inject] public IObservationLookupService LookupService { get; set; } = default!;
     [Inject] public NavigationManager Navigation { get; set; } = default!;
+    [Inject] public ToastService ToastService { get; set; } = default!;
 
     private DateTime _date = DateTime.Today;
     private short _dayPart = 1;
@@ -47,7 +49,6 @@ public partial class ObservationCreatePage : ComponentBase, IDisposable
     private bool _saving;
     private bool _duplicate;
     private bool _contextLoading;
-    private string? _error;
 
     private CancellationTokenSource? _layerCts;
     private CancellationTokenSource? _districtCts;
@@ -365,21 +366,23 @@ public partial class ObservationCreatePage : ComponentBase, IDisposable
         }
     }
 
-    private string GetContextBadgeClass(string relationType) => relationType switch
+    private static string GetContextBadgeClass(string relationType)
     {
-        "direct" => "text-bg-success",
-        "same-action" => "text-bg-warning",
-        _ => "text-bg-secondary"
-    };
+        return relationType switch
+        {
+            "direct" => "text-bg-success",
+            "same-action" => "text-bg-warning",
+            _ => "text-bg-secondary"
+        };
+    }
 
     private async Task SaveAsync()
     {
-        _error = null;
         _duplicate = false;
 
         if (string.IsNullOrWhiteSpace(_actionRaw))
         {
-            _error = "Поле 'Дія' є обов'язковим.";
+            ToastService.Warning("Поле 'Дія' є обов'язковим.");
             return;
         }
 
@@ -397,10 +400,10 @@ public partial class ObservationCreatePage : ComponentBase, IDisposable
                 LocationRaw: string.IsNullOrWhiteSpace(_locationRaw) ? null : _locationRaw.Trim(),
                 DistrictRaw: string.IsNullOrWhiteSpace(_districtRaw) ? null : _districtRaw.Trim(),
                 Note: string.IsNullOrWhiteSpace(_note) ? null : _note.Trim(),
-                Participants: _participants.Select(p => new ObservationCreateParticipantDto(
+                Participants: [.. _participants.Select(p => new ObservationCreateParticipantDto(
                     p.LabelRaw,
                     p.IsUnknown,
-                    p.RoleRaw)).ToList());
+                    p.RoleRaw))]);
 
             var result = await WriteService.CreateAsync(req, CancellationToken.None);
 
@@ -414,7 +417,7 @@ public partial class ObservationCreatePage : ComponentBase, IDisposable
         }
         catch (Exception ex)
         {
-            _error = ex.Message;
+            ToastService.Error(ex.Message);
         }
         finally
         {

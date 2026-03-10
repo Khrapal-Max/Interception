@@ -1,0 +1,16 @@
+﻿<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 2000;">
+    @foreach (var t in _toasts)
+    {
+        <div class="toast show mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <span class="@IconClass(t.Kind) me-2"></span>
+                <strong class="me-auto">@t.Title</strong>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="() => Remove(t)"></button>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(t.Body))
+            {
+                <div class="toast-body text-white">@t.Body</div>
+            }
+        </div>
+    }
+</div>

@@ -7,6 +7,7 @@ using Interception.UI.Application.Analytics.Services;
 using Interception.UI.Application.Observations.Abstractions;
 using Interception.UI.Application.Observations.Import;
 using Interception.UI.Application.Observations.Services;
+using Interception.UI.Application.Toasts;
 using Interception.UI.Components;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
@@ -28,7 +29,9 @@ builder.Services.AddDbContextFactory<AppDbContext>(options =>
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo("/data-protection-keys"));
 
+builder.Services.AddScoped<ToastService>();
 builder.Services.AddScoped<ObservationImportService>();
+
 builder.Services.AddScoped<IObservationWriteService, ObservationWriteService>();
 builder.Services.AddScoped<IObservationLookupService, ObservationLookupService>();
 builder.Services.AddScoped<IObservationRegistryService, ObservationRegistryService>();

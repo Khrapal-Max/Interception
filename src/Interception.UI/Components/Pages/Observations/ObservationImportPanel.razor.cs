@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Observations.Import;
+using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 
@@ -11,12 +12,12 @@ namespace Interception.UI.Components.Pages.Observations;
 public partial class ObservationImportPanel : ComponentBase
 {
     [Inject] public ObservationImportService ImportService { get; set; } = default!;
+    [Inject] public ToastService ToastService { get; set; } = default!;
 
     [Parameter] public EventCallback OnImported { get; set; }
 
     private IBrowserFile? _selectedFile;
     private bool _importing;
-    private string? _error;
     private ObservationImportResult? _result;
 
     private int _firstRowNumber = 2;
@@ -24,7 +25,6 @@ public partial class ObservationImportPanel : ComponentBase
     // NOTE: Make it async to ensure UI re-renders reliably after selecting a file
     private async Task OnFileSelected(InputFileChangeEventArgs e)
     {
-        _error = null;
         _result = null;
 
         // If user picks a file while import was running, unlock UI.
@@ -45,7 +45,7 @@ public partial class ObservationImportPanel : ComponentBase
         var name = _selectedFile.Name ?? string.Empty;
         if (!name.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
         {
-            _error = "Потрібен файл Excel формату .xlsx";
+            ToastService.Warning("Потрібен файл Excel формату .xlsx");
             return false;
         }
 
@@ -63,7 +63,6 @@ public partial class ObservationImportPanel : ComponentBase
             return;
         }
 
-        _error = null;
         _result = null;
         _importing = true;
 
@@ -87,7 +86,7 @@ public partial class ObservationImportPanel : ComponentBase
         }
         catch (Exception ex)
         {
-            _error = ex.Message;
+            ToastService.Error(ex.Message);
         }
         finally
         {
