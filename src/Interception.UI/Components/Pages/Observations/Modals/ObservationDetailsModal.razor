@@ -23,7 +23,7 @@
                     }
                     else
                     {
-                        <div class="row g-2">
+                        <div class="row g-1">
                             <div class="col-6 col-md-4 border">
                                 <div class="text-muted">Дата</div>
                                 <div><strong>@_dto.ObservedDate.ToString("yyyy-MM-dd")</strong> (@(_dto.DayPart == 2 ? "PM" : "AM"))</div>
@@ -70,10 +70,11 @@
                                         <thead>
                                             <tr>
                                                 <th style="white-space:nowrap;">#</th>
-                                                <th>Raw</th>
-                                                <th>Ефективний вузол</th>
+                                                <th>ОСОБА</th>
+                                                <th>Гипотеза</th>
                                                 <th style="white-space:nowrap;">НВ</th>
                                                 <th>Роль</th>
+                                                <th class="text-end">Аналітика</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -88,11 +89,14 @@
                                                     </td>
                                                     <td style="white-space:nowrap;">@(p.IsUnknown ? "Так" : "Ні")</td>
                                                     <td>@(p.RoleRaw ?? "—")</td>
+                                                    <td class="text-end">
+                                                        <a class="btn btn-success btn-sm rounded-0" href="@($"/analytics/participants/{p.Id}")">Ідентифікувати</a>
+                                                    </td>
                                                 </tr>
                                             }
                                             @if (_dto.Participants.Count == 0)
                                             {
-                                                <tr><td colspan="5" class="text-muted">—</td></tr>
+                                                <tr><td colspan="6" class="text-muted">—</td></tr>
                                             }
                                         </tbody>
                                     </table>

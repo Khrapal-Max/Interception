@@ -53,4 +53,35 @@ public sealed class ResolvedActor
     private ResolvedActor()
     {
     }
+
+    /// <summary>
+    /// Створює встановлену особу для аналітичної резолюції.
+    /// </summary>
+    public static ResolvedActor Create(
+        Guid id,
+        string kind,
+        string displayName,
+        string? callsign,
+        string? note,
+        DateTime createdAtUtc,
+        string? createdBy)
+    {
+        if (id == Guid.Empty)
+            throw new ArgumentException("Actor id is required.", nameof(id));
+        if (string.IsNullOrWhiteSpace(kind))
+            throw new ArgumentException("Actor kind is required.", nameof(kind));
+        if (string.IsNullOrWhiteSpace(displayName))
+            throw new ArgumentException("Actor display name is required.", nameof(displayName));
+
+        return new ResolvedActor
+        {
+            Id = id,
+            Kind = kind.Trim(),
+            DisplayName = displayName.Trim(),
+            Callsign = string.IsNullOrWhiteSpace(callsign) ? null : callsign.Trim(),
+            Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+            CreatedAtUtc = createdAtUtc,
+            CreatedBy = string.IsNullOrWhiteSpace(createdBy) ? null : createdBy.Trim()
+        };
+    }
 }

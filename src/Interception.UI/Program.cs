@@ -2,6 +2,8 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
+using Interception.UI.Application.Analytics.Abstractions;
+using Interception.UI.Application.Analytics.Services;
 using Interception.UI.Application.Observations.Abstractions;
 using Interception.UI.Application.Observations.Import;
 using Interception.UI.Application.Observations.Services;
@@ -30,6 +32,7 @@ builder.Services.AddScoped<ObservationImportService>();
 builder.Services.AddScoped<IObservationWriteService, ObservationWriteService>();
 builder.Services.AddScoped<IObservationLookupService, ObservationLookupService>();
 builder.Services.AddScoped<IObservationRegistryService, ObservationRegistryService>();
+builder.Services.AddScoped<IAnalyticsParticipantResolutionService, AnalyticsParticipantResolutionService>();
 
 
 var app = builder.Build();

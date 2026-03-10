@@ -58,4 +58,50 @@ public sealed class UnknownClusterMember
     private UnknownClusterMember()
     {
     }
+
+    /// <summary>
+    /// Створює нову прив'язку учасника до unknown-кластера.
+    /// </summary>
+    public static UnknownClusterMember Create(
+        Guid id,
+        Guid unknownClusterId,
+        Guid observationParticipantId,
+        string? reason,
+        DateTime addedAtUtc,
+        string? addedBy,
+        decimal? confidence = null)
+    {
+        if (id == Guid.Empty)
+            throw new ArgumentException("Member id is required.", nameof(id));
+        if (unknownClusterId == Guid.Empty)
+            throw new ArgumentException("Unknown cluster id is required.", nameof(unknownClusterId));
+        if (observationParticipantId == Guid.Empty)
+            throw new ArgumentException("Observation participant id is required.", nameof(observationParticipantId));
+
+        return new UnknownClusterMember
+        {
+            Id = id,
+            UnknownClusterId = unknownClusterId,
+            ObservationParticipantId = observationParticipantId,
+            Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim(),
+            AddedAtUtc = addedAtUtc,
+            AddedBy = string.IsNullOrWhiteSpace(addedBy) ? null : addedBy.Trim(),
+            Confidence = confidence
+        };
+    }
+
+    /// <summary>
+    /// Переносить прив'язку в інший кластер та оновлює супровідні дані.
+    /// </summary>
+    public void MoveToCluster(Guid unknownClusterId, string? reason, DateTime addedAtUtc, string? addedBy, decimal? confidence = null)
+    {
+        if (unknownClusterId == Guid.Empty)
+            throw new ArgumentException("Unknown cluster id is required.", nameof(unknownClusterId));
+
+        UnknownClusterId = unknownClusterId;
+        Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+        AddedAtUtc = addedAtUtc;
+        AddedBy = string.IsNullOrWhiteSpace(addedBy) ? null : addedBy.Trim();
+        Confidence = confidence;
+    }
 }

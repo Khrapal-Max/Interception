@@ -13,7 +13,7 @@ public sealed class UnknownCluster
     /// <summary>
     /// Ідентифікатор кластера.
     /// </summary>
-    public Guid Id { get; private set; } = Guid.NewGuid();
+    public Guid Id { get; private set; }
 
     /// <summary>
     /// Стабільний код кластера, напр. UNK-000123.
@@ -57,5 +57,38 @@ public sealed class UnknownCluster
 
     private UnknownCluster()
     {
+    }
+
+    /// <summary>
+    /// Створює новий unknown-кластер.
+    /// </summary>
+    public static UnknownCluster Create(Guid id, string code, string? displayName, DateTime createdAtUtc, string? createdBy)
+    {
+        if (id == Guid.Empty)
+            throw new ArgumentException("Cluster id is required.", nameof(id));
+        if (string.IsNullOrWhiteSpace(code))
+            throw new ArgumentException("Cluster code is required.", nameof(code));
+
+        return new UnknownCluster
+        {
+            Id = id,
+            Code = code.Trim(),
+            DisplayName = string.IsNullOrWhiteSpace(displayName) ? null : displayName.Trim(),
+            Status = "open",
+            CreatedAtUtc = createdAtUtc,
+            CreatedBy = string.IsNullOrWhiteSpace(createdBy) ? null : createdBy.Trim()
+        };
+    }
+
+    /// <summary>
+    /// Позначає кластер як резолвлений у встановлену особу.
+    /// </summary>
+    public void ResolveToActor(Guid actorId)
+    {
+        if (actorId == Guid.Empty)
+            throw new ArgumentException("Actor id is required.", nameof(actorId));
+
+        ResolvedActorId = actorId;
+        Status = "resolved";
     }
 }
