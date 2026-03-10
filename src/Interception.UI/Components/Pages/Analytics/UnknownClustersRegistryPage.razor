@@ -1,0 +1,94 @@
+@page "/analytics/clusters"
+
+<PageTitle>Гипотези</PageTitle>
+
+<div class="card shadow-sm rounded-0">
+    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <strong>Гипотези (кластери) щодо невизначених осіб</strong>
+            <div class="small text-muted">Реєстр аналітичних кластерів із прив'язаними raw-учасниками.</div>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <input class="form-control form-control-sm rounded-0"
+                   style="width: 16rem;"
+                   @bind="_query"
+                   @bind:event="oninput"
+                   placeholder="Код, назва або встановлена особа" />
+
+            <select class="form-select form-select-sm rounded-0" style="width: 12rem;" @bind="_status">
+                <option value="">Усі статуси</option>
+                <option value="open">Відкритий</option>
+                <option value="resolved">Резолвлений</option>
+                <option value="merged">Об'єднаний</option>
+                <option value="archived">Архівний</option>
+            </select>
+
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-0" @onclick="ResetAsync" disabled="@_loading">
+                Скинути
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary rounded-0" @onclick="SearchAsync" disabled="@_loading">
+                Пошук
+            </button>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Код</th>
+                        <th>Назва</th>
+                        <th>Статус</th>
+                        <th class="text-end">Учасників</th>
+                        <th>Остання поява</th>
+                        <th>Встановлена особа</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (_loading)
+                    {
+                        <tr>
+                            <td colspan="7" class="text-muted">Завантаження…</td>
+                        </tr>
+                    }
+                    else if (_page is null || _page.Items.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="7" class="text-muted">Кластери не знайдено.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in _page.Items)
+                        {
+                            <tr>
+                                <td class="fw-semibold text-nowrap">@item.Code</td>
+                                <td>@(string.IsNullOrWhiteSpace(item.DisplayName) ? "—" : item.DisplayName)</td>
+                                <td>
+                                    <span class="badge rounded-0 @GetStatusBadgeClass(item.Status)">@GetStatusText(item.Status)</span>
+                                </td>
+                                <td class="text-end">@item.ParticipantsCount</td>
+                                <td class="text-nowrap">@(item.LastSeenDate?.ToString("dd.MM.yyyy") ?? "—")</td>
+                                <td>@(string.IsNullOrWhiteSpace(item.LinkedActorDisplayName) ? "—" : item.LinkedActorDisplayName)</td>
+                                <td class="text-end text-muted small">Етап 2</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
+            <div class="text-muted small">Усього: @_page?.Total</div>
+
+            <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-secondary rounded-0" @onclick="PrevPageAsync" disabled="@(!CanPrev || _loading)">Назад</button>
+                <button type="button" class="btn btn-outline-secondary rounded-0" disabled>@($"{_pageIndex + 1} / {TotalPages}")</button>
+                <button type="button" class="btn btn-outline-secondary rounded-0" @onclick="NextPageAsync" disabled="@(!CanNext || _loading)">Вперед</button>
+            </div>
+        </div>
+    </div>
+</div>

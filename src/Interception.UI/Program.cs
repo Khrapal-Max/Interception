@@ -35,7 +35,9 @@ builder.Services.AddScoped<ObservationImportService>();
 builder.Services.AddScoped<IObservationWriteService, ObservationWriteService>();
 builder.Services.AddScoped<IObservationLookupService, ObservationLookupService>();
 builder.Services.AddScoped<IObservationRegistryService, ObservationRegistryService>();
+
 builder.Services.AddScoped<IAnalyticsParticipantResolutionService, AnalyticsParticipantResolutionService>();
+builder.Services.AddScoped<IAnalyticsUnknownClusterRegistryService, AnalyticsUnknownClusterRegistryService>();
 
 
 var app = builder.Build();
