@@ -93,15 +93,26 @@ public sealed class UnknownClusterMember
     /// <summary>
     /// Переносить прив'язку в інший кластер та оновлює супровідні дані.
     /// </summary>
-    public void MoveToCluster(Guid unknownClusterId, string? reason, DateTime addedAtUtc, string? addedBy, decimal? confidence = null)
+    public void MoveToCluster(
+        Guid unknownClusterId,
+        string? reason = null,
+        DateTime? addedAtUtc = null,
+        string? addedBy = null,
+        decimal? confidence = null)
     {
         if (unknownClusterId == Guid.Empty)
-            throw new ArgumentException("Unknown cluster id is required.", nameof(unknownClusterId));
+            throw new ArgumentException("Cluster id is required.", nameof(unknownClusterId));
 
         UnknownClusterId = unknownClusterId;
         Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
-        AddedAtUtc = addedAtUtc;
-        AddedBy = string.IsNullOrWhiteSpace(addedBy) ? null : addedBy.Trim();
-        Confidence = confidence;
+
+        if (addedAtUtc.HasValue)
+            AddedAtUtc = addedAtUtc.Value;
+
+        if (addedBy is not null)
+            AddedBy = string.IsNullOrWhiteSpace(addedBy) ? null : addedBy.Trim();
+
+        if (confidence.HasValue)
+            Confidence = confidence;
     }
 }

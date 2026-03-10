@@ -38,6 +38,7 @@ builder.Services.AddScoped<IObservationRegistryService, ObservationRegistryServi
 
 builder.Services.AddScoped<IAnalyticsParticipantResolutionService, AnalyticsParticipantResolutionService>();
 builder.Services.AddScoped<IAnalyticsUnknownClusterRegistryService, AnalyticsUnknownClusterRegistryService>();
+builder.Services.AddScoped<IAnalyticsUnknownClusterDetailsService, AnalyticsUnknownClusterDetailsService>();
 
 
 var app = builder.Build();

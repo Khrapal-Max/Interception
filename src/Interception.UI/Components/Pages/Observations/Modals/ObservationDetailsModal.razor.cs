@@ -4,6 +4,7 @@
 
 using Interception.UI.Application.Observations.Abstractions;
 using Interception.UI.Application.Observations.Dtos;
+using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.UI.Components.Pages.Observations.Modals;
@@ -11,13 +12,14 @@ namespace Interception.UI.Components.Pages.Observations.Modals;
 public partial class ObservationDetailsModal : ComponentBase
 {
     [Inject] public IObservationRegistryService RegistryService { get; set; } = default!;
+
+    [Inject] public ToastService ToastService { get; set; } = default!;
     [Parameter] public Guid? ObservationId { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
     private Guid? _loadedId;
     private ObservationDetailsDto? _dto;
     private bool _loading;
-    private string? _error;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -25,7 +27,6 @@ public partial class ObservationDetailsModal : ComponentBase
         {
             _loadedId = null;
             _dto = null;
-            _error = null;
             _loading = false;
             return;
         }
@@ -35,7 +36,6 @@ public partial class ObservationDetailsModal : ComponentBase
 
         _loadedId = ObservationId;
         _dto = null;
-        _error = null;
         _loading = true;
 
         try
@@ -44,7 +44,7 @@ public partial class ObservationDetailsModal : ComponentBase
         }
         catch (Exception ex)
         {
-            _error = ex.Message;
+            ToastService.Error(ex.Message);
         }
         finally
         {
@@ -56,7 +56,6 @@ public partial class ObservationDetailsModal : ComponentBase
     {
         _loadedId = null;
         _dto = null;
-        _error = null;
         _loading = false;
 
         if (OnClose.HasDelegate)
