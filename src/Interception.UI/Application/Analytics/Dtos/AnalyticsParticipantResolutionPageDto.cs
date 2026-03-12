@@ -25,6 +25,9 @@ public sealed record AnalyticsParticipantResolutionPageDto(
     Guid? UnknownClusterId,
     string? UnknownClusterCode,
     string? UnknownClusterDisplayName,
+    string? HypothesisRole,
+    string? ArchiveReason,
     Guid? ResolvedActorId,
     string? ResolvedActorDisplayName,
+    string? ConfirmedRole,
     IReadOnlyList<AnalyticsRelatedParticipantDto> RelatedParticipants);

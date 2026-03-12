@@ -26,6 +26,11 @@ public sealed class ResolvedActor
     public string DisplayName { get; private set; } = default!;
 
     /// <summary>
+    /// Підтверджена роль особи.
+    /// </summary>
+    public string? Role { get; private set; }
+
+    /// <summary>
     /// Опціональний позивний або короткий ідентифікатор.
     /// </summary>
     public string? Callsign { get; private set; }
@@ -61,6 +66,7 @@ public sealed class ResolvedActor
         Guid id,
         string kind,
         string displayName,
+        string? role,
         string? callsign,
         string? note,
         DateTime createdAtUtc,
@@ -78,10 +84,16 @@ public sealed class ResolvedActor
             Id = id,
             Kind = kind.Trim(),
             DisplayName = displayName.Trim(),
+            Role = string.IsNullOrWhiteSpace(role) ? null : role.Trim(),
             Callsign = string.IsNullOrWhiteSpace(callsign) ? null : callsign.Trim(),
             Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
             CreatedAtUtc = createdAtUtc,
             CreatedBy = string.IsNullOrWhiteSpace(createdBy) ? null : createdBy.Trim()
         };
+    }
+
+    public void SetRole(string? role)
+    {
+        Role = string.IsNullOrWhiteSpace(role) ? null : role.Trim();
     }
 }

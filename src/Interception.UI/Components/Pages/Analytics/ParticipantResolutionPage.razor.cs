@@ -11,49 +11,41 @@ using Microsoft.AspNetCore.Components;
 namespace Interception.UI.Components.Pages.Analytics;
 
 /// <summary>
-/// Окрема аналітична сторінка для резолюції raw-учасника observation.
-/// Не викликається з modal/drawer-ланцюга оператора, а працює як самостійна page.
+/// Аналітична сторінка роботи з raw-учасником observation.
 /// </summary>
 public partial class ParticipantResolutionPage : ComponentBase
 {
-    [Inject] public IAnalyticsParticipantResolutionService AnalyticsService { get; set; } = default!;
-    [Inject] public NavigationManager Navigation { get; set; } = default!;
+    [Inject] public IAnalyticsParticipantResolutionService ResolutionService { get; set; } = default!;
     [Inject] public ToastService ToastService { get; set; } = default!;
 
     [Parameter] public Guid ParticipantId { get; set; }
 
     protected AnalyticsParticipantResolutionPageDto? _dto;
     protected readonly List<AnalyticsUnknownClusterLookupDto> _clusters = [];
-    protected ResolutionAction CurrentAction { get; set; } = ResolutionAction.CreateCluster;
 
     protected bool _loading;
     protected bool _savingAction;
     protected bool _clusterLoading;
 
-    protected string? _newClusterDisplayName;
+    protected ParticipantAction CurrentAction { get; set; } = ParticipantAction.CreateHypothesis;
+
+    protected string? _newHypothesisName;
+    protected string? _hypothesisRole;
+    protected string? _confirmedRole;
     protected string? _reason;
     protected string? _clusterSearch;
     protected Guid? _selectedClusterId;
+
     protected string? _actorDisplayName;
     protected string? _actorCallsign;
     protected string? _actorNote;
 
-    /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
         await LoadAsync();
     }
 
-    protected Task NavigateToObservationAsync()
-    {
-        Navigation.NavigateTo("/observations");
-        return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Перемикає поточну дію аналітика та очищує проміжний стан форми.
-    /// </summary>
-    protected async Task SetCurrentActionAsync(ResolutionAction action)
+    protected async Task SetCurrentActionAsync(ParticipantAction action)
     {
         if (CurrentAction == action)
             return;
@@ -63,7 +55,7 @@ public partial class ParticipantResolutionPage : ComponentBase
         _clusters.Clear();
 
         var term = (_clusterSearch ?? string.Empty).Trim();
-        if (action == ResolutionAction.AddToCluster && term.Length >= 2)
+        if (action == ParticipantAction.AddToHypothesis && term.Length >= 2)
             await SearchClustersAsync();
     }
 
@@ -80,11 +72,11 @@ public partial class ParticipantResolutionPage : ComponentBase
             if (term.Length < 2)
                 return;
 
-            _clusters.AddRange(await AnalyticsService.SearchUnknownClustersAsync(term, 8, CancellationToken.None));
+            _clusters.AddRange(await ResolutionService.SearchUnknownClustersAsync(term, 10, CancellationToken.None));
         }
         catch (Exception ex)
         {
-            ToastService.Error(ex.Message);
+            ToastService.Error("Помилка пошуку припущень.", ex.Message);
         }
         finally
         {
@@ -92,41 +84,69 @@ public partial class ParticipantResolutionPage : ComponentBase
         }
     }
 
-    protected async Task SaveCreateClusterAsync()
+    protected async Task SaveCreateHypothesisAsync()
     {
         if (_dto is null)
             return;
 
         await ExecuteActionAsync(async () =>
         {
-            await AnalyticsService.CreateUnknownClusterAsync(_dto.ParticipantId, _newClusterDisplayName, _reason, CancellationToken.None);
-            ToastService.Success("Гіпотезу створено.");
+            await ResolutionService.CreateUnknownClusterAsync(
+                _dto.ParticipantId,
+                _newHypothesisName,
+                _hypothesisRole,
+                _reason,
+                CancellationToken.None);
+
+            ToastService.Success("Нове припущення створено.");
         });
     }
 
-    protected async Task SaveAddToClusterAsync()
+    protected async Task SaveAddToHypothesisAsync()
     {
         if (_dto is null || _selectedClusterId is null)
             return;
 
         await ExecuteActionAsync(async () =>
         {
-            await AnalyticsService.AddToUnknownClusterAsync(_dto.ParticipantId, _selectedClusterId.Value, _reason, CancellationToken.None);
-            ToastService.Success("Учасника додано до наявної гіпотези.");
+            await ResolutionService.AddToUnknownClusterAsync(
+                _dto.ParticipantId,
+                _selectedClusterId.Value,
+                _reason,
+                CancellationToken.None);
+
+            ToastService.Success("Учасника додано до припущення.");
         });
     }
 
-    protected async Task SaveResolveActorAsync()
+    protected async Task SaveResolveFactAsync()
     {
         if (_dto is null)
             return;
 
         await ExecuteActionAsync(async () =>
         {
-            await AnalyticsService.ResolveAsActorAsync(_dto.ParticipantId, _actorDisplayName ?? string.Empty, _actorCallsign, _actorNote, CancellationToken.None);
-            ToastService.Success("Учасника прив'язано до встановленої особи.");
+            await ResolutionService.ResolveAsActorAsync(
+                _dto.ParticipantId,
+                _actorDisplayName ?? string.Empty,
+                _confirmedRole,
+                _actorCallsign,
+                _actorNote,
+                CancellationToken.None);
+
+            ToastService.Success("Факт підтверджено.");
         });
     }
+
+    protected static string GetArchiveReasonText(string? reason)
+        => (reason ?? string.Empty).ToLowerInvariant() switch
+        {
+            "resolved" => "Встановлено особу",
+            "merged" => "Об'єднано",
+            "empty" => "Порожня після переносу",
+            "archived" => "Архівовано",
+            _ => "—"
+        };
 
     private async Task ExecuteActionAsync(Func<Task> action)
     {
@@ -140,7 +160,7 @@ public partial class ParticipantResolutionPage : ComponentBase
         }
         catch (Exception ex)
         {
-            ToastService.Error(ex.Message);
+            ToastService.Error("Помилка аналітичної дії.", ex.Message);
         }
         finally
         {
@@ -154,15 +174,11 @@ public partial class ParticipantResolutionPage : ComponentBase
 
         try
         {
-            _dto = await AnalyticsService.GetPageAsync(ParticipantId, CancellationToken.None);
-
-            var term = (_clusterSearch ?? string.Empty).Trim();
-            if (CurrentAction == ResolutionAction.AddToCluster && term.Length >= 2)
-                await SearchClustersAsync();
+            _dto = await ResolutionService.GetPageAsync(ParticipantId, CancellationToken.None);
         }
         catch (Exception ex)
         {
-            ToastService.Error(ex.Message);
+            ToastService.Error("Помилка завантаження сторінки аналітики.", ex.Message);
         }
         finally
         {
@@ -172,13 +188,16 @@ public partial class ParticipantResolutionPage : ComponentBase
 
     private void ClearActionInputs()
     {
-        _newClusterDisplayName = null;
+        _newHypothesisName = null;
+        _hypothesisRole = null;
         _reason = null;
         _clusterSearch = null;
         _selectedClusterId = null;
+        _clusters.Clear();
+
         _actorDisplayName = null;
+        _confirmedRole = null;
         _actorCallsign = null;
         _actorNote = null;
-        _clusters.Clear();
     }
 }

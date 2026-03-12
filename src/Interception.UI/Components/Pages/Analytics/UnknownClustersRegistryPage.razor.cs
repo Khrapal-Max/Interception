@@ -29,7 +29,6 @@ public partial class UnknownClustersRegistryPage : ComponentBase
     protected bool CanPrev => _pageIndex > 0;
     protected bool CanNext => _pageIndex + 1 < TotalPages;
 
-    /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
         await SearchAsync();
@@ -82,10 +81,8 @@ public partial class UnknownClustersRegistryPage : ComponentBase
     protected static string GetStatusText(string? status)
         => (status ?? string.Empty).ToLowerInvariant() switch
         {
-            "open" => "Відкритий",
-            "resolved" => "Резолвлений",
-            "merged" => "Об'єднаний",
-            "archived" => "Архівний",
+            "open" => "Відкрита",
+            "archived" => "Архів",
             _ => "Невідомо"
         };
 
@@ -93,10 +90,18 @@ public partial class UnknownClustersRegistryPage : ComponentBase
         => (status ?? string.Empty).ToLowerInvariant() switch
         {
             "open" => "text-bg-warning",
-            "resolved" => "text-bg-success",
-            "merged" => "text-bg-secondary",
             "archived" => "text-bg-dark",
             _ => "text-bg-light"
+        };
+
+    protected static string GetArchiveReasonText(string? reason)
+        => (reason ?? string.Empty).ToLowerInvariant() switch
+        {
+            "resolved" => "Встановлено особу",
+            "merged" => "Об'єднано",
+            "empty" => "Порожня після переносу",
+            "archived" => "Архівовано",
+            _ => "—"
         };
 
     private AnalyticsUnknownClusterRegistryFilter BuildFilter()

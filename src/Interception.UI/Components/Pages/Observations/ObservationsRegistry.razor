@@ -102,8 +102,17 @@
     </div>
 </div>
 
-<ObservationDetailsModal ObservationId="_detailsId" OnClose="CloseDetails" />
+<ObservationDetailsModal ObservationId="_detailsId"
+                         IsOpen="_isDetailsOpen"
+                         OnClose="CloseDetailsAsync" />
 
 <!-- Drawers: only one is open at a time -->
-<ObservationFilterDrawer IsOpen="@IsFilterOpen" Draft="_filterDraft" OnApply="ApplyFilterAsync" OnClear="ClearFilterAsync" OnClose="CloseDrawer" />
-<ObservationImportDrawer IsOpen="@IsImportOpen" OnImported="OnImportedAsync" OnClose="CloseDrawer" />
+<ObservationFilterDrawer IsOpen="@IsFilterOpen" 
+                            Draft="_filterDraft" 
+                            OnApply="ApplyFilterAsync" 
+                            OnClear="ClearFilterAsync" 
+                            OnClose="CloseDrawer" />
+
+<ObservationImportDrawer IsOpen="@IsImportOpen" 
+                            OnImported="OnImportedAsync" 
+                            OnClose="CloseDrawer" />

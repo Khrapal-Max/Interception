@@ -5,8 +5,8 @@
 namespace Interception.UI.Application.Analytics.Dtos;
 
 /// <summary>
-/// Сторінка реєстру аналітичних кластерів.
+/// Page DTO for unknown cluster registry.
 /// </summary>
 public sealed record AnalyticsUnknownClusterRegistryPageDto(
-    IReadOnlyList<AnalyticsUnknownClusterRegistryItemDto> Items,
-    int Total);
+    int Total,
+    IReadOnlyList<AnalyticsUnknownClusterRegistryItemDto> Items);

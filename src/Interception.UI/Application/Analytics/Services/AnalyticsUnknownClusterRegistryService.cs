@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Interception.UI.Application.Analytics.Services;
 
 /// <summary>
-/// Сервіс реєстру аналітичних кластерів невизначених осіб.
+/// Реєстр аналітичних припущень щодо невизначених осіб.
 /// </summary>
 public sealed class AnalyticsUnknownClusterRegistryService(IDbContextFactory<AppDbContext> dbFactory) : IAnalyticsUnknownClusterRegistryService
 {
@@ -22,63 +22,48 @@ public sealed class AnalyticsUnknownClusterRegistryService(IDbContextFactory<App
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
-        var take = Math.Clamp(filter.Take, 1, 100);
-        var skip = Math.Max(0, filter.Skip);
-        var query = (filter.Query ?? string.Empty).Trim();
-        var status = string.IsNullOrWhiteSpace(filter.Status) ? null : filter.Status.Trim().ToLowerInvariant();
-
-        var clusters = db.UnknownClusters
+        var q = db.UnknownClusters
             .AsNoTracking()
             .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(query))
+        if (!string.IsNullOrWhiteSpace(filter.Query))
         {
-            clusters = clusters.Where(x =>
-                EF.Functions.ILike(x.Code, $"%{query}%") ||
-                (x.DisplayName != null && EF.Functions.ILike(x.DisplayName, $"%{query}%")) ||
-                (x.ResolvedActor != null && EF.Functions.ILike(x.ResolvedActor.DisplayName, $"%{query}%")));
+            var text = filter.Query.Trim();
+            q = q.Where(x =>
+                EF.Functions.ILike(x.Code, $"%{text}%") ||
+                (x.DisplayName != null && EF.Functions.ILike(x.DisplayName, $"%{text}%")) ||
+                (x.Role != null && EF.Functions.ILike(x.Role, $"%{text}%")) ||
+                (x.ResolvedActor != null && EF.Functions.ILike(x.ResolvedActor.DisplayName, $"%{text}%")));
         }
 
-        if (!string.IsNullOrWhiteSpace(status))
-            clusters = clusters.Where(x => x.Status == status);
+        if (!string.IsNullOrWhiteSpace(filter.Status))
+        {
+            var status = filter.Status.Trim();
+            q = q.Where(x => x.Status == status);
+        }
 
-        var total = await clusters.CountAsync(ct);
+        var total = await q.CountAsync(ct);
 
-        var itemsRaw = await clusters
+        var items = await q
             .OrderBy(x => x.Status)
-            .ThenByDescending(x => x.Members
-                .Select(m => (DateOnly?)m.ObservationParticipant.Observation.ObservedDate)
-                .OrderByDescending(d => d)
-                .FirstOrDefault())
-            .ThenBy(x => x.Code)
-            .Skip(skip)
-            .Take(take)
-            .Select(x => new
-            {
-                x.Id,
-                x.Code,
-                x.DisplayName,
-                x.Status,
-                ParticipantsCount = x.Members.Count,
-                LastSeenDate = x.Members
-                    .Select(m => (DateOnly?)m.ObservationParticipant.Observation.ObservedDate)
-                    .OrderByDescending(d => d)
-                    .FirstOrDefault(),
-                LinkedActorDisplayName = x.ResolvedActor != null ? x.ResolvedActor.DisplayName : null
-            })
-            .ToListAsync(ct);
-
-        var items = itemsRaw
+            .ThenByDescending(x => x.CreatedAtUtc)
+            .Skip(Math.Max(0, filter.Skip))
+            .Take(Math.Clamp(filter.Take, 1, 200))
             .Select(x => new AnalyticsUnknownClusterRegistryItemDto(
                 x.Id,
                 x.Code,
                 x.DisplayName,
+                x.Role,
                 x.Status,
-                x.ParticipantsCount,
-                x.LastSeenDate,
-                x.LinkedActorDisplayName))
-            .ToList();
+                x.ArchiveReason,
+                x.Members.Count,
+                x.Members
+                    .Select(m => (DateOnly?)m.ObservationParticipant.Observation.ObservedDate)
+                    .Max(),
+                x.ResolvedActor != null ? x.ResolvedActor.DisplayName : null,
+                x.ResolvedActor != null ? x.ResolvedActor.Role : null))
+            .ToListAsync(ct);
 
-        return new AnalyticsUnknownClusterRegistryPageDto(items, total);
+        return new AnalyticsUnknownClusterRegistryPageDto(total, items);
     }
 }

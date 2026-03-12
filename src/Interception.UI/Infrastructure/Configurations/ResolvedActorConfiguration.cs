@@ -33,6 +33,10 @@ public sealed class ResolvedActorConfiguration : IEntityTypeConfiguration<Resolv
             .HasMaxLength(256)
             .IsRequired();
 
+        b.Property(x => x.Role)
+            .HasColumnName("role")
+            .HasMaxLength(128);
+
         b.Property(x => x.Callsign)
             .HasColumnName("callsign")
             .HasMaxLength(128);

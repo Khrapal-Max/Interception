@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Interception.UI.Application.Observations.Services;
 
-public sealed class ObservationRegistryService(IDbContextFactory<AppDbContext> dbFactory) : IObservationRegistryService
+public sealed partial class ObservationRegistryService(IDbContextFactory<AppDbContext> dbFactory) : IObservationRegistryService
 {
     private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
 
@@ -134,10 +134,6 @@ public sealed class ObservationRegistryService(IDbContextFactory<AppDbContext> d
         );
     }
 
-    /// <summary>
-    /// Завантажує шар резолюції для raw-учасників: participant → cluster → actor.
-    /// Якщо даних ще нема, query-шар коректно впаде у fallback-ідентичність.
-    /// </summary>
     private static async Task<Dictionary<Guid, ParticipantResolutionReadModel>> LoadResolutionMapAsync(
         AppDbContext db,
         IReadOnlyCollection<Guid> participantIds,
@@ -154,8 +150,11 @@ public sealed class ObservationRegistryService(IDbContextFactory<AppDbContext> d
                 x.UnknownClusterId,
                 x.UnknownCluster.Code,
                 x.UnknownCluster.DisplayName,
+                x.UnknownCluster.Role,
+                x.UnknownCluster.ArchiveReason,
                 x.UnknownCluster.ResolvedActorId,
-                x.UnknownCluster.ResolvedActor != null ? x.UnknownCluster.ResolvedActor.DisplayName : null))
+                x.UnknownCluster.ResolvedActor != null ? x.UnknownCluster.ResolvedActor.DisplayName : null,
+                x.UnknownCluster.ResolvedActor != null ? x.UnknownCluster.ResolvedActor.Role : null))
             .ToListAsync(ct);
 
         return rows
@@ -163,9 +162,6 @@ public sealed class ObservationRegistryService(IDbContextFactory<AppDbContext> d
             .ToDictionary(x => x.Key, x => x.First());
     }
 
-    /// <summary>
-    /// Обчислює ефективну ідентичність учасника без зміни raw-історії.
-    /// </summary>
     private static ObservationParticipantDto CreateParticipantDto(
         ObservationParticipant participant,
         IReadOnlyDictionary<Guid, ParticipantResolutionReadModel> resolutionMap)
@@ -188,8 +184,10 @@ public sealed class ObservationRegistryService(IDbContextFactory<AppDbContext> d
                     actorDisplay ?? $"Актор {resolution.ResolvedActorId}",
                     resolution.UnknownClusterId,
                     resolution.ClusterCode,
+                    resolution.ClusterRole,
                     resolution.ResolvedActorId,
-                    resolution.ResolvedActorDisplayName);
+                    resolution.ResolvedActorDisplayName,
+                    resolution.ConfirmedRole);
             }
 
             var clusterDisplay = resolution.ClusterDisplayName ?? resolution.ClusterCode ?? FallbackUnknownDisplay(participant);
@@ -203,6 +201,8 @@ public sealed class ObservationRegistryService(IDbContextFactory<AppDbContext> d
                 clusterDisplay,
                 resolution.UnknownClusterId,
                 resolution.ClusterCode,
+                resolution.ClusterRole,
+                null,
                 null,
                 null);
         }
@@ -220,6 +220,8 @@ public sealed class ObservationRegistryService(IDbContextFactory<AppDbContext> d
                 null,
                 null,
                 null,
+                null,
+                null,
                 null);
         }
 
@@ -234,20 +236,11 @@ public sealed class ObservationRegistryService(IDbContextFactory<AppDbContext> d
             null,
             null,
             null,
+            null,
+            null,
             null);
     }
 
     private static string FallbackUnknownDisplay(ObservationParticipant participant)
         => string.IsNullOrWhiteSpace(participant.LabelRaw) ? $"НВ {participant.Ordinal}" : participant.LabelRaw!;
-
-    /// <summary>
-    /// Легка read-модель для переходу participant → cluster → actor.
-    /// </summary>
-    private sealed record ParticipantResolutionReadModel(
-        Guid ObservationParticipantId,
-        Guid UnknownClusterId,
-        string? ClusterCode,
-        string? ClusterDisplayName,
-        Guid? ResolvedActorId,
-        string? ResolvedActorDisplayName);
 }

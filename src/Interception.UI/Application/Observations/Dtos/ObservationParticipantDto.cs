@@ -5,7 +5,7 @@
 namespace Interception.UI.Application.Observations.Dtos;
 
 /// <summary>
-/// DTO учасника спостереження з уже порахованою ефективною ідентичністю для read/query-шару.
+/// DTO учасника observation з урахуванням поточної аналітичної резолюції.
 /// </summary>
 public sealed record ObservationParticipantDto(
     Guid Id,
@@ -17,5 +17,7 @@ public sealed record ObservationParticipantDto(
     string EffectiveDisplayName,
     Guid? UnknownClusterId,
     string? UnknownClusterCode,
+    string? HypothesisRole,
     Guid? ResolvedActorId,
-    string? ResolvedActorDisplayName);
+    string? ResolvedActorDisplayName,
+    string? ConfirmedRole);

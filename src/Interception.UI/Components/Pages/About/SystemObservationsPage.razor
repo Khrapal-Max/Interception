@@ -1,0 +1,136 @@
+﻿@page "/system/observations"
+
+<PageTitle>Спостереження</PageTitle>
+
+<div class="container-fluid py-3">
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="card rounded-0 shadow-sm">
+                <div class="card-body">
+                    <h3 class="mb-2">Спостереження</h3>
+                    <p class="mb-0">
+                        Розділ описує операторський контур системи — створення та збереження первинного факту.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-8">
+            <div class="card rounded-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="mb-3">Що таке observation</h5>
+
+                    <p>
+                        Спостереження — це первинний запис про подію або перехват.
+                        Він фіксує факт у тому вигляді, у якому його отримав оператор.
+                    </p>
+
+                    <p class="mb-2">До спостереження можуть входити:</p>
+                    <ul class="mb-3">
+                        <li>дата та частина доби;</li>
+                        <li>дія;</li>
+                        <li>шар, Р/М, точка, локація, район;</li>
+                        <li>примітка;</li>
+                        <li>учасники observation.</li>
+                    </ul>
+
+                    <h5 class="mb-3">Що таке учасник</h5>
+
+                    <p>
+                        Учасник спостереження зберігається як невідомий учасник.
+                        Це означає, що система не змінює його заднім числом, навіть якщо пізніше
+                        з'явиться краще розуміння особи або ролі.
+                    </p>
+
+                    <p class="mb-0">
+                        Учасник спостереження може містити:
+                        ім'я або умовне позначення, ознаку невідомої особи,
+                        а також роль, якщо вона була відома на момент фіксації.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-4">
+            <div class="card rounded-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="mb-3">Принципи</h5>
+
+                    <div class="border rounded-0 p-3 mb-2">
+                        <div class="fw-semibold">1. Fact first</div>
+                        <div class="small text-muted mt-1">
+                            Спочатку зберігається факт, а не висновок.
+                        </div>
+                    </div>
+
+                    <div class="border rounded-0 p-3 mb-2">
+                        <div class="fw-semibold">2. Без переписування історії</div>
+                        <div class="small text-muted mt-1">
+                            Спостереження не замінюється аналітичним результатом.
+                        </div>
+                    </div>
+
+                    <div class="border rounded-0 p-3">
+                        <div class="fw-semibold">3. Швидкість оператора</div>
+                        <div class="small text-muted mt-1">
+                            Оператор може зафіксувати факт навіть без повної ідентифікації особи.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card rounded-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="mb-3">Як це працює в процесі</h5>
+
+                    <div class="row g-2">
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <div class="border rounded-0 p-3 h-100">
+                                <div class="fw-semibold">Створення observation</div>
+                                <div class="small text-muted mt-1">
+                                    Оператор створює спостереження і вказує первинні дані.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <div class="border rounded-0 p-3 h-100">
+                                <div class="fw-semibold">Додавання учасників</div>
+                                <div class="small text-muted mt-1">
+                                    До спостереження додаються відомі та невідомі учасники.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <div class="border rounded-0 p-3 h-100">
+                                <div class="fw-semibold">Підказки</div>
+                                <div class="small text-muted mt-1">
+                                    Система допомагає підказками по шару, району та учасниках.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <div class="border rounded-0 p-3 h-100">
+                                <div class="fw-semibold">Збереження факту спостереження</div>
+                                <div class="small text-muted mt-1">
+                                    Після збереження спостереження потрапляє в реєстр без зміни історії.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary rounded-0" href="/system/about">Назад до “Про систему”</a>
+                <a class="btn btn-outline-primary rounded-0" href="/system/analytics">Далі: Аналітика</a>
+            </div>
+        </div>
+    </div>
+</div>

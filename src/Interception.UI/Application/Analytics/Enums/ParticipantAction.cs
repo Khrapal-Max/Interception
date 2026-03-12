@@ -7,9 +7,9 @@ namespace Interception.UI.Application.Analytics.Enums;
 /// <summary>
 /// Поточна дія аналітика на сторінці резолюції.
 /// </summary>
-public enum ResolutionAction
+public enum ParticipantAction
 {
-    CreateCluster,
-    AddToCluster,
-    ResolveActor
+    CreateHypothesis,
+    AddToHypothesis,
+    ResolveFact
 }

@@ -48,6 +48,7 @@ namespace Interception.UI.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     kind = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
                     display_name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    role = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
                     callsign = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
                     note = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
                     created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -89,7 +90,10 @@ namespace Interception.UI.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     code = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     display_name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    role = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
                     status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    archive_reason = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    archived_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     resolved_actor_id = table.Column<Guid>(type: "uuid", nullable: true),
                     created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     created_by = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true)
@@ -97,7 +101,7 @@ namespace Interception.UI.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_link_unknown_clusters", x => x.Id);
-                    table.CheckConstraint("ck_link_unknown_clusters_status", "status in ('open', 'resolved', 'merged', 'archived')");
+                    table.CheckConstraint("ck_link_unknown_clusters_status", "status in ('open', 'archived')");
                     table.ForeignKey(
                         name: "FK_link_unknown_clusters_link_resolved_actors_resolved_actor_id",
                         column: x => x.resolved_actor_id,

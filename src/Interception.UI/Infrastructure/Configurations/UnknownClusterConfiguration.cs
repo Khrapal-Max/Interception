@@ -18,7 +18,7 @@ public sealed class UnknownClusterConfiguration : IEntityTypeConfiguration<Unkno
     {
         b.ToTable("link_unknown_clusters", tb =>
         {
-            tb.HasCheckConstraint("ck_link_unknown_clusters_status", "status in ('open', 'resolved', 'merged', 'archived')");
+            tb.HasCheckConstraint("ck_link_unknown_clusters_status", "status in ('open', 'archived')");
         });
 
         b.HasKey(x => x.Id);
@@ -35,10 +35,22 @@ public sealed class UnknownClusterConfiguration : IEntityTypeConfiguration<Unkno
             .HasColumnName("display_name")
             .HasMaxLength(256);
 
+        b.Property(x => x.Role)
+            .HasColumnName("role")
+            .HasMaxLength(128);
+
         b.Property(x => x.Status)
             .HasColumnName("status")
             .HasMaxLength(32)
             .IsRequired();
+
+        b.Property(x => x.ArchiveReason)
+            .HasColumnName("archive_reason")
+            .HasMaxLength(64);
+
+        b.Property(x => x.ArchivedAtUtc)
+            .HasColumnName("archived_at_utc")
+            .HasColumnType("timestamp with time zone");
 
         b.Property(x => x.ResolvedActorId)
             .HasColumnName("resolved_actor_id");

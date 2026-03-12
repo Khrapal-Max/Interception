@@ -3,29 +3,11 @@
 
 <PageTitle>Аналітика учасника</PageTitle>
 
-<div class="container-fluid py-2 d-flex flex-column gap-2 overflow-hidden" style="min-height: calc(100vh - 6rem); max-height: calc(100vh - 6rem);">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <div class="text-black">
-            <strong>Аналітика учасника</strong>
-            <span class="small text-muted">Окрема сторінка для аналітичної прив'язки без зміни первинного запису.</span>
-        </div>
-
-        <div class="d-flex flex-wrap gap-2">
-            <button type="button"
-                    class="btn btn-secondary btn-sm rounded-0"
-                    @onclick="NavigateToObservationAsync"
-                    disabled="@_loading">
-                До реєстру
-            </button>
-        </div>
-    </div>
-
+<div class="container-fluid py-2 d-flex flex-column gap-2">
     @if (_loading)
     {
-        <div class="card rounded-0 flex-fill">
-            <div class="card-body d-flex align-items-center justify-content-center text-muted">
-                Завантаження аналітичного контексту…
-            </div>
+        <div class="card rounded-0">
+            <div class="card-body text-center text-muted py-5">Завантаження…</div>
         </div>
     }
     else if (_dto is null)
@@ -34,122 +16,121 @@
     }
     else
     {
-        <div class="row g-2 flex-fill overflow-hidden">
-            <div class="col-12 col-xl-7 d-flex flex-column gap-2 overflow-hidden">
+        <div class="row g-2">
+            <div class="col-12 col-xxl-7 d-flex flex-column gap-2">
                 <div class="card rounded-0">
-                    <div class="card-header py-2">Дані спостереження</div>
-                    <div class="card-body py-2">
-                        <div class="row g-2 small">
-                            <div class="col-6 col-lg-3">
+                    <div class="card-header py-2">Дані учасника</div>
+                    <div class="card-body py-2 small">
+                        <div class="row g-2">
+                            <div class="col-12 col-md-4 border">
+                                <div class="text-muted">Позначення</div>
+                                <div class="fw-semibold">@_dto.RawDisplayName</div>
+                            </div>
+                            <div class="col-12 col-md-4 border">
+                                <div class="text-muted">Роль</div>
+                                <div>@(_dto.RoleRaw ?? "—")</div>
+                            </div>
+                            <div class="col-12 col-md-4 border">
+                                <div class="text-muted">Тип</div>
+                                <div>@(_dto.IsUnknown ? "Невідома особа / роль" : "Відома особа")</div>
+                            </div>
+
+                            <div class="col-12 col-md-3 border">
                                 <div class="text-muted">Дата</div>
                                 <div>@_dto.ObservedDate.ToString("dd.MM.yyyy")</div>
                             </div>
-                            <div class="col-6 col-lg-3">
+                            <div class="col-12 col-md-3 border">
                                 <div class="text-muted">Частина доби</div>
                                 <div>@(_dto.DayPart == 2 ? "PM" : "AM")</div>
                             </div>
-                            <div class="col-12 col-lg-3">
+                            <div class="col-12 col-md-3 border">
                                 <div class="text-muted">Шар</div>
                                 <div>@(_dto.Layer ?? "—")</div>
                             </div>
-                            <div class="col-12 col-lg-3">
+                            <div class="col-12 col-md-3 border">
                                 <div class="text-muted">Р/М</div>
                                 <div>@(_dto.RmRaw ?? "—")</div>
                             </div>
-                            <div class="col-12 col-lg-6">
+                            
+                            <div class="col-12 col-md-6 border">
                                 <div class="text-muted">Локація</div>
                                 <div>@(_dto.LocationRaw ?? "—")</div>
                             </div>
-                            <div class="col-12 col-lg-6">
-                                <div class="text-muted">Район / напрямок</div>
+
+                            <div class="col-12 col-md-6 border">
+                                <div class="text-muted">Вектор сигналу</div>
                                 <div>@(_dto.DistrictRaw ?? "—")</div>
                             </div>
-                            <div class="col-12">
+
+                            <div class="col-12 col-md-6 border">
                                 <div class="text-muted">Дія</div>
-                                <div class="fw-semibold">@_dto.ActionRaw</div>
+                                <div>@_dto.ActionRaw</div>
                             </div>
-                            @if (!string.IsNullOrWhiteSpace(_dto.Note))
-                            {
-                                <div class="col-12">
-                                    <div class="text-muted">Примітка</div>
-                                    <div>@_dto.Note</div>
-                                </div>
-                            }
+
+                            <div class="col-12 col-md-6 border">
+                                <div class="text-muted">Примітка</div>
+                                <div>@(_dto.Note ?? "—")</div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="card rounded-0">
-                    <div class="card-header py-2">Учасник для аналізу</div>
-                    <div class="card-body py-2">
-                        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
-                            <div>
-                                <div class="fw-semibold">@_dto.RawDisplayName</div>
-                                <div class="text-muted small">
-                                    Первинне позначення · № @_dto.Ordinal
-                                </div>
+                    <div class="card-header py-2">Поточний аналітичний стан</div>
+                    <div class="card-body py-2 small">
+                        <div class="row g-2">
+                            <div class="col-12 col-md-4 border">
+                                <div class="text-muted">Припущення</div>
+                                <div>@(_dto.UnknownClusterDisplayName ?? _dto.UnknownClusterCode ?? "—")</div>
+                            </div>
+                            <div class="col-12 col-md-4 border">
+                                <div class="text-muted">Роль припущення</div>
+                                <div>@(_dto.HypothesisRole ?? "—")</div>
+                            </div>
+                            <div class="col-12 col-md-4 border">
+                                <div class="text-muted">Підстава архіву</div>
+                                <div>@GetArchiveReasonText(_dto.ArchiveReason)</div>
                             </div>
 
-                            <div class="d-flex flex-wrap gap-2">
-                                @if (_dto.IsUnknown)
-                                {
-                                    <span class="badge text-bg-warning rounded-0">Невизначена особа</span>
-                                }
-                                else
-                                {
-                                    <span class="badge text-bg-secondary rounded-0">Визначена особа</span>
-                                }
-
-                                @if (!string.IsNullOrWhiteSpace(_dto.RoleRaw))
-                                {
-                                    <span class="badge text-bg-light border rounded-0">@_dto.RoleRaw</span>
-                                }
+                            <div class="col-12 col-md-6 border">
+                                <div class="text-muted">Встановлена особа</div>
+                                <div>@(_dto.ResolvedActorDisplayName ?? "—")</div>
+                            </div>
+                            <div class="col-12 col-md-6 border">
+                                <div class="text-muted">Підтверджена роль</div>
+                                <div>@(_dto.ConfirmedRole ?? "—")</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card rounded-0 flex-fill overflow-hidden">
-                    <div class="card-header py-2">Учасники цього спостереження</div>
-                    <div class="card-body p-0 overflow-auto">
+                <div class="card rounded-0">
+                    <div class="card-header py-2">Інші учасники цього спостереження</div>
+                    <div class="card-body p-0">
                         @if (_dto.RelatedParticipants.Count == 0)
                         {
-                            <div class="text-muted small">Інших учасників не знайдено.</div>
+                            <div class="p-3 text-muted small">Інших учасників не знайдено.</div>
                         }
                         else
                         {
-                            <div class="table-responsive px-3">
+                            <div class="table-responsive">
                                 <table class="table table-sm table-hover align-middle mb-0">
                                     <thead class="table-light">
                                         <tr>
                                             <th>Позначення</th>
                                             <th>Роль</th>
-                                            <th>Статус</th>
+                                            <th>Тип</th>
+                                            <th>Поточне відображення</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach (var participant in _dto.RelatedParticipants)
+                                        @foreach (var item in _dto.RelatedParticipants)
                                         {
-                                            <tr class="@(participant.ParticipantId == _dto.ParticipantId ? "table-active" : null)">
-                                                <td>
-                                                    <div class="fw-semibold">@participant.DisplayName</div>
-                                                    <div class="text-muted small">№ @participant.Ordinal</div>
-                                                </td>
-                                                <td>@(participant.RoleRaw ?? "—")</td>
-                                                <td>
-                                                    @if (participant.ParticipantId == _dto.ParticipantId)
-                                                    {
-                                                        <span class="badge text-bg-primary rounded-0">Поточний</span>
-                                                    }
-                                                    else if (participant.IsUnknown)
-                                                    {
-                                                        <span class="badge text-bg-warning rounded-0">Невизначена особа</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="badge text-bg-light border rounded-0">Визначена особа</span>
-                                                    }
-                                                </td>
+                                            <tr>
+                                                <td class="fw-semibold">@item.DisplayName</td>
+                                                <td>@(item.RoleRaw ?? "—")</td>
+                                                <td>@(item.IsUnknown ? "Невідома" : "Відома")</td>
+                                                <td>@item.EffectiveNodeDisplay</td>
                                             </tr>
                                         }
                                     </tbody>
@@ -160,209 +141,188 @@
                 </div>
             </div>
 
-            <div class="col-12 col-xl-5 d-flex flex-column gap-2 overflow-hidden">
+            <div class="col-12 col-xxl-5">
                 <div class="card rounded-0">
-                    <div class="card-header py-2">Поточний аналітичний стан</div>
-                    <div class="card-body py-2">
-                        <dl class="row mb-0 small">
-                            <dt class="col-5 text-muted fw-normal">Первинне позначення</dt>
-                            <dd class="col-7 mb-2">@_dto.RawDisplayName</dd>
-
-                            <dt class="col-5 text-muted fw-normal">Припущення</dt>
-                            <dd class="col-7 mb-2">
-                                @if (_dto.UnknownClusterId is null)
-                                {
-                                    <span class="text-muted">Не задано</span>
-                                }
-                                else
-                                {
-                                    <div>
-                                        <a class="link-secondary" href="@($"/analytics/clusters/{_dto.UnknownClusterId}")">@(_dto.UnknownClusterCode ?? "—")</a>
-                                    </div>
-                                    @if (!string.IsNullOrWhiteSpace(_dto.UnknownClusterDisplayName))
-                                    {
-                                        <div class="text-muted">@_dto.UnknownClusterDisplayName</div>
-                                    }
-                                }
-                            </dd>
-
-                            <dt class="col-5 text-muted fw-normal">Встановлена особа</dt>
-                            <dd class="col-7 mb-0">
-                                @if (_dto.ResolvedActorId is null)
-                                {
-                                    <span class="text-muted">Не задано</span>
-                                }
-                                else
-                                {
-                                    @_dto.ResolvedActorDisplayName
-                                }
-                            </dd>
-                        </dl>
-                    </div>
-                </div>
-
-                <div class="card rounded-0 flex-fill overflow-hidden">
-                    <div class="card-header py-2">Оновлення аналітичної прив'язки</div>
-                    <div class="card-body py-2 d-flex flex-column gap-2 overflow-auto">
+                    <div class="card-header py-2">Аналітичні дії</div>
+                    <div class="card-body py-2 d-flex flex-column gap-2">
                         <div class="btn-group btn-group-sm" role="group">
-                            <input type="radio" class="btn-check" name="resolution-action" id="action-create-cluster"
-                                   checked="@(CurrentAction == ResolutionAction.CreateCluster)"
-                                   @onchange="@(async () => await SetCurrentActionAsync(ResolutionAction.CreateCluster))">
-                                    <label class="btn btn-outline-secondary rounded-0" for="action-create-cluster">Нове припущення</label>
+                            <input type="radio"
+                                   class="btn-check"
+                                   name="participant-action"
+                                   id="participant-action-create"
+                                   checked="@(CurrentAction == ParticipantAction.CreateHypothesis)"
+                                   @onchange="@(async () => await SetCurrentActionAsync(ParticipantAction.CreateHypothesis))">
+                                <label class="btn btn-outline-secondary rounded-0" for="participant-action-create">Нове припущення</label>
 
-                            <input type="radio" class="btn-check" name="resolution-action" id="action-add-cluster"
-                                   checked="@(CurrentAction == ResolutionAction.AddToCluster)"
-                                   @onchange="@(async () => await SetCurrentActionAsync(ResolutionAction.AddToCluster))">
-                                    <label class="btn btn-outline-secondary rounded-0" for="action-add-cluster">Додати до припущення</label>
+                                <input type="radio"
+                                       class="btn-check"
+                                       name="participant-action"
+                                       id="participant-action-add"
+                                       checked="@(CurrentAction == ParticipantAction.AddToHypothesis)"
+                                       @onchange="@(async () => await SetCurrentActionAsync(ParticipantAction.AddToHypothesis))">
+                                    <label class="btn btn-outline-secondary rounded-0" for="participant-action-add">Додати до припущення</label>
 
-                            <input type="radio" class="btn-check" name="resolution-action" id="action-resolve-person"
-                                   checked="@(CurrentAction == ResolutionAction.ResolveActor)"
-                                   @onchange="@(async () => await SetCurrentActionAsync(ResolutionAction.ResolveActor))">
-                                 <label class="btn btn-outline-secondary rounded-0" for="action-resolve-person">Встановити особу</label>
-                        </div>
+                                    <input type="radio"
+                                           class="btn-check"
+                                           name="participant-action"
+                                           id="participant-action-resolve"
+                                           checked="@(CurrentAction == ParticipantAction.ResolveFact)"
+                                           @onchange="@(async () => await SetCurrentActionAsync(ParticipantAction.ResolveFact))">
+                                        <label class="btn btn-outline-secondary rounded-0" for="participant-action-resolve">Підтвердити факт</label>
+                                    </div>
 
-                        @if (CurrentAction == ResolutionAction.CreateCluster)
-                        {
-                                        <div class="small text-muted">Створи окреме припущення для цієї невизначеної особи.</div>
-
-                            <div>
-                                <label class="form-label small mb-1">Припущення</label>
-                                <input class="form-control form-control-sm rounded-0"
-                                       @bind="_newClusterDisplayName"
-                                       @bind:event="oninput"
-                                       placeholder="Напр. НВ водій пікапу" />
-                            </div>
-
-                            <div>
-                                <label class="form-label small mb-1">Пояснення</label>
-                                <input class="form-control form-control-sm rounded-0"
-                                       @bind="_reason"
-                                       @bind:event="oninput" />
-                            </div>
-
-                            <div>
-                                <button type="button"
-                                        class="btn btn-primary btn-sm rounded-0"
-                                        @onclick="SaveCreateClusterAsync"
-                                        disabled="@_savingAction">
-                                    Зберегти
-                                </button>
-                            </div>
-                        }
-                        else if (CurrentAction == ResolutionAction.AddToCluster)
-                        {
-                                        <div class="small text-muted">Знайди існуюче припущення і додати до неї цього учасника.</div>
-
-                            <div class="d-flex gap-2">
-                                <input class="form-control form-control-sm rounded-0"
-                                       @bind="_clusterSearch"
-                                       @bind:event="oninput"
-                                       placeholder="Пошук кластера…" />
-                                <button type="button"
-                                        class="btn btn-primary btn-sm rounded-0"
-                                        @onclick="SearchClustersAsync"
-                                        disabled="@(_clusterLoading || string.IsNullOrWhiteSpace(_clusterSearch) || _clusterSearch.Trim().Length < 2)">
-                                    Пошук
-                                </button>
-                            </div>
-
-                            <div>
-                                <label class="form-label small mb-1">Пояснення</label>
-                                <input class="form-control form-control-sm rounded-0"
-                                       @bind="_reason"
-                                       @bind:event="oninput" />
-                            </div>
-
-                            <div class="border rounded-0">
-                                @if (!string.IsNullOrWhiteSpace(_clusterSearch) && _clusterSearch.Trim().Length >= 2)
-                                {
-                                    if (_clusterLoading)
+                                    @if (CurrentAction == ParticipantAction.CreateHypothesis)
                                     {
-                                        <div class="text-muted small">Пошук кластерів…</div>
+                                        <div class="small text-muted">Створює нове припущення для цього raw-учасника.</div>
+
+                                        <div>
+                                            <label class="form-label small mb-1">Назва припущення</label>
+                                            <input class="form-control form-control-sm rounded-0"
+                                                   @bind="_newHypothesisName"
+                                                   @bind:event="oninput" />
+                                        </div>
+
+                                        <div>
+                                            <label class="form-label small mb-1">Роль припущення</label>
+                                            <input class="form-control form-control-sm rounded-0"
+                                                   @bind="_hypothesisRole"
+                                                   @bind:event="oninput" />
+                                        </div>
+
+                                        <div>
+                                            <label class="form-label small mb-1">Пояснення</label>
+                                            <input class="form-control form-control-sm rounded-0"
+                                                   @bind="_reason"
+                                                   @bind:event="oninput" />
+                                        </div>
+
+                                        <div>
+                                            <button type="button"
+                                                    class="btn btn-primary btn-sm rounded-0"
+                                                    @onclick="SaveCreateHypothesisAsync"
+                                                    disabled="@_savingAction">
+                                                Створити припущення
+                                            </button>
+                                        </div>
                                     }
-                                    else if (_clusters.Count == 0)
+                                    else if (CurrentAction == ParticipantAction.AddToHypothesis)
                                     {
-                                        <div class="text-muted small">Кластери не знайдено.</div>
+                                        <div class="small text-muted">Додає raw-учасника до вже існуючого припущення.</div>
+
+                                        <div class="d-flex gap-2">
+                                            <input class="form-control form-control-sm rounded-0"
+                                                   @bind="_clusterSearch"
+                                                   @bind:event="oninput"
+                                                   placeholder="Пошук припущення…" />
+                                            <button type="button"
+                                                    class="btn btn-outline-secondary btn-sm rounded-0"
+                                                    @onclick="SearchClustersAsync"
+                                                    disabled="@(_clusterLoading || string.IsNullOrWhiteSpace(_clusterSearch) || _clusterSearch.Trim().Length < 2)">
+                                                Пошук
+                                            </button>
+                                        </div>
+
+                                        <div>
+                                            <label class="form-label small mb-1">Пояснення</label>
+                                            <input class="form-control form-control-sm rounded-0"
+                                                   @bind="_reason"
+                                                   @bind:event="oninput" />
+                                        </div>
+
+                                        <div class="border rounded-0">
+                                            @if (!string.IsNullOrWhiteSpace(_clusterSearch) && _clusterSearch.Trim().Length >= 2)
+                                            {
+                                                if (_clusterLoading)
+                                                {
+                                                    <div class="p-3 text-muted small">Пошук припущень…</div>
+                                                }
+                                                else if (_clusters.Count == 0)
+                                                {
+                                                    <div class="p-3 text-muted small">Припущення не знайдено.</div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="list-group list-group-flush rounded-0">
+                                                        @foreach (var cluster in _clusters)
+                                                        {
+                                                            var checkedCluster = _selectedClusterId == cluster.Id;
+                                                            <label class="list-group-item list-group-item-action rounded-0">
+                                                                <span class="form-check m-0">
+                                                                    <input class="form-check-input"
+                                                                           type="radio"
+                                                                           name="target-cluster"
+                                                                           checked="@checkedCluster"
+                                                                           @onchange="@(() => _selectedClusterId = cluster.Id)" />
+                                                                    <span class="ms-2 fw-semibold">@cluster.Code</span>
+                                                                </span>
+                                                                <span class="small text-muted ms-4">
+                                                                    @(cluster.DisplayName ?? "—") · @cluster.Status · учасників: @cluster.MembersCount
+                                                                </span>
+                                                            </label>
+                                                        }
+                                                    </div>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <div class="p-3 text-muted small">Введіть щонайменше 2 символи для пошуку припущення.</div>
+                                            }
+                                        </div>
+
+                                        <div>
+                                            <button type="button"
+                                                    class="btn btn-primary btn-sm rounded-0"
+                                                    @onclick="SaveAddToHypothesisAsync"
+                                                    disabled="@(_savingAction || _selectedClusterId is null)">
+                                                Додати до припущення
+                                            </button>
+                                        </div>
                                     }
                                     else
                                     {
-                                        <div class="list-group list-group-flush rounded-0">
-                                            @foreach (var cluster in _clusters)
-                                            {
-                                                var checkedCluster = _selectedClusterId == cluster.Id;
-                                                <label class="list-group-item list-group-item-action rounded-0">
-                                                    <span class="form-check m-0">
-                                                        <input class="form-check-input"
-                                                               type="radio"
-                                                               name="target-cluster"
-                                                               checked="@checkedCluster"
-                                                               @onchange="@(() => _selectedClusterId = cluster.Id)" />
-                                                        <span class="ms-2 fw-semibold">@cluster.Code</span>
-                                                    </span>
-                                                    <span class="small text-muted ms-4">@(cluster.DisplayName ?? "—") · учасників: @cluster.MembersCount</span>
-                                                </label>
-                                            }
+                                        <div class="small text-muted">Підтверджує факт: створює встановлену особу та архівує припущення.</div>
+
+                                        <div>
+                                            <label class="form-label small mb-1">Назва особи</label>
+                                            <input class="form-control form-control-sm rounded-0"
+                                                   @bind="_actorDisplayName"
+                                                   @bind:event="oninput" />
+                                        </div>
+
+                                        <div>
+                                            <label class="form-label small mb-1">Підтверджена роль</label>
+                                            <input class="form-control form-control-sm rounded-0"
+                                                   @bind="_confirmedRole"
+                                                   @bind:event="oninput" />
+                                        </div>
+
+                                        <div class="row g-2">
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label small mb-1">Позивний</label>
+                                                <input class="form-control form-control-sm rounded-0"
+                                                       @bind="_actorCallsign"
+                                                       @bind:event="oninput" />
+                                            </div>
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label small mb-1">Примітка</label>
+                                                <input class="form-control form-control-sm rounded-0"
+                                                       @bind="_actorNote"
+                                                       @bind:event="oninput" />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <button type="button"
+                                                    class="btn btn-primary btn-sm rounded-0"
+                                                    @onclick="SaveResolveFactAsync"
+                                                    disabled="@_savingAction">
+                                                Підтвердити факт
+                                            </button>
                                         </div>
                                     }
-                                }
-                                else
-                                {
-                                                <div class="text-muted small">Введіть щонайменше 2 символи для пошуку припущення.</div>
-                                }
-                            </div>
-
-                            <div>
-                                <button type="button"
-                                        class="btn btn-primary btn-sm rounded-0"
-                                        @onclick="SaveAddToClusterAsync"
-                                        disabled="@(_savingAction || _selectedClusterId is null)">
-                                                Додати до припущення
-                                </button>
-                                @if (_selectedClusterId is null)
-                                {
-                                                <div class="form-text">Оберіть призначення припущення.</div>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="small text-muted">Познач цього учасника як встановлену особу.</div>
-
-                            <div>
-                                <label class="form-label small mb-1">Назва особи</label>
-                                <input class="form-control form-control-sm rounded-0"
-                                       @bind="_actorDisplayName"
-                                       @bind:event="oninput"
-                                       placeholder="Напр. ПЕТРО" />
-                            </div>
-
-                            <div class="row g-2">
-                                <div class="col-12 col-lg-6">
-                                    <label class="form-label small mb-1">Позивний</label>
-                                    <input class="form-control form-control-sm rounded-0"
-                                           @bind="_actorCallsign"
-                                           @bind:event="oninput" />
-                                </div>
-                                <div class="col-12 col-lg-6">
-                                    <label class="form-label small mb-1">Примітка</label>
-                                    <input class="form-control form-control-sm rounded-0"
-                                           @bind="_actorNote"
-                                           @bind:event="oninput" />
                                 </div>
                             </div>
-
-                            <div>
-                                <button type="button"
-                                        class="btn btn-primary btn-sm rounded-0"
-                                        @onclick="SaveResolveActorAsync"
-                                        disabled="@_savingAction">
-                                    Зберегти
-                                </button>
-                            </div>
-                        }
+                        </div>
                     </div>
-                </div>
+                }
             </div>
-        </div>
-    }
-</div>

@@ -32,9 +32,12 @@ public sealed class AnalyticsUnknownClusterDetailsService(IDbContextFactory<AppD
                 x.Id,
                 x.Code,
                 x.DisplayName,
+                x.Role,
                 x.Status,
+                x.ArchiveReason,
                 x.ResolvedActorId,
-                ResolvedActorDisplayName = x.ResolvedActor != null ? x.ResolvedActor.DisplayName : null
+                ResolvedActorDisplayName = x.ResolvedActor != null ? x.ResolvedActor.DisplayName : null,
+                ConfirmedRole = x.ResolvedActor != null ? x.ResolvedActor.Role : null
             })
             .FirstOrDefaultAsync(ct);
 
@@ -173,9 +176,12 @@ public sealed class AnalyticsUnknownClusterDetailsService(IDbContextFactory<AppD
             clusterRow.Id,
             clusterRow.Code,
             clusterRow.DisplayName,
+            clusterRow.Role,
             clusterRow.Status,
+            clusterRow.ArchiveReason,
             clusterRow.ResolvedActorId,
             clusterRow.ResolvedActorDisplayName,
+            clusterRow.ConfirmedRole,
             memberDtos.Count,
             historyDtos.Count == 0 ? null : historyDtos.Max(x => x.ObservedDate),
             memberDtos,
@@ -215,7 +221,7 @@ public sealed class AnalyticsUnknownClusterDetailsService(IDbContextFactory<AppD
     }
 
     /// <inheritdoc />
-    public async Task ResolveClusterAsActorAsync(Guid clusterId, string displayName, string? callsign, string? note, CancellationToken ct)
+    public async Task ResolveClusterAsActorAsync(Guid clusterId, string displayName, string? role, string? callsign, string? note, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(displayName))
             throw new ArgumentException("Actor display name is required.", nameof(displayName));
@@ -226,7 +232,19 @@ public sealed class AnalyticsUnknownClusterDetailsService(IDbContextFactory<AppD
         var cluster = await db.UnknownClusters.FirstOrDefaultAsync(x => x.Id == clusterId, ct)
                      ?? throw new InvalidOperationException("Unknown cluster was not found.");
 
-        var actor = ResolvedActor.Create(Guid.NewGuid(), "person", displayName.Trim(), Clean(callsign), Clean(note), DateTime.UtcNow, null);
+        if (!string.IsNullOrWhiteSpace(role))
+            cluster.SetRole(role);
+
+        var actor = ResolvedActor.Create(
+            Guid.NewGuid(),
+            "person",
+            displayName.Trim(),
+            Clean(role) ?? cluster.Role,
+            Clean(callsign),
+            Clean(note),
+            DateTime.UtcNow,
+            null);
+
         db.ResolvedActors.Add(actor);
         cluster.ResolveToActor(actor.Id);
 
@@ -248,107 +266,107 @@ public sealed class AnalyticsUnknownClusterDetailsService(IDbContextFactory<AppD
             .FirstOrDefaultAsync(x => x.Id == clusterId, ct)
             ?? throw new InvalidOperationException("Source cluster was not found.");
 
-        var target = await db.UnknownClusters
-            .FirstOrDefaultAsync(x => x.Id == targetClusterId, ct)
+        var target = await db.UnknownClusters.FirstOrDefaultAsync(x => x.Id == targetClusterId, ct)
             ?? throw new InvalidOperationException("Target cluster was not found.");
 
-        if (source.ResolvedActorId.HasValue && target.ResolvedActorId.HasValue && source.ResolvedActorId != target.ResolvedActorId)
-            throw new InvalidOperationException("Both clusters are already resolved to different actors.");
-
-        var now = DateTime.UtcNow;
-        foreach (var member in source.Members.ToList())
-        {
-            member.MoveToCluster(target.Id, Clean(reason), now, null);
-        }
-
-        if (!target.ResolvedActorId.HasValue && source.ResolvedActorId.HasValue)
-            target.ResolveToActor(source.ResolvedActorId.Value);
-
         source.MarkMerged();
+        target.SetDisplayNameIfMissing(source.DisplayName);
+        target.SetRoleIfMissing(source.Role);
+
+        var movedAt = DateTime.UtcNow;
+        foreach (var member in source.Members)
+        {
+            member.MoveToCluster(targetClusterId, Clean(reason) ?? "merged", movedAt, null);
+        }
 
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
     }
 
     /// <inheritdoc />
-    public async Task ReassignParticipantAsync(Guid sourceClusterId, Guid participantId, Guid targetClusterId, string? reason, CancellationToken ct)
+    public async Task ReassignParticipantAsync(Guid clusterId, Guid participantId, Guid targetClusterId, string? reason, CancellationToken ct)
     {
-        if (sourceClusterId == targetClusterId)
-            throw new InvalidOperationException("Неможливо перепризначити учасника в той самий кластер.");
+        if (clusterId == targetClusterId)
+            throw new InvalidOperationException("Source and target cluster must be different.");
 
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
-        var sourceCluster = await db.UnknownClusters
-            .FirstOrDefaultAsync(x => x.Id == sourceClusterId, ct)
-            ?? throw new InvalidOperationException("Початковий кластер не знайдено.");
+        var source = await db.UnknownClusters
+            .Include(x => x.Members)
+            .FirstOrDefaultAsync(x => x.Id == clusterId, ct)
+            ?? throw new InvalidOperationException("Source cluster was not found.");
 
-        var targetCluster = await db.UnknownClusters
-            .FirstOrDefaultAsync(x => x.Id == targetClusterId, ct)
-            ?? throw new InvalidOperationException("Цільовий кластер не знайдено.");
+        var target = await db.UnknownClusters.FirstOrDefaultAsync(x => x.Id == targetClusterId, ct)
+            ?? throw new InvalidOperationException("Target cluster was not found.");
 
-        var member = await db.UnknownClusterMembers
-            .FirstOrDefaultAsync(
-                x => x.UnknownClusterId == sourceClusterId && x.ObservationParticipantId == participantId,
-                ct)
-            ?? throw new InvalidOperationException("Учасника не знайдено в поточному кластері.");
+        var member = source.Members.FirstOrDefault(x => x.ObservationParticipantId == participantId)
+            ?? throw new InvalidOperationException("Cluster member was not found.");
 
-        var now = DateTime.UtcNow;
-        member.MoveToCluster(targetCluster.Id, Clean(reason), now, null);
+        member.MoveToCluster(targetClusterId, Clean(reason), DateTime.UtcNow, null);
 
-        await db.SaveChangesAsync(ct);
-
-        var sourceHasMembers = await db.UnknownClusterMembers
-            .AnyAsync(x => x.UnknownClusterId == sourceClusterId, ct);
-
-        if (!sourceHasMembers)
+        var participant = await db.ObservationParticipants.FirstOrDefaultAsync(x => x.Id == participantId, ct);
+        if (participant is not null)
         {
-            sourceCluster.MarkArchived();
-            await db.SaveChangesAsync(ct);
+            target.SetDisplayNameIfMissing(participant.LabelRaw);
+            target.SetRoleIfMissing(participant.RoleRaw);
         }
 
+        if (!await db.UnknownClusterMembers.AnyAsync(x => x.UnknownClusterId == clusterId && x.ObservationParticipantId != participantId, ct))
+            source.MarkArchived("empty");
+
+        await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
     }
 
     private static string? Clean(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static string BuildRelatedKey(bool isUnknown, Guid? clusterId, string? resolvedActorDisplayName, string? labelNorm, int ordinal)
+    private static string BuildRelatedKey(bool isUnknown, Guid? clusterId, string? actorDisplayName, string? labelNorm, int ordinal)
     {
-        if (!string.IsNullOrWhiteSpace(resolvedActorDisplayName))
-            return $"actor:{TextNorm.NormalizeRequired(resolvedActorDisplayName)}";
+        if (!string.IsNullOrWhiteSpace(actorDisplayName))
+            return $"actor:{TextNorm.Normalize(actorDisplayName)}";
 
-        if (clusterId.HasValue)
-            return $"cluster:{clusterId.Value:N}";
+        if (isUnknown && clusterId is not null)
+            return $"cluster:{clusterId}";
 
-        if (!isUnknown && !string.IsNullOrWhiteSpace(labelNorm))
-            return $"known:{labelNorm}";
+        if (isUnknown)
+            return $"unknown:{ordinal}";
 
-        return $"unknown:{ordinal}";
+        return $"known:{labelNorm ?? ordinal.ToString()}";
     }
 
-    private static string BuildRelatedDisplay(bool isUnknown, Guid? clusterId, string? clusterCode, string? resolvedActorDisplayName, string? labelRaw, int ordinal)
+    private static string BuildRelatedDisplay(
+        bool isUnknown,
+        Guid? clusterId,
+        string? clusterCode,
+        string? actorDisplayName,
+        string? labelRaw,
+        int ordinal)
     {
-        if (!string.IsNullOrWhiteSpace(resolvedActorDisplayName))
-            return resolvedActorDisplayName;
+        if (!string.IsNullOrWhiteSpace(actorDisplayName))
+            return actorDisplayName!;
 
-        if (clusterId.HasValue)
-            return string.IsNullOrWhiteSpace(clusterCode) ? "Кластер" : clusterCode!;
+        if (isUnknown && clusterId is not null)
+            return clusterCode ?? $"Припущення {clusterId}";
 
-        if (!isUnknown)
-            return string.IsNullOrWhiteSpace(labelRaw) ? "—" : labelRaw!;
+        if (isUnknown)
+            return string.IsNullOrWhiteSpace(labelRaw) ? $"НВ {ordinal}" : labelRaw!;
 
-        return string.IsNullOrWhiteSpace(labelRaw) ? $"НВ {ordinal}" : labelRaw!;
+        return labelRaw ?? $"Особа {ordinal}";
     }
 
-    private static string BuildRelatedKind(bool isUnknown, Guid? clusterId, string? resolvedActorDisplayName)
+    private static string BuildRelatedKind(bool isUnknown, Guid? clusterId, string? actorDisplayName)
     {
-        if (!string.IsNullOrWhiteSpace(resolvedActorDisplayName))
-            return "Встановлена особа";
+        if (!string.IsNullOrWhiteSpace(actorDisplayName))
+            return "fact";
 
-        if (clusterId.HasValue)
-            return "Кластер";
+        if (isUnknown && clusterId is not null)
+            return "hypothesis";
 
-        return isUnknown ? "Невизначена особа" : "Відома особа";
+        if (isUnknown)
+            return "raw-unknown";
+
+        return "known";
     }
 }

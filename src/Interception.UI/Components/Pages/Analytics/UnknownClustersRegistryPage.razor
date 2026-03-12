@@ -5,8 +5,8 @@
 <div class="card shadow-sm rounded-0">
     <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div>
-            <strong>Припущення (кластери) щодо невизначених осіб</strong>
-            <div class="small text-muted">Реєстр аналітичних кластерів із прив'язаними учасниками.</div>
+            <strong>Припущення щодо невизначених осіб</strong>
+            <div class="small text-muted">Активні гіпотези та архів завершених аналітичних рішень.</div>
         </div>
 
         <div class="d-flex flex-wrap align-items-center gap-2">
@@ -14,14 +14,12 @@
                    style="width: 16rem;"
                    @bind="_query"
                    @bind:event="oninput"
-                   placeholder="Код, назва або встановлена особа" />
+                   placeholder="Код, назва, роль або встановлена особа" />
 
             <select class="form-select form-select-sm rounded-0" style="width: 12rem;" @bind="_status">
                 <option value="">Усі статуси</option>
-                <option value="open">Відкритий</option>
-                <option value="resolved">Резолвлений</option>
-                <option value="merged">Об'єднаний</option>
-                <option value="archived">Архівний</option>
+                <option value="open">Відкрита</option>
+                <option value="archived">Архів</option>
             </select>
 
             <button type="button" class="btn btn-sm btn-primary rounded-0" @onclick="SearchAsync" disabled="@_loading">
@@ -30,7 +28,6 @@
             <button type="button" class="btn btn-sm btn-secondary rounded-0" @onclick="ResetAsync" disabled="@_loading">
                 Скинути
             </button>
-           
         </div>
     </div>
 
@@ -40,11 +37,12 @@
                 <thead>
                     <tr>
                         <th>Код</th>
-                        <th>Назва</th>
+                        <th>Назва / роль</th>
                         <th class="text-center">Статус</th>
                         <th class="text-center">Учасників</th>
                         <th class="text-center">Остання поява</th>
                         <th class="text-center">Встановлена особа</th>
+                        <th class="text-center">Підстава архіву</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -52,13 +50,13 @@
                     @if (_loading)
                     {
                         <tr>
-                            <td colspan="7" class="text-muted">Завантаження…</td>
+                            <td colspan="8" class="text-muted">Завантаження…</td>
                         </tr>
                     }
                     else if (_page is null || _page.Items.Count == 0)
                     {
                         <tr>
-                            <td colspan="7" class="text-muted">Кластери не знайдено.</td>
+                            <td colspan="8" class="text-muted">Кластери не знайдено.</td>
                         </tr>
                     }
                     else
@@ -68,20 +66,27 @@
                             <tr>
                                 <td class="fw-semibold text-nowrap">
                                     <a class="link-secondary text-decoration-none"
-                                       href="@($"/analytics/clusters/{item.Id}")">
+                                           href="@($"/analytics/clusters/{item.Id}")">
                                         @item.Code
                                     </a>
                                 </td>
-                                <td>@(string.IsNullOrWhiteSpace(item.DisplayName) ? "—" : item.DisplayName)</td>
+                                <td>
+                                    <div>@(string.IsNullOrWhiteSpace(item.DisplayName) ? "—" : item.DisplayName)</div>
+                                    <div class="small text-muted">Роль: @(string.IsNullOrWhiteSpace(item.Role) ? "—" : item.Role)</div>
+                                </td>
                                 <td class="text-center">
                                     <span class="badge rounded-1 @GetStatusBadgeClass(item.Status)">@GetStatusText(item.Status)</span>
                                 </td>
                                 <td class="text-center">@item.ParticipantsCount</td>
                                 <td class="text-nowrap text-center">@(item.LastSeenDate?.ToString("dd.MM.yyyy") ?? "—")</td>
-                                <td class="text-center">@(string.IsNullOrWhiteSpace(item.LinkedActorDisplayName) ? "—" : item.LinkedActorDisplayName)</td>
+                                <td class="text-center">
+                                    <div>@(string.IsNullOrWhiteSpace(item.LinkedActorDisplayName) ? "—" : item.LinkedActorDisplayName)</div>
+                                    <div class="small text-muted">Роль: @(string.IsNullOrWhiteSpace(item.ConfirmedRole) ? "—" : item.ConfirmedRole)</div>
+                                </td>
+                                <td class="text-center">@GetArchiveReasonText(item.ArchiveReason)</td>
                                 <td class="text-end">
                                     <a class="btn btn-sm btn-primary rounded-0"
-                                       href="@($"/analytics/clusters/{item.Id}")">
+                                           href="@($"/analytics/clusters/{item.Id}")">
                                         Деталі
                                     </a>
                                 </td>

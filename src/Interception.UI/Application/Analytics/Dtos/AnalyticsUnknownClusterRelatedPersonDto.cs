@@ -5,7 +5,7 @@
 namespace Interception.UI.Application.Analytics.Dtos;
 
 /// <summary>
-/// Узагальнений DTO пов'язаної особи або вузла, який зустрічався поруч із кластером.
+/// Related persons / nodes around cluster from shared observations.
 /// </summary>
 public sealed record AnalyticsUnknownClusterRelatedPersonDto(
     string DisplayName,

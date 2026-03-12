@@ -5,7 +5,7 @@
 namespace Interception.UI.Application.Analytics.Dtos;
 
 /// <summary>
-/// Короткий DTO спостереження, у якому фігурував кластер.
+/// Observation history item for cluster details.
 /// </summary>
 public sealed record AnalyticsUnknownClusterObservationDto(
     Guid ObservationId,

@@ -1,0 +1,116 @@
+﻿@page "/system/about"
+
+<PageTitle>Про систему</PageTitle>
+
+<div class="container-fluid py-3">
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="card rounded-0 shadow-sm">
+                <div class="card-body">
+                    <h3 class="mb-2">Про систему</h3>
+                    <p class="mb-2">
+                        Система призначена для фіксації спостережень/перехватів і подальшого аналітичного
+                        опрацювання осіб, ролей та зв'язків між записами.
+                    </p>
+                    <p class="mb-0">
+                        Вона поділяється на два основні контури:
+                        <strong>спостереження</strong> — первинна фіксація факту,
+                        і <strong>аналітика</strong> — побудова гіпотез та підтвердження встановлених осіб.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-6">
+            <div class="card rounded-0 shadow-sm h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="mb-2">Спостереження</h5>
+                    <p class="text-muted mb-3">
+                        Операторський контур. Тут зберігається первинний факт у тому вигляді,
+                        у якому його було зафіксовано.
+                    </p>
+
+                    <div class="small text-muted mb-3">
+                        Observation містить дату, частину доби, дію, місце, район, шар, Р/М, примітку
+                        та учасників із raw-даними.
+                    </div>
+
+                    <div class="mt-auto">
+                        <a class="btn btn-outline-primary rounded-0" href="/system/observations">
+                            Перейти до розділу
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-6">
+            <div class="card rounded-0 shadow-sm h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="mb-2">Аналітика</h5>
+                    <p class="text-muted mb-3">
+                        Аналітичний контур. Тут невизначені учасники переходять у гіпотези,
+                        а гіпотези — у встановлені особи.
+                    </p>
+
+                    <div class="small text-muted mb-3">
+                        Аналітика не переписує первинне observation, а створює поверх нього
+                        окремий інтерпретаційний шар.
+                    </div>
+
+                    <div class="mt-auto">
+                        <a class="btn btn-outline-primary rounded-0" href="/system/analytics">
+                            Перейти до розділу
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card rounded-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="mb-2">Короткий процес</h5>
+
+                    <div class="row g-2">
+                        <div class="col-12 col-lg-3">
+                            <div class="border rounded-0 p-3 h-100">
+                                <div class="fw-semibold">1. Спостереження</div>
+                                <div class="small text-muted mt-1">
+                                    Оператор фіксує факт спостереження: подію, місце, час, учасників і відомі ролі.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-3">
+                            <div class="border rounded-0 p-3 h-100">
+                                <div class="fw-semibold">2. Учасник</div>
+                                <div class="small text-muted mt-1">
+                                    Учасник зберігається в тому вигляді, у якому він з'явився в спостереженні.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-3">
+                            <div class="border rounded-0 p-3 h-100">
+                                <div class="fw-semibold">3. Припущення</div>
+                                <div class="small text-muted mt-1">
+                                    Якщо даних недостатньо, аналітик створює або уточнює припущення.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-3">
+                            <div class="border rounded-0 p-3 h-100">
+                                <div class="fw-semibold">4. Встановлена особа</div>
+                                <div class="small text-muted mt-1">
+                                    Коли припущення підтверджується, система зберігає окремий факт встановлення.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

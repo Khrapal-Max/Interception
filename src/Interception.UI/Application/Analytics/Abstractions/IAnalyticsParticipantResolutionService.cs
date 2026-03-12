@@ -25,7 +25,7 @@ public interface IAnalyticsParticipantResolutionService
     /// <summary>
     /// Створює новий unknown-кластер і додає до нього raw-учасника.
     /// </summary>
-    Task CreateUnknownClusterAsync(Guid participantId, string? displayName, string? reason, CancellationToken ct);
+    Task CreateUnknownClusterAsync(Guid participantId, string? displayName, string? role, string? reason, CancellationToken ct);
 
     /// <summary>
     /// Додає raw-учасника в існуючий unknown-кластер.
@@ -37,5 +37,5 @@ public interface IAnalyticsParticipantResolutionService
     /// Позначає raw-учасника як канонічного актора.
     /// Якщо кластера ще нема, він створюється автоматично.
     /// </summary>
-    Task ResolveAsActorAsync(Guid participantId, string displayName, string? callsign, string? note, CancellationToken ct);
+    Task ResolveAsActorAsync(Guid participantId, string displayName, string? role, string? callsign, string? note, CancellationToken ct);
 }

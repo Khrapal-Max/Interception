@@ -11,7 +11,10 @@ public sealed record AnalyticsUnknownClusterRegistryItemDto(
     Guid Id,
     string Code,
     string? DisplayName,
+    string? Role,
     string Status,
+    string? ArchiveReason,
     int ParticipantsCount,
     DateOnly? LastSeenDate,
-    string? LinkedActorDisplayName);
+    string? LinkedActorDisplayName,
+    string? ConfirmedRole);

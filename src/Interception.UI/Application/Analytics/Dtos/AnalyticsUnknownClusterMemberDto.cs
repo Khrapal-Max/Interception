@@ -5,7 +5,7 @@
 namespace Interception.UI.Application.Analytics.Dtos;
 
 /// <summary>
-/// Короткий DTO учасника, який входить до unknown-кластера.
+/// Учасник припущення.
 /// </summary>
 public sealed record AnalyticsUnknownClusterMemberDto(
     Guid ParticipantId,

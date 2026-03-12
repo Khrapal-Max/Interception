@@ -61,8 +61,11 @@ public sealed class AnalyticsParticipantResolutionService(IDbContextFactory<AppD
                 x.UnknownClusterId,
                 x.UnknownCluster.Code,
                 x.UnknownCluster.DisplayName,
+                x.UnknownCluster.Role,
+                x.UnknownCluster.ArchiveReason,
                 x.UnknownCluster.ResolvedActorId,
-                ActorDisplayName = x.UnknownCluster.ResolvedActor != null ? x.UnknownCluster.ResolvedActor.DisplayName : null
+                ActorDisplayName = x.UnknownCluster.ResolvedActor != null ? x.UnknownCluster.ResolvedActor.DisplayName : null,
+                ActorRole = x.UnknownCluster.ResolvedActor != null ? x.UnknownCluster.ResolvedActor.Role : null
             })
             .FirstOrDefaultAsync(ct);
 
@@ -131,8 +134,11 @@ public sealed class AnalyticsParticipantResolutionService(IDbContextFactory<AppD
             memberRow?.UnknownClusterId,
             memberRow?.Code,
             memberRow?.DisplayName,
+            memberRow?.Role,
+            memberRow?.ArchiveReason,
             memberRow?.ResolvedActorId,
             memberRow?.ActorDisplayName,
+            memberRow?.ActorRole,
             related);
     }
 
@@ -170,17 +176,25 @@ public sealed class AnalyticsParticipantResolutionService(IDbContextFactory<AppD
     }
 
     /// <inheritdoc />
-    public async Task CreateUnknownClusterAsync(Guid participantId, string? displayName, string? reason, CancellationToken ct)
+    public async Task CreateUnknownClusterAsync(Guid participantId, string? displayName, string? role, string? reason, CancellationToken ct)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
-        await EnsureParticipantExistsAsync(db, participantId, ct);
+        var participant = await db.ObservationParticipants.FirstOrDefaultAsync(x => x.Id == participantId, ct)
+            ?? throw new InvalidOperationException("Observation participant was not found.");
 
         var now = DateTime.UtcNow;
         var codeBase = $"UNK-{now:yyyyMMddHHmmss}-{Guid.NewGuid():N}";
         var code = codeBase[..Math.Min(64, codeBase.Length)];
-        var cluster = UnknownCluster.Create(Guid.NewGuid(), code, Clean(displayName), now, null);
+
+        var cluster = UnknownCluster.Create(
+            Guid.NewGuid(),
+            code,
+            Clean(displayName) ?? participant.LabelRaw,
+            Clean(role) ?? participant.RoleRaw,
+            now,
+            null);
 
         db.UnknownClusters.Add(cluster);
         await UpsertMemberAsync(db, Guid.NewGuid(), cluster.Id, participantId, Clean(reason), now, ct);
@@ -195,11 +209,14 @@ public sealed class AnalyticsParticipantResolutionService(IDbContextFactory<AppD
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
-        await EnsureParticipantExistsAsync(db, participantId, ct);
+        var participant = await db.ObservationParticipants.FirstOrDefaultAsync(x => x.Id == participantId, ct)
+            ?? throw new InvalidOperationException("Observation participant was not found.");
 
-        var clusterExists = await db.UnknownClusters.AnyAsync(x => x.Id == unknownClusterId, ct);
-        if (!clusterExists)
-            throw new InvalidOperationException("Unknown cluster was not found.");
+        var cluster = await db.UnknownClusters.FirstOrDefaultAsync(x => x.Id == unknownClusterId, ct)
+            ?? throw new InvalidOperationException("Unknown cluster was not found.");
+
+        cluster.SetDisplayNameIfMissing(participant.LabelRaw);
+        cluster.SetRoleIfMissing(participant.RoleRaw);
 
         await UpsertMemberAsync(db, Guid.NewGuid(), unknownClusterId, participantId, Clean(reason), DateTime.UtcNow, ct);
 
@@ -208,7 +225,7 @@ public sealed class AnalyticsParticipantResolutionService(IDbContextFactory<AppD
     }
 
     /// <inheritdoc />
-    public async Task ResolveAsActorAsync(Guid participantId, string displayName, string? callsign, string? note, CancellationToken ct)
+    public async Task ResolveAsActorAsync(Guid participantId, string displayName, string? role, string? callsign, string? note, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(displayName))
             throw new ArgumentException("Actor display name is required.", nameof(displayName));
@@ -216,7 +233,8 @@ public sealed class AnalyticsParticipantResolutionService(IDbContextFactory<AppD
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
-        await EnsureParticipantExistsAsync(db, participantId, ct);
+        var participant = await db.ObservationParticipants.FirstOrDefaultAsync(x => x.Id == participantId, ct)
+            ?? throw new InvalidOperationException("Observation participant was not found.");
 
         var existingMember = await db.UnknownClusterMembers
             .FirstOrDefaultAsync(x => x.ObservationParticipantId == participantId, ct);
@@ -228,14 +246,22 @@ public sealed class AnalyticsParticipantResolutionService(IDbContextFactory<AppD
         {
             var codeBase = $"UNK-{now:yyyyMMddHHmmss}-{Guid.NewGuid():N}";
             var clusterCode = codeBase[..Math.Min(64, codeBase.Length)];
-            cluster = UnknownCluster.Create(Guid.NewGuid(), clusterCode, null, now, null);
+
+            cluster = UnknownCluster.Create(
+                Guid.NewGuid(),
+                clusterCode,
+                participant.LabelRaw,
+                participant.RoleRaw,
+                now,
+                null);
+
             db.UnknownClusters.Add(cluster);
 
             var member = UnknownClusterMember.Create(
                 Guid.NewGuid(),
                 cluster.Id,
                 participantId,
-                "Автоматично створено при резолюції в актора.",
+                "Автоматично створено при підтвердженні факту.",
                 now,
                 null);
 
@@ -244,22 +270,28 @@ public sealed class AnalyticsParticipantResolutionService(IDbContextFactory<AppD
         else
         {
             cluster = await db.UnknownClusters.FirstAsync(x => x.Id == existingMember.UnknownClusterId, ct);
+            cluster.SetDisplayNameIfMissing(participant.LabelRaw);
+            cluster.SetRoleIfMissing(participant.RoleRaw);
         }
 
-        var actor = ResolvedActor.Create(Guid.NewGuid(), "person", displayName.Trim(), Clean(callsign), Clean(note), now, null);
-        db.ResolvedActors.Add(actor);
+        if (!string.IsNullOrWhiteSpace(role))
+            cluster.SetRole(role);
 
+        var actor = ResolvedActor.Create(
+            Guid.NewGuid(),
+            "person",
+            displayName.Trim(),
+            Clean(role) ?? cluster.Role,
+            Clean(callsign),
+            Clean(note),
+            now,
+            null);
+
+        db.ResolvedActors.Add(actor);
         cluster.ResolveToActor(actor.Id);
 
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
-    }
-
-    private static async Task EnsureParticipantExistsAsync(AppDbContext db, Guid participantId, CancellationToken ct)
-    {
-        var exists = await db.ObservationParticipants.AsNoTracking().AnyAsync(x => x.Id == participantId, ct);
-        if (!exists)
-            throw new InvalidOperationException("Observation participant was not found.");
     }
 
     private static async Task UpsertMemberAsync(

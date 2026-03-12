@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Components;
 namespace Interception.UI.Components.Pages.Analytics;
 
 /// <summary>
-/// Сторінка деталей unknown-кластера: учасники, історія, пов'язані особи та аналітичні дії.
+/// Сторінка деталей припущення.
 /// </summary>
 public partial class UnknownClusterDetailsPage : ComponentBase
 {
@@ -23,6 +23,7 @@ public partial class UnknownClusterDetailsPage : ComponentBase
 
     protected AnalyticsUnknownClusterDetailsPageDto? _dto;
     protected readonly List<AnalyticsUnknownClusterLookupDto> _clusters = [];
+
     protected ClusterDetailsAction CurrentAction { get; set; } = ClusterDetailsAction.Resolve;
 
     protected bool _loading;
@@ -36,8 +37,8 @@ public partial class UnknownClusterDetailsPage : ComponentBase
     protected string? _actorDisplayName;
     protected string? _actorCallsign;
     protected string? _actorNote;
+    protected string? _confirmedRole;
 
-    /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
         await LoadAsync();
@@ -49,9 +50,6 @@ public partial class UnknownClusterDetailsPage : ComponentBase
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Перемикає поточну аналітичну дію та очищує проміжний стан форми.
-    /// </summary>
     protected async Task SetCurrentActionAsync(ClusterDetailsAction action)
     {
         if (CurrentAction == action)
@@ -65,9 +63,6 @@ public partial class UnknownClusterDetailsPage : ComponentBase
             await SearchClustersAsync();
     }
 
-    /// <summary>
-    /// Обирає учасника для перепризначення та переводить сторінку у відповідний режим.
-    /// </summary>
     protected async Task BeginReassignAsync(Guid participantId)
     {
         _selectedParticipantId = participantId;
@@ -106,8 +101,15 @@ public partial class UnknownClusterDetailsPage : ComponentBase
 
         await ExecuteActionAsync(async () =>
         {
-            await ClusterService.ResolveClusterAsActorAsync(_dto.ClusterId, _actorDisplayName ?? string.Empty, _actorCallsign, _actorNote, CancellationToken.None);
-            ToastService.Success("Кластер резолвлено.");
+            await ClusterService.ResolveClusterAsActorAsync(
+                _dto.ClusterId,
+                _actorDisplayName ?? string.Empty,
+                _confirmedRole,
+                _actorCallsign,
+                _actorNote,
+                CancellationToken.None);
+
+            ToastService.Success("Факт встановлено.");
         });
     }
 
@@ -119,7 +121,7 @@ public partial class UnknownClusterDetailsPage : ComponentBase
         await ExecuteActionAsync(async () =>
         {
             await ClusterService.MergeClusterAsync(_dto.ClusterId, _selectedClusterId.Value, _reason, CancellationToken.None);
-            ToastService.Success("Кластер об'єднано.");
+            ToastService.Success("Припущення об'єднано та архівовано.");
         });
     }
 
@@ -131,16 +133,14 @@ public partial class UnknownClusterDetailsPage : ComponentBase
         await ExecuteActionAsync(async () =>
         {
             await ClusterService.ReassignParticipantAsync(_dto.ClusterId, _selectedParticipantId.Value, _selectedClusterId.Value, _reason, CancellationToken.None);
-            ToastService.Success("Учасника перепризначено.");
+            ToastService.Success("Учасника перенесено.");
         });
     }
 
     protected static string GetStatusText(string status)
         => status switch
         {
-            "open" => "Активний",
-            "resolved" => "Резолвлено",
-            "merged" => "Об'єднано",
+            "open" => "Відкрита",
             "archived" => "Архів",
             _ => status
         };
@@ -149,10 +149,18 @@ public partial class UnknownClusterDetailsPage : ComponentBase
         => status switch
         {
             "open" => "text-bg-warning",
-            "resolved" => "text-bg-success",
-            "merged" => "text-bg-secondary",
             "archived" => "text-bg-dark",
             _ => "text-bg-light border"
+        };
+
+    protected static string GetArchiveReasonText(string? reason)
+        => (reason ?? string.Empty).ToLowerInvariant() switch
+        {
+            "resolved" => "Встановлено особу",
+            "merged" => "Об'єднано",
+            "empty" => "Порожня після переносу",
+            "archived" => "Архівовано",
+            _ => "—"
         };
 
     private async Task ExecuteActionAsync(Func<Task> action)
@@ -204,6 +212,7 @@ public partial class UnknownClusterDetailsPage : ComponentBase
         _selectedClusterId = null;
         _selectedParticipantId = null;
         _actorDisplayName = null;
+        _confirmedRole = null;
         _actorCallsign = null;
         _actorNote = null;
         _clusters.Clear();

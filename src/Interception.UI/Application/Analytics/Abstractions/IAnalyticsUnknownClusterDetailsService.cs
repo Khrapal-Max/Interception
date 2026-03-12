@@ -25,7 +25,7 @@ public interface IAnalyticsUnknownClusterDetailsService
     /// <summary>
     /// Резолвить поточний кластер у встановлену особу.
     /// </summary>
-    Task ResolveClusterAsActorAsync(Guid clusterId, string displayName, string? callsign, string? note, CancellationToken ct);
+    Task ResolveClusterAsActorAsync(Guid clusterId, string displayName, string? role, string? callsign, string? note, CancellationToken ct);
 
     /// <summary>
     /// Переносить усіх учасників поточного кластера в інший кластер та позначає поточний як merged.

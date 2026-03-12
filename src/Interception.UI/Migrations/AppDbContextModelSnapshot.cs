@@ -215,6 +215,11 @@ namespace Interception.UI.Migrations
                         .HasColumnType("character varying(1024)")
                         .HasColumnName("note");
 
+                    b.Property<string>("Role")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("role");
+
                     b.HasKey("Id");
 
                     b.HasIndex("DisplayName")
@@ -227,6 +232,15 @@ namespace Interception.UI.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ArchiveReason")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("archive_reason");
+
+                    b.Property<DateTime?>("ArchivedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("archived_at_utc");
 
                     b.Property<string>("Code")
                         .IsRequired()
@@ -252,6 +266,11 @@ namespace Interception.UI.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("resolved_actor_id");
 
+                    b.Property<string>("Role")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("role");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -269,7 +288,7 @@ namespace Interception.UI.Migrations
 
                     b.ToTable("link_unknown_clusters", null, t =>
                         {
-                            t.HasCheckConstraint("ck_link_unknown_clusters_status", "status in ('open', 'resolved', 'merged', 'archived')");
+                            t.HasCheckConstraint("ck_link_unknown_clusters_status", "status in ('open', 'archived')");
                         });
                 });
 

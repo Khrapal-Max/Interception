@@ -22,11 +22,11 @@ public partial class ObservationsRegistry : ComponentBase
 
     private int _pageIndex = 0;
 
-    private Guid? _detailsId;
+    private Guid _detailsId;
+    private bool _isDetailsOpen;
 
     private DrawerKind _activeDrawer = DrawerKind.None;
 
-    // Single draft instance bound to filter drawer
     private FilterDraftModel _filterDraft = new();
 
     private int Take => Math.Clamp(_filterDraft.Take, 1, 500);
@@ -103,10 +103,15 @@ public partial class ObservationsRegistry : ComponentBase
     private async Task OpenDetailsAsync(Guid id)
     {
         _detailsId = id;
-        await Task.CompletedTask;
+        _isDetailsOpen = true;
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void CloseDetails() => _detailsId = null;
+    private async Task CloseDetailsAsync()
+    {
+        _isDetailsOpen = false;
+        await InvokeAsync(StateHasChanged);
+    }
 
     private void OpenFilter() => _activeDrawer = DrawerKind.Filter;
     private void OpenImport() => _activeDrawer = DrawerKind.Import;
@@ -128,12 +133,6 @@ public partial class ObservationsRegistry : ComponentBase
     }
 
     private async Task OnImportedAsync()
-    {
-        _pageIndex = 0;
-        await SearchAsync();
-    }
-
-    private async Task OnCreatedAsync()
     {
         _pageIndex = 0;
         await SearchAsync();

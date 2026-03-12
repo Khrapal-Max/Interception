@@ -4,7 +4,6 @@
 
 using Interception.UI.Application.Observations.Abstractions;
 using Interception.UI.Application.Observations.Dtos;
-using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.UI.Components.Pages.Observations.Modals;
@@ -12,39 +11,33 @@ namespace Interception.UI.Components.Pages.Observations.Modals;
 public partial class ObservationDetailsModal : ComponentBase
 {
     [Inject] public IObservationRegistryService RegistryService { get; set; } = default!;
+    [Inject] public NavigationManager Navigation { get; set; } = default!;
 
-    [Inject] public ToastService ToastService { get; set; } = default!;
-    [Parameter] public Guid? ObservationId { get; set; }
+    [Parameter] public Guid ObservationId { get; set; }
+    [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
-    private Guid? _loadedId;
-    private ObservationDetailsDto? _dto;
-    private bool _loading;
+    protected ObservationDetailsDto? _dto;
+    protected bool _loading;
+    private Guid _loadedObservationId;
 
     protected override async Task OnParametersSetAsync()
     {
-        if (ObservationId is null)
-        {
-            _loadedId = null;
-            _dto = null;
-            _loading = false;
-            return;
-        }
-
-        if (_loadedId == ObservationId)
+        if (!IsOpen)
             return;
 
-        _loadedId = ObservationId;
-        _dto = null;
+        if (_dto is null || _loadedObservationId != ObservationId)
+            await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
         _loading = true;
 
         try
         {
-            _dto = await RegistryService.GetByIdAsync(ObservationId.Value, CancellationToken.None);
-        }
-        catch (Exception ex)
-        {
-            ToastService.Error(ex.Message);
+            _dto = await RegistryService.GetByIdAsync(ObservationId, CancellationToken.None);
+            _loadedObservationId = ObservationId;
         }
         finally
         {
@@ -52,13 +45,24 @@ public partial class ObservationDetailsModal : ComponentBase
         }
     }
 
-    private async Task Close()
+    private async Task CloseAsync()
     {
-        _loadedId = null;
-        _dto = null;
-        _loading = false;
-
         if (OnClose.HasDelegate)
             await OnClose.InvokeAsync();
+    }
+
+    private async Task OpenParticipantAnalyticsAsync(Guid participantId)
+    {
+        await CloseAsync();
+        Navigation.NavigateTo($"/analytics/participants/{participantId}");
+    }
+
+    private async Task OpenClusterAnalyticsAsync(Guid? clusterId)
+    {
+        if (clusterId == Guid.Empty)
+            return;
+
+        await CloseAsync();
+        Navigation.NavigateTo($"/analytics/clusters/{clusterId}");
     }
 }
