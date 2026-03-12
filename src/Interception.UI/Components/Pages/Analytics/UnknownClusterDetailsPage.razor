@@ -7,7 +7,7 @@
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div class="text-black">
             <div class="fw-semibold">Деталі припущення</div>
-            <div class="small text-muted">Контекст гіпотези, історія спостережень та аналітичні дії.</div>
+            <div class="small">Контекст гіпотези, історія спостережень та аналітичні дії.</div>
         </div>
 
         <div class="d-flex flex-wrap gap-2">
@@ -53,7 +53,7 @@
                             <div class="col-6 col-lg-4">
                                 <div class="text-muted">Статус</div>
                                 <div>
-                                    <span class="badge rounded-0 @GetStatusBadgeClass(_dto.Status)">
+                                    <span class="badge bg-success rounded-1 @GetStatusBadgeClass(_dto.Status)">
                                         @GetStatusText(_dto.Status)
                                     </span>
                                 </div>
@@ -87,7 +87,7 @@
                     <div class="card-body p-0">
                         @if (_dto.Members.Count == 0)
                         {
-                            <div class="p-3 text-muted small">У припущенні ще немає учасників.</div>
+                            <div class="p-3 text-muted small">У припущенні немає учасників.</div>
                         }
                         else
                         {
