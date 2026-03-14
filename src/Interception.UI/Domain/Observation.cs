@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
@@ -10,42 +10,38 @@ using System.Text;
 namespace Interception.UI.Domain;
 
 /// <summary>
-/// Append-only operator record (raw) that can be used for later grouping and analysis.
-/// A record may contain only action, or action+location, or action+participants, etc.
+/// Primary raw observation record.
+/// Stores the fact as it was fixed by operator/import and allows lightweight in-record editing of participants.
 /// </summary>
-public class Observation
+public sealed class Observation
 {
     public Guid Id { get; private set; } = Guid.NewGuid();
 
     public DateOnly ObservedDate { get; private set; }
     public DayPart DayPart { get; private set; }
 
-    // Raw location/company snapshots (may be unknown).
-    public string? Layer { get; private set; }          // e.g. "шар"
-    public string? RmRaw { get; private set; }           // e.g. "р/м"
-    public string? PointRaw { get; private set; }        // e.g. "точка" / coords
+    /// <summary>
+    /// Optional bound action from the action catalog.
+    /// Raw action text still remains the source snapshot.
+    /// </summary>
+    public Guid? ObservationActionId { get; private set; }
+    public ObservationAction? ObservationAction { get; private set; }
 
-    public string? LocationRaw { get; private set; }     // e.g. "локація"
-    public string? DistrictRaw { get; private set; }     // e.g. "район"
+    public string? Layer { get; private set; }
+    public string? RmRaw { get; private set; }
+    public string? PointRaw { get; private set; }
+    public string? LocationRaw { get; private set; }
+    public string? DistrictRaw { get; private set; }
 
-    // Action is the minimal required field for the record.
     public string ActionRaw { get; private set; } = default!;
     public string ActionNorm { get; private set; } = default!;
 
-    /// <summary>
-    /// Optional operator note / justification.
-    /// </summary>
     public string? Note { get; private set; }
 
-    // Import/registry metadata (optional).
-    public string Source { get; private set; } = "manual";  // "manual" | "import"
+    public string Source { get; private set; } = "manual";
     public Guid? SourceFileId { get; private set; }
     public int? SourceRow { get; private set; }
 
-    /// <summary>
-    /// Stable content hash for idempotent imports and deduplication.
-    /// Computed from canonicalized core fields + participant labels.
-    /// </summary>
     public string ContentHash { get; private set; } = default!;
 
     public DateTime CreatedAtUtc { get; private set; } = DateTime.UtcNow;
@@ -53,7 +49,9 @@ public class Observation
 
     public List<ObservationParticipant> Participants { get; private set; } = [];
 
-    private Observation() { } // EF
+    private Observation()
+    {
+    }
 
     public static Observation Create(
         DateOnly observedDate,
@@ -64,7 +62,6 @@ public class Observation
         string? pointRaw = null,
         string? locationRaw = null,
         string? districtRaw = null,
-        string? companyRaw = null,
         string? note = null,
         string source = "manual",
         Guid? sourceFileId = null,
@@ -74,73 +71,141 @@ public class Observation
         if (string.IsNullOrWhiteSpace(actionRaw))
             throw new ArgumentException("Action is required.", nameof(actionRaw));
 
-        var obs = new Observation
+        var observation = new Observation
         {
             ObservedDate = observedDate,
             DayPart = dayPart,
-            Layer = string.IsNullOrWhiteSpace(layer) ? null : layer.Trim(),
-            RmRaw = string.IsNullOrWhiteSpace(rmRaw) ? null : rmRaw.Trim(),
-            PointRaw = string.IsNullOrWhiteSpace(pointRaw) ? null : pointRaw.Trim(),
-            LocationRaw = string.IsNullOrWhiteSpace(locationRaw) ? null : locationRaw.Trim(),
-            DistrictRaw = string.IsNullOrWhiteSpace(districtRaw) ? null : districtRaw.Trim(),
+            Layer = NormalizeOptional(layer),
+            RmRaw = NormalizeOptional(rmRaw),
+            PointRaw = NormalizeOptional(pointRaw),
+            LocationRaw = NormalizeOptional(locationRaw),
+            DistrictRaw = NormalizeOptional(districtRaw),
             ActionRaw = actionRaw.Trim(),
             ActionNorm = TextNorm.NormalizeRequired(actionRaw),
-            Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+            Note = NormalizeOptional(note),
             Source = string.IsNullOrWhiteSpace(source) ? "manual" : source.Trim(),
             SourceFileId = sourceFileId,
             SourceRow = sourceRow,
-            CreatedBy = string.IsNullOrWhiteSpace(createdBy) ? null : createdBy.Trim(),
+            CreatedBy = NormalizeOptional(createdBy)
         };
 
-        obs.ContentHash = obs.ComputeContentHash();
-        return obs;
+        observation.RecomputeContentHash();
+        return observation;
     }
 
-    /// <summary>
-    /// Adds a participant snapshot to this observation.
-    /// For unknown participants you may pass null/empty labelRaw with isUnknown=true.
-    /// </summary>
     public ObservationParticipant AddParticipant(string? labelRaw, bool isUnknown, string? roleRaw = null, int? ordinal = null)
     {
         var nextOrdinal = ordinal ?? (Participants.Count == 0 ? 1 : Participants.Max(p => p.Ordinal) + 1);
+        EnsureKnownParticipantUniqueness(null, labelRaw, isUnknown);
 
-        // Для unknown дозволяємо кілька записів навіть із подібними ярликами.
-        // Заборона дублікатів працює лише для відомих осіб у межах одного observation.
+        var participant = new ObservationParticipant(Id, labelRaw, isUnknown, roleRaw, nextOrdinal);
+        Participants.Add(participant);
+        RecomputeContentHash();
+        return participant;
+    }
+
+    public void UpdateParticipant(Guid participantId, string? labelRaw, bool isUnknown, string? roleRaw)
+    {
+        var participant = Participants.FirstOrDefault(x => x.Id == participantId)
+            ?? throw new InvalidOperationException("Participant was not found.");
+
+        EnsureKnownParticipantUniqueness(participantId, labelRaw, isUnknown);
+        participant.UpdateSnapshot(labelRaw, isUnknown, roleRaw);
+        RecomputeContentHash();
+    }
+
+    public void RemoveParticipant(Guid participantId)
+    {
+        var participant = Participants.FirstOrDefault(x => x.Id == participantId)
+            ?? throw new InvalidOperationException("Participant was not found.");
+
+        Participants.Remove(participant);
+        RecomputeContentHash();
+    }
+
+    public void BindAction(Guid actionId, string actionName)
+    {
+        if (actionId == Guid.Empty)
+            throw new ArgumentException("Action id is required.", nameof(actionId));
+        if (string.IsNullOrWhiteSpace(actionName))
+            throw new ArgumentException("Action name is required.", nameof(actionName));
+
+        ObservationActionId = actionId;
+        ActionRaw = actionName.Trim();
+        ActionNorm = TextNorm.NormalizeRequired(actionName);
+        RecomputeContentHash();
+    }
+
+    public void ClearBoundAction()
+    {
+        ObservationActionId = null;
+    }
+
+    public void UpdateContext(
+        string? actionRaw,
+        string? layer,
+        string? rmRaw,
+        string? pointRaw,
+        string? locationRaw,
+        string? districtRaw,
+        string? note)
+    {
+        if (!string.IsNullOrWhiteSpace(actionRaw))
+        {
+            ActionRaw = actionRaw.Trim();
+            ActionNorm = TextNorm.NormalizeRequired(actionRaw);
+        }
+
+        Layer = NormalizeOptional(layer);
+        RmRaw = NormalizeOptional(rmRaw);
+        PointRaw = NormalizeOptional(pointRaw);
+        LocationRaw = NormalizeOptional(locationRaw);
+        DistrictRaw = NormalizeOptional(districtRaw);
+        Note = NormalizeOptional(note);
+
+        RecomputeContentHash();
+    }
+
+    private void EnsureKnownParticipantUniqueness(Guid? currentParticipantId, string? labelRaw, bool isUnknown)
+    {
         var norm = TextNorm.Normalize(labelRaw);
-        if (!isUnknown && norm is not null && Participants.Any(p => !p.IsUnknown && p.LabelNorm == norm))
+        if (isUnknown || norm is null)
+            return;
+
+        var duplicate = Participants.Any(p =>
+            p.Id != currentParticipantId &&
+            !p.IsUnknown &&
+            string.Equals(p.LabelNorm, norm, StringComparison.Ordinal));
+
+        if (duplicate)
             throw new InvalidOperationException($"Participant '{labelRaw}' already exists in this observation.");
+    }
 
-        var p = new ObservationParticipant(Id, labelRaw, isUnknown, roleRaw, nextOrdinal);
-        Participants.Add(p);
-
-        // update hash because participants are part of canonical identity
+    private void RecomputeContentHash()
+    {
         ContentHash = ComputeContentHash();
-        return p;
     }
 
     private string ComputeContentHash()
     {
-        // Canonical string: date|dayPart|actionNorm|locationNorm|districtNorm|rmNorm|pointNorm|layer|participants(sorted by ordinal)
-        var sb = new StringBuilder();
-        sb.Append(ObservedDate.ToString("yyyy-MM-dd")).Append('|');
-        sb.Append((short)DayPart).Append('|');
-        sb.Append(ActionNorm).Append('|');
-        sb.Append(TextNorm.Normalize(LocationRaw) ?? "").Append('|');
-        sb.Append(TextNorm.Normalize(DistrictRaw) ?? "").Append('|');
-        sb.Append(TextNorm.Normalize(RmRaw) ?? "").Append('|');
-        sb.Append(TextNorm.Normalize(PointRaw) ?? "").Append('|');
-        sb.Append(TextNorm.Normalize(Layer) ?? "").Append('|');
+        var builder = new StringBuilder();
+        builder.Append(ObservedDate.ToString("yyyy-MM-dd")).Append('|');
+        builder.Append((short)DayPart).Append('|');
+        builder.Append(ActionNorm).Append('|');
+        builder.Append(TextNorm.Normalize(LocationRaw) ?? string.Empty).Append('|');
+        builder.Append(TextNorm.Normalize(DistrictRaw) ?? string.Empty).Append('|');
+        builder.Append(TextNorm.Normalize(RmRaw) ?? string.Empty).Append('|');
+        builder.Append(TextNorm.Normalize(PointRaw) ?? string.Empty).Append('|');
+        builder.Append(TextNorm.Normalize(Layer) ?? string.Empty).Append('|');
 
-        foreach (var p in Participants.OrderBy(x => x.Ordinal))
+        foreach (var participant in Participants.OrderBy(x => x.Ordinal))
         {
-            var roleNorm = TextNorm.Normalize(p.RoleRaw) ?? "";
+            var roleNorm = TextNorm.Normalize(participant.RoleRaw) ?? string.Empty;
 
-            if (p.IsUnknown)
+            if (participant.IsUnknown)
             {
-                // Для unknown не використовуємо label як identity-ознаку,
-                // бо "НВ 1"/"НВ 2" — це операторські ярлики, а не стабільна особа.
-                sb.Append("u:")
-                    .Append(p.Ordinal)
+                builder.Append("u:")
+                    .Append(participant.Ordinal)
                     .Append(':')
                     .Append(roleNorm)
                     .Append(';');
@@ -148,15 +213,18 @@ public class Observation
                 continue;
             }
 
-            sb.Append("k:")
-                .Append(p.LabelNorm ?? "")
+            builder.Append("k:")
+                .Append(participant.LabelNorm ?? string.Empty)
                 .Append(':')
                 .Append(roleNorm)
                 .Append(';');
         }
 
-        var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+        var bytes = Encoding.UTF8.GetBytes(builder.ToString());
         var hash = SHA256.HashData(bytes);
-        return Convert.ToHexString(hash); // uppercase hex
+        return Convert.ToHexString(hash);
     }
+
+    private static string? NormalizeOptional(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

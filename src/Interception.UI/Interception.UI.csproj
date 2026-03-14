@@ -22,4 +22,12 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Application\Analytics\" />
+    <Folder Include="Application\Observations\" />
+    <Folder Include="Components\Pages\Analytics\" />
+    <Folder Include="Components\Pages\Observations\Drawers\" />
+    <Folder Include="Components\Pages\Observations\Modals\" />
+  </ItemGroup>
+
 </Project>

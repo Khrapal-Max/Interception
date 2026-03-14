@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
@@ -12,10 +12,9 @@ public sealed class ObservationParticipantConfiguration : IEntityTypeConfigurati
 {
     public void Configure(EntityTypeBuilder<ObservationParticipant> b)
     {
-        b.ToTable("link_observation_participants", td =>
+        b.ToTable("link_observation_participants", tb =>
         {
-            // Checks
-            td.HasCheckConstraint("ck_link_obs_participants_ordinal", "ordinal >= 1");
+            tb.HasCheckConstraint("ck_link_obs_participants_ordinal", "ordinal >= 1");
         });
 
         b.HasKey(x => x.Id);
@@ -29,14 +28,18 @@ public sealed class ObservationParticipantConfiguration : IEntityTypeConfigurati
 
         b.Property(x => x.LabelRaw)
             .HasColumnName("label_raw")
-            .HasMaxLength(128);
+            .HasMaxLength(256);
 
         b.Property(x => x.LabelNorm)
             .HasColumnName("label_norm")
-            .HasMaxLength(128);
+            .HasMaxLength(256);
 
         b.Property(x => x.IsUnknown)
             .HasColumnName("is_unknown")
+            .IsRequired();
+
+        b.Property(x => x.StartedAsUnknown)
+            .HasColumnName("started_as_unknown")
             .IsRequired();
 
         b.Property(x => x.RoleRaw)
@@ -47,14 +50,16 @@ public sealed class ObservationParticipantConfiguration : IEntityTypeConfigurati
             .HasColumnName("ordinal")
             .IsRequired();
 
-        // Indexes
         b.HasIndex(x => x.ObservationId)
             .HasDatabaseName("ix_link_obs_participants_observation_id");
+
+        b.HasIndex(x => new { x.ObservationId, x.Ordinal })
+            .IsUnique()
+            .HasDatabaseName("ux_link_obs_participants_observation_ordinal");
 
         b.HasIndex(x => x.LabelNorm)
             .HasDatabaseName("ix_link_obs_participants_label_norm");
 
-        // Унікальність у межах одного observation — тільки для відомих осіб.
         b.HasIndex(x => new { x.ObservationId, x.LabelNorm })
             .IsUnique()
             .HasFilter("is_unknown = false and label_norm is not null")

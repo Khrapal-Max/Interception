@@ -2,11 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Analytics.Abstractions;
-using Interception.UI.Application.Analytics.Services;
-using Interception.UI.Application.Observations.Abstractions;
-using Interception.UI.Application.Observations.Import;
-using Interception.UI.Application.Observations.Services;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Components;
 using Interception.UI.Extensions;
@@ -30,20 +25,6 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo("/data-protection-keys"));
 
 builder.Services.AddScoped<ToastService>();
-builder.Services.AddScoped<ObservationImportService>();
-
-builder.Services.AddScoped<IObservationWriteService, ObservationWriteService>();
-builder.Services.AddScoped<IObservationLookupService, ObservationLookupService>();
-builder.Services.AddScoped<IObservationRegistryService, ObservationRegistryService>();
-
-builder.Services.AddScoped<IAnalyticsParticipantResolutionService, AnalyticsParticipantResolutionService>();
-builder.Services.AddScoped<IAnalyticsUnknownClusterRegistryService, AnalyticsUnknownClusterRegistryService>();
-builder.Services.AddScoped<IAnalyticsUnknownClusterDetailsService, AnalyticsUnknownClusterDetailsService>();
-
-builder.Services.AddScoped<IAnalyticsCandidateService,  AnalyticsCandidateService>();
-builder.Services.AddScoped<IAnalyticsClusterContextService,  AnalyticsClusterContextService>();
-builder.Services.AddScoped<IAnalyticsDayPictureService, AnalyticsDayPictureService>();
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

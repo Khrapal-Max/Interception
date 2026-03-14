@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
@@ -7,9 +7,10 @@ using Interception.UI.Extensions;
 namespace Interception.UI.Domain;
 
 /// <summary>
-/// Raw participant snapshot in a single observation (append-only).
+/// Raw participant snapshot inside a single observation.
+/// Can later be уточнений by label/role, but we still keep whether the record started as unknown.
 /// </summary>
-public class ObservationParticipant
+public sealed class ObservationParticipant
 {
     public Guid Id { get; private set; } = Guid.NewGuid();
 
@@ -17,43 +18,87 @@ public class ObservationParticipant
     public Observation Observation { get; private set; } = default!;
 
     /// <summary>
-    /// Operator-entered label (callsign/name). Can be null/empty if unknown.
-    /// Example: "КЛИМ", "ТАШКЕНТ", "НВ", "НВ 4".
+    /// Поточна raw-назва/позначення учасника в межах observation.
     /// </summary>
     public string? LabelRaw { get; private set; }
 
     /// <summary>
-    /// Normalized label for grouping (trim + collapse whitespace + lower).
-    /// Null if <see cref="LabelRaw"/> is null/empty.
+    /// Нормалізована назва для пошуку/порівняння.
     /// </summary>
     public string? LabelNorm { get; private set; }
 
     /// <summary>
-    /// True when the participant is unknown (НВ / НВ 1 / НВ 4 / тощо).
+    /// Поточний стан учасника: чи він зараз вважається unknown.
     /// </summary>
     public bool IsUnknown { get; private set; }
 
     /// <summary>
-    /// Optional raw role as entered by operator (can be unknown/empty).
+    /// Ознака, що запис був створений як unknown (НВ), навіть якщо пізніше його уточнили.
+    /// Це окремий технічний флаг для аналітики і сценаріїв редагування.
+    /// </summary>
+    public bool StartedAsUnknown { get; private set; }
+
+    /// <summary>
+    /// Поточна raw-роль учасника в межах observation.
     /// </summary>
     public string? RoleRaw { get; private set; }
 
     /// <summary>
-    /// Participant order in the original record (1..N). Helps preserve source formatting.
+    /// Порядок учасника у вихідному записі observation.
     /// </summary>
     public int Ordinal { get; private set; }
 
-    private ObservationParticipant() { } // EF
+    private ObservationParticipant()
+    {
+    }
 
     internal ObservationParticipant(Guid observationId, string? labelRaw, bool isUnknown, string? roleRaw, int ordinal)
     {
-        if (ordinal <= 0) throw new ArgumentOutOfRangeException(nameof(ordinal), "Ordinal must be >= 1.");
+        if (ordinal <= 0)
+            throw new ArgumentOutOfRangeException(nameof(ordinal), "Ordinal must be >= 1.");
 
         ObservationId = observationId;
-        LabelRaw = string.IsNullOrWhiteSpace(labelRaw) ? null : labelRaw.Trim();
-        LabelNorm = TextNorm.Normalize(LabelRaw);
-        IsUnknown = isUnknown || LabelNorm is null; // якщо ярлик відсутній — це unknown
-        RoleRaw = string.IsNullOrWhiteSpace(roleRaw) ? null : roleRaw.Trim();
         Ordinal = ordinal;
+
+        ApplySnapshot(labelRaw, isUnknown, roleRaw, initializeStartedFlag: true);
     }
+
+    /// <summary>
+    /// Оновлює raw-дані учасника всередині observation.
+    /// Флаг <see cref="StartedAsUnknown"/> зберігає історію старту запису і ніколи не скидається назад у false.
+    /// </summary>
+    public void UpdateSnapshot(string? labelRaw, bool isUnknown, string? roleRaw)
+    {
+        ApplySnapshot(labelRaw, isUnknown, roleRaw, initializeStartedFlag: false);
+    }
+
+    /// <summary>
+    /// Оновлює тільки raw-роль учасника.
+    /// </summary>
+    public void UpdateRole(string? roleRaw)
+    {
+        RoleRaw = NormalizeOptional(roleRaw);
+    }
+
+    private void ApplySnapshot(string? labelRaw, bool isUnknown, string? roleRaw, bool initializeStartedFlag)
+    {
+        LabelRaw = NormalizeOptional(labelRaw);
+        LabelNorm = TextNorm.Normalize(LabelRaw);
+        RoleRaw = NormalizeOptional(roleRaw);
+
+        var effectiveUnknown = isUnknown || LabelNorm is null;
+        IsUnknown = effectiveUnknown;
+
+        if (initializeStartedFlag)
+        {
+            StartedAsUnknown = effectiveUnknown;
+            return;
+        }
+
+        if (effectiveUnknown)
+            StartedAsUnknown = true;
+    }
+
+    private static string? NormalizeOptional(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
