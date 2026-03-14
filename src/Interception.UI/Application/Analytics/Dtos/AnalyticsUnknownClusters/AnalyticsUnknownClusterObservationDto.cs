@@ -2,20 +2,18 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Analytics.Dtos;
+namespace Interception.UI.Application.Analytics.Dtos.AnalyticsUnknownClusters;
 
 /// <summary>
-/// Учасник припущення.
+/// Observation history item for cluster details.
 /// </summary>
-public sealed record AnalyticsUnknownClusterMemberDto(
-    Guid ParticipantId,
+public sealed record AnalyticsUnknownClusterObservationDto(
     Guid ObservationId,
-    int Ordinal,
-    string DisplayName,
-    bool IsUnknown,
-    string? RoleRaw,
     DateOnly ObservedDate,
     short DayPart,
     string ActionRaw,
     string? Layer,
-    string? LocationRaw);
+    string? RmRaw,
+    string? LocationRaw,
+    string? DistrictRaw,
+    int ParticipantsCount);

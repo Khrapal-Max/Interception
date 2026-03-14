@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Abstractions;
-using Interception.UI.Application.Analytics.Dtos;
+using Interception.UI.Application.Analytics.Dtos.AnalyticsUnknownClusters;
 using Interception.UI.Application.Analytics.Enums;
 using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;

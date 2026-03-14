@@ -27,7 +27,6 @@
                         <th class="text-black">Ч</th>
                         <th class="text-black">ЧС</th>
                         <th class="text-black">Р/M</th>
-                        <th class="text-black">Точка</th>
                         <th class="text-black">ВЕКТОР</th>
 
                         <th class="text-black">УЧАСТНИКИ</th>
@@ -61,7 +60,6 @@
                                 </td>
                                 <td class="border" style="white-space:nowrap;">@(item.Layer ?? "—")</td>
                                 <td class="border">@item.RmRaw</td>
-                                <td class="border">@item.PointRaw</td>
                                 <td class ="border">@item.DistrictRaw</td>
                                 <td class="border" style="white-space:nowrap;">
                                     @foreach (var p in item.Participants.OrderBy(x => x.Ordinal).Take(3))

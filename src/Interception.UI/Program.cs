@@ -40,6 +40,9 @@ builder.Services.AddScoped<IAnalyticsParticipantResolutionService, AnalyticsPart
 builder.Services.AddScoped<IAnalyticsUnknownClusterRegistryService, AnalyticsUnknownClusterRegistryService>();
 builder.Services.AddScoped<IAnalyticsUnknownClusterDetailsService, AnalyticsUnknownClusterDetailsService>();
 
+builder.Services.AddScoped<IAnalyticsCandidateService,  AnalyticsCandidateService>();
+builder.Services.AddScoped<IAnalyticsClusterContextService,  AnalyticsClusterContextService>();
+builder.Services.AddScoped<IAnalyticsDayPictureService, AnalyticsDayPictureService>();
 
 var app = builder.Build();
 

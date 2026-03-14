@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Dtos;
+using Interception.UI.Application.Analytics.Dtos.AnalyticsUnknownClusters;
 
 namespace Interception.UI.Application.Analytics.Abstractions;
 

@@ -1,13 +1,10 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Analytics.Dtos;
+namespace Interception.UI.Application.Analytics.Dtos.AnalyticsClusters;
 
-/// <summary>
-/// Observation history item for cluster details.
-/// </summary>
-public sealed record AnalyticsUnknownClusterObservationDto(
+public sealed record AnalyticsClusterContextObservationDto(
     Guid ObservationId,
     DateOnly ObservedDate,
     short DayPart,
@@ -16,4 +13,7 @@ public sealed record AnalyticsUnknownClusterObservationDto(
     string? RmRaw,
     string? LocationRaw,
     string? DistrictRaw,
-    int ParticipantsCount);
+    string? Note,
+    string RelationKind,
+    int Score,
+    IReadOnlyList<string> MatchedSignals);

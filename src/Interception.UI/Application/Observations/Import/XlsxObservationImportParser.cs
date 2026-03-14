@@ -164,9 +164,10 @@ public sealed class XlsxObservationImportParser
                 roleRaw ??= roleFromCell;
 
                 var norm = Normalize(labelRaw);
-                var isUnknown = norm is "нв" or "nv" or "unknown" or "unk" or "?";
 
-                participants.Add(new ObservationImportParticipant(labelRaw, isUnknown, roleRaw));
+                var (LabelRaw, IsUnknown, RoleRaw) = ParseParticipant(norm, roleRaw);
+                
+                participants.Add(new ObservationImportParticipant(LabelRaw, IsUnknown, RoleRaw));
             }
 
             rows.Add(new ObservationImportRow(
@@ -469,6 +470,16 @@ public sealed class XlsxObservationImportParser
         }
 
         return (s, null);
+    }
+
+    private static (string? LabelRaw, bool IsUnknown, string? RoleRaw) ParseParticipant(string? rawLabel, string? rawRole)
+    {
+        var label = string.IsNullOrWhiteSpace(rawLabel) ? null : rawLabel.Trim();
+        var role = string.IsNullOrWhiteSpace(rawRole) ? null : rawRole.Trim();
+
+        var isUnknown = UnknownIdentityText.IsUnknownLabel(label);
+
+        return (UnknownIdentityText.NormalizeRawUnknownLabel(label), isUnknown, role);
     }
 
     internal enum DayPart : short

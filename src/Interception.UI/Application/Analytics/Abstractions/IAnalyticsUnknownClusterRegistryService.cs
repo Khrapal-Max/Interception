@@ -2,8 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Analytics.Dtos;
-using Interception.UI.Application.Analytics.Models;
+using Interception.UI.Application.Analytics.Dtos.AnalyticsUnknownClusters;
 
 namespace Interception.UI.Application.Analytics.Abstractions;
 

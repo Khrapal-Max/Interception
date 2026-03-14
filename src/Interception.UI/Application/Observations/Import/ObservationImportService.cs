@@ -12,17 +12,6 @@ public sealed class ObservationImportService(IDbContextFactory<AppDbContext> dbF
 {
     private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
 
-    public async Task<ObservationImportResult> ImportCsvAsync(
-        Stream csvStream,
-        ObservationImportOptions options,
-        CancellationToken ct)
-    {
-        var parser = new CsvObservationImportParser();
-        var rows = await parser.ParseAsync(csvStream, ct);
-        return await ImportAsync(rows, options, ct);
-    }
-
-
     public async Task<ObservationImportResult> ImportXlsxAsync(
         Stream xlsxStream,
         ObservationImportOptions options,
@@ -62,7 +51,7 @@ public sealed class ObservationImportService(IDbContextFactory<AppDbContext> dbF
             {
                 var obs = Observation.Create(
                     r.ObservedDate,
-                    (Interception.UI.Domain.Enums.DayPart)r.DayPart,
+                    (Domain.Enums.DayPart)r.DayPart,
                     r.ActionRaw,
                     layer: r.Layer,
                     rmRaw: r.RmRaw,
