@@ -2,7 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using System.Text.RegularExpressions;
 using Interception.UI.Application.Observations.Abstractions;
 using Interception.UI.Application.Observations.Dtos;
 using Interception.UI.Application.Toasts;
@@ -10,6 +9,7 @@ using Interception.UI.Components.Pages.Observations.Models;
 using Interception.UI.Components.Shared.Drawer;
 using Interception.UI.Domain.Enums;
 using Microsoft.AspNetCore.Components;
+using System.Text.RegularExpressions;
 
 namespace Interception.UI.Components.Pages.Observations.Drawers;
 

@@ -27,7 +27,25 @@
     white-space: nowrap;
 }
 
-    .obs-table td,
-    .obs-table th {
-        vertical-align: middle;
-    }
+.obs-table td,
+.obs-table th {
+    vertical-align: middle;
+}
+
+.obs-wrap-cell {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.obs-wrap-badge {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.obs-filter-chip {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
