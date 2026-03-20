@@ -7,23 +7,30 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Interception.UI.Infrastructure;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public DbSet<Observation> Observations { get; set; }
-    public DbSet<ObservationParticipant> ObservationParticipants { get; set; }
-    public DbSet<ObservationAction> ObservationActions { get; set; }
+    public DbSet<Observation> Observations => Set<Observation>();
+    public DbSet<ObservationParticipant> ObservationParticipants => Set<ObservationParticipant>();
+    public DbSet<ObservationAction> ObservationActions => Set<ObservationAction>();
+    public DbSet<ObservationTag> ObservationTags => Set<ObservationTag>();
+    public DbSet<TagCatalog> TagCatalogs => Set<TagCatalog>();
+    public DbSet<ObservationProbableAction> ObservationProbableActions => Set<ObservationProbableAction>();
+    public DbSet<UnknownCluster> UnknownClusters => Set<UnknownCluster>();
+    public DbSet<UnknownClusterMember> UnknownClusterMembers => Set<UnknownClusterMember>();
+    public DbSet<ResolvedActor> ResolvedActors => Set<ResolvedActor>();
+    public DbSet<UnknownSubdivisionCluster> UnknownSubdivisionClusters => Set<UnknownSubdivisionCluster>();
+    public DbSet<UnknownSubdivisionObservation> UnknownSubdivisionObservations => Set<UnknownSubdivisionObservation>();
+    public DbSet<ResolvedSubdivision> ResolvedSubdivisions => Set<ResolvedSubdivision>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Postgres розширення для темпоральних обмежень
         if (Database.IsNpgsql())
         {
             modelBuilder.HasPostgresExtension("btree_gist");
         }
 
-        // Застосувати всі конфігурації з поточної збірки
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 }

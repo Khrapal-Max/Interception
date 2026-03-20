@@ -1,72 +1,74 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
 
 namespace Interception.Tests.Domain;
 
 public sealed class ObservationActionTests
 {
     [Fact]
-    public void Create_SetsNormalizedFields_And_Defaults()
+    public void Create_Sets_Reference_Data_And_Normalized_Name()
     {
         var action = ObservationAction.Create(
-            "  Передача цілі  ",
-            "  Ініціатор  ",
-            "  Відповідач  ",
-            "  Короткий опис  ",
-            "  analyst  ");
+            "  Передача наказу  ",
+            category: ObservationActionCategory.Command,
+            initiatorRoleName: "  командир  ",
+            responderRoleName: "  підлеглий  ",
+            description: "  короткий опис  ",
+            typicalParticipantsCount: 2,
+            requiresCounterparty: true,
+            createdBy: "  analyst  ");
 
-        Assert.Equal("Передача цілі", action.Name);
-        Assert.Equal("передача цілі", action.NameNorm);
-        Assert.Equal("Ініціатор", action.InitiatorRoleName);
-        Assert.Equal("Відповідач", action.ResponderRoleName);
-        Assert.Equal("Короткий опис", action.Description);
+        Assert.Equal("Передача наказу", action.Name);
+        Assert.Equal("передача наказу", action.NameNorm);
+        Assert.Equal(ObservationActionCategory.Command, action.Category);
+        Assert.Equal("командир", action.InitiatorRoleName);
+        Assert.Equal("підлеглий", action.ResponderRoleName);
+        Assert.Equal("короткий опис", action.Description);
+        Assert.Equal((short)2, action.TypicalParticipantsCount);
+        Assert.True(action.RequiresCounterparty);
+        Assert.True(action.IsActive);
         Assert.Equal("analyst", action.CreatedBy);
-        Assert.True(action.IsActive);
     }
 
     [Fact]
-    public void Create_Throws_When_Name_Is_Empty()
+    public void Rename_And_Reconfigure_Update_Action_Metadata()
     {
-        var ex = Assert.Throws<ArgumentException>(() => ObservationAction.Create("   "));
-        Assert.Contains("Action name is required.", ex.Message);
-    }
+        var action = ObservationAction.Create("Рух");
 
-    [Fact]
-    public void Rename_Updates_Name_And_Normalized_Name()
-    {
-        var action = ObservationAction.Create("Передача");
-
-        action.Rename("  Підтвердження цілі  ");
-
-        Assert.Equal("Підтвердження цілі", action.Name);
-        Assert.Equal("підтвердження цілі", action.NameNorm);
-    }
-
-    [Fact]
-    public void ConfigureRoles_And_SetDescription_Normalize_Optional_Values()
-    {
-        var action = ObservationAction.Create("Передача");
-
-        action.ConfigureRoles("  Оператор  ", "   ");
-        action.SetDescription("  Опис   ");
-
-        Assert.Equal("Оператор", action.InitiatorRoleName);
-        Assert.Null(action.ResponderRoleName);
-        Assert.Equal("Опис", action.Description);
-    }
-
-    [Fact]
-    public void Archive_And_Restore_Toggle_IsActive()
-    {
-        var action = ObservationAction.Create("Передача");
-
+        action.Rename("  Вихід на рубіж  ");
+        action.SetCategory(ObservationActionCategory.Movement);
+        action.ConfigureRoles("  водій  ", "  командир  ");
+        action.ConfigureUsage(3, requiresCounterparty: false);
+        action.SetDescription("  оновлений опис  ");
         action.Archive();
-        Assert.False(action.IsActive);
-
         action.Restore();
+
+        Assert.Equal("Вихід на рубіж", action.Name);
+        Assert.Equal("вихід на рубіж", action.NameNorm);
+        Assert.Equal(ObservationActionCategory.Movement, action.Category);
+        Assert.Equal("водій", action.InitiatorRoleName);
+        Assert.Equal("командир", action.ResponderRoleName);
+        Assert.Equal((short)3, action.TypicalParticipantsCount);
+        Assert.False(action.RequiresCounterparty);
+        Assert.Equal("оновлений опис", action.Description);
         Assert.True(action.IsActive);
+    }
+
+    [Fact]
+    public void Create_Rejects_Invalid_Usage_Count()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => ObservationAction.Create("Рух", typicalParticipantsCount: 0));
+    }
+
+    [Fact]
+    public void ConfigureUsage_Rejects_Invalid_Usage_Count()
+    {
+        var action = ObservationAction.Create("Рух");
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => action.ConfigureUsage(0, requiresCounterparty: true));
     }
 }

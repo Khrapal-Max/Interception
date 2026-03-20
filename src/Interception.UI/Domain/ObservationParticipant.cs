@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
@@ -8,7 +8,7 @@ namespace Interception.UI.Domain;
 
 /// <summary>
 /// Raw participant snapshot inside a single observation.
-/// Can later be уточнений by label/role, but we still keep whether the record started as unknown.
+/// Can later be clarified by label/role, but we still keep whether the record started as unknown.
 /// </summary>
 public sealed class ObservationParticipant
 {
@@ -70,6 +70,19 @@ public sealed class ObservationParticipant
     public void UpdateSnapshot(string? labelRaw, bool isUnknown, string? roleRaw)
     {
         ApplySnapshot(labelRaw, isUnknown, roleRaw, initializeStartedFlag: false);
+    }
+
+    public void ResolveAsKnown(string labelRaw, string? roleRaw = null)
+    {
+        if (string.IsNullOrWhiteSpace(labelRaw))
+            throw new ArgumentException("Known participant label is required.", nameof(labelRaw));
+
+        ApplySnapshot(labelRaw, isUnknown: false, roleRaw, initializeStartedFlag: false);
+    }
+
+    public void MarkUnknown(string? roleRaw = null)
+    {
+        ApplySnapshot(LabelRaw, isUnknown: true, roleRaw, initializeStartedFlag: false);
     }
 
     /// <summary>

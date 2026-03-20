@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
@@ -14,7 +14,7 @@ public sealed class ObservationParticipantConfiguration : IEntityTypeConfigurati
     {
         b.ToTable("link_observation_participants", tb =>
         {
-            tb.HasCheckConstraint("ck_link_obs_participants_ordinal", "ordinal >= 1");
+            tb.HasCheckConstraint("ck_link_observation_participants_ordinal", "ordinal >= 1");
         });
 
         b.HasKey(x => x.Id);
@@ -50,19 +50,24 @@ public sealed class ObservationParticipantConfiguration : IEntityTypeConfigurati
             .HasColumnName("ordinal")
             .IsRequired();
 
+        b.HasOne(x => x.Observation)
+            .WithMany(x => x.Participants)
+            .HasForeignKey(x => x.ObservationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         b.HasIndex(x => x.ObservationId)
-            .HasDatabaseName("ix_link_obs_participants_observation_id");
+            .HasDatabaseName("ix_link_observation_participants_observation_id");
 
         b.HasIndex(x => new { x.ObservationId, x.Ordinal })
             .IsUnique()
-            .HasDatabaseName("ux_link_obs_participants_observation_ordinal");
+            .HasDatabaseName("ux_link_observation_participants_observation_ordinal");
 
         b.HasIndex(x => x.LabelNorm)
-            .HasDatabaseName("ix_link_obs_participants_label_norm");
+            .HasDatabaseName("ix_link_observation_participants_label_norm");
 
         b.HasIndex(x => new { x.ObservationId, x.LabelNorm })
             .IsUnique()
             .HasFilter("is_unknown = false and label_norm is not null")
-            .HasDatabaseName("ux_link_obs_participants_observation_label_norm");
+            .HasDatabaseName("ux_link_observation_participants_observation_label_norm");
     }
 }

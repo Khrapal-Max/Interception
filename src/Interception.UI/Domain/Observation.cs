@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
@@ -12,17 +12,17 @@ namespace Interception.UI.Domain;
 /// <summary>
 /// Primary raw observation record.
 /// Stores the fact as it was fixed by operator/import and allows lightweight in-record editing of participants.
+/// Raw fact stays separate from later analytical enrichment.
 /// </summary>
 public sealed class Observation
 {
     public Guid Id { get; private set; } = Guid.NewGuid();
 
-    public DateOnly ObservedDate { get; private set; }
-    public DayPart DayPart { get; private set; }
+    public DateTime ObservedDate { get; private set; }
 
     /// <summary>
     /// Optional bound action from the action catalog.
-    /// Raw action text still remains the source snapshot.
+    /// Raw action text remains the source snapshot and is not overwritten by binding.
     /// </summary>
     public Guid? ObservationActionId { get; private set; }
     public ObservationAction? ObservationAction { get; private set; }
@@ -36,6 +36,11 @@ public sealed class Observation
     public string ActionRaw { get; private set; } = default!;
     public string ActionNorm { get; private set; } = default!;
 
+    public string? SubdivisionRaw { get; private set; }
+    public string? SubdivisionNorm { get; private set; }
+    public SubdivisionLinkStrength? SubdivisionStrength { get; private set; }
+    public ObservationSubdivisionSource? SubdivisionSource { get; private set; }
+
     public string? Note { get; private set; }
 
     public string Source { get; private set; } = "manual";
@@ -48,20 +53,24 @@ public sealed class Observation
     public string? CreatedBy { get; private set; }
 
     public List<ObservationParticipant> Participants { get; private set; } = [];
+    public List<ObservationTag> Tags { get; private set; } = [];
+    public List<ObservationProbableAction> ProbableActions { get; private set; } = [];
 
     private Observation()
     {
     }
 
     public static Observation Create(
-        DateOnly observedDate,
-        DayPart dayPart,
+        DateTime observedDate,
         string actionRaw,
         string? layer = null,
         string? rmRaw = null,
         string? pointRaw = null,
         string? locationRaw = null,
         string? districtRaw = null,
+        string? subdivisionRaw = null,
+        SubdivisionLinkStrength? subdivisionStrength = null,
+        ObservationSubdivisionSource? subdivisionSource = null,
         string? note = null,
         string source = "manual",
         Guid? sourceFileId = null,
@@ -74,7 +83,6 @@ public sealed class Observation
         var observation = new Observation
         {
             ObservedDate = observedDate,
-            DayPart = dayPart,
             Layer = NormalizeOptional(layer),
             RmRaw = NormalizeOptional(rmRaw),
             PointRaw = NormalizeOptional(pointRaw),
@@ -89,6 +97,7 @@ public sealed class Observation
             CreatedBy = NormalizeOptional(createdBy)
         };
 
+        observation.UpdateSubdivision(subdivisionRaw, subdivisionStrength, subdivisionSource);
         observation.RecomputeContentHash();
         return observation;
     }
@@ -123,17 +132,91 @@ public sealed class Observation
         RecomputeContentHash();
     }
 
-    public void BindAction(Guid actionId, string actionName)
+    public ObservationTag AddTag(
+        string rawValue,
+        TagKind kind,
+        ObservationTagSource source = ObservationTagSource.Manual,
+        Guid? tagCatalogId = null)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+            throw new ArgumentException("Tag value is required.", nameof(rawValue));
+
+        var norm = TextNorm.NormalizeRequired(rawValue);
+        var duplicate = Tags.Any(x => x.Kind == kind && x.RawValueNorm == norm);
+        if (duplicate)
+            throw new InvalidOperationException($"Tag '{rawValue}' already exists for this observation.");
+
+        var tag = ObservationTag.Create(Id, rawValue, kind, source, tagCatalogId);
+        Tags.Add(tag);
+        return tag;
+    }
+
+    public void UpdateTag(Guid tagId, string rawValue, TagKind kind, Guid? tagCatalogId = null)
+    {
+        var tag = Tags.FirstOrDefault(x => x.Id == tagId)
+            ?? throw new InvalidOperationException("Tag was not found.");
+
+        var norm = TextNorm.NormalizeRequired(rawValue);
+        var duplicate = Tags.Any(x => x.Id != tagId && x.Kind == kind && x.RawValueNorm == norm);
+        if (duplicate)
+            throw new InvalidOperationException($"Tag '{rawValue}' already exists for this observation.");
+
+        tag.Update(rawValue, kind, tagCatalogId);
+    }
+
+    public void RemoveTag(Guid tagId)
+    {
+        var tag = Tags.FirstOrDefault(x => x.Id == tagId)
+            ?? throw new InvalidOperationException("Tag was not found.");
+
+        Tags.Remove(tag);
+    }
+
+    public ObservationProbableAction AddProbableAction(
+        Guid observationActionId,
+        decimal confidence,
+        string? reason = null,
+        ProbableActionSource source = ProbableActionSource.Manual,
+        string? createdBy = null)
+    {
+        var duplicate = ProbableActions.Any(x => x.ObservationActionId == observationActionId);
+        if (duplicate)
+            throw new InvalidOperationException("Probable action already exists for this observation.");
+
+        var probableAction = ObservationProbableAction.Create(
+            Id,
+            observationActionId,
+            confidence,
+            reason,
+            source,
+            createdBy);
+
+        ProbableActions.Add(probableAction);
+        return probableAction;
+    }
+
+    public void UpdateProbableAction(Guid probableActionId, decimal confidence, string? reason)
+    {
+        var probableAction = ProbableActions.FirstOrDefault(x => x.Id == probableActionId)
+            ?? throw new InvalidOperationException("Probable action was not found.");
+
+        probableAction.Update(confidence, reason);
+    }
+
+    public void RemoveProbableAction(Guid probableActionId)
+    {
+        var probableAction = ProbableActions.FirstOrDefault(x => x.Id == probableActionId)
+            ?? throw new InvalidOperationException("Probable action was not found.");
+
+        ProbableActions.Remove(probableAction);
+    }
+
+    public void BindAction(Guid actionId)
     {
         if (actionId == Guid.Empty)
             throw new ArgumentException("Action id is required.", nameof(actionId));
-        if (string.IsNullOrWhiteSpace(actionName))
-            throw new ArgumentException("Action name is required.", nameof(actionName));
 
         ObservationActionId = actionId;
-        ActionRaw = actionName.Trim();
-        ActionNorm = TextNorm.NormalizeRequired(actionName);
-        RecomputeContentHash();
     }
 
     public void ClearBoundAction()
@@ -166,6 +249,24 @@ public sealed class Observation
         RecomputeContentHash();
     }
 
+    public void UpdateTiming(DateTime observedDate)
+    {
+        ObservedDate = observedDate;
+        RecomputeContentHash();
+    }
+
+    public void UpdateSubdivision(
+        string? subdivisionRaw,
+        SubdivisionLinkStrength? subdivisionStrength,
+        ObservationSubdivisionSource? subdivisionSource)
+    {
+        SubdivisionRaw = NormalizeOptional(subdivisionRaw);
+        SubdivisionNorm = TextNorm.Normalize(SubdivisionRaw);
+        SubdivisionStrength = SubdivisionNorm is null ? null : subdivisionStrength;
+        SubdivisionSource = SubdivisionNorm is null ? null : subdivisionSource;
+        RecomputeContentHash();
+    }
+
     private void EnsureKnownParticipantUniqueness(Guid? currentParticipantId, string? labelRaw, bool isUnknown)
     {
         var norm = TextNorm.Normalize(labelRaw);
@@ -189,14 +290,16 @@ public sealed class Observation
     private string ComputeContentHash()
     {
         var builder = new StringBuilder();
-        builder.Append(ObservedDate.ToString("yyyy-MM-dd")).Append('|');
-        builder.Append((short)DayPart).Append('|');
+        builder.Append(ObservedDate.ToString("yyyy-MM-dd HH^mm")).Append('|');
         builder.Append(ActionNorm).Append('|');
         builder.Append(TextNorm.Normalize(LocationRaw) ?? string.Empty).Append('|');
         builder.Append(TextNorm.Normalize(DistrictRaw) ?? string.Empty).Append('|');
         builder.Append(TextNorm.Normalize(RmRaw) ?? string.Empty).Append('|');
         builder.Append(TextNorm.Normalize(PointRaw) ?? string.Empty).Append('|');
         builder.Append(TextNorm.Normalize(Layer) ?? string.Empty).Append('|');
+        builder.Append(SubdivisionNorm ?? string.Empty).Append('|');
+        builder.Append(SubdivisionStrength is null ? string.Empty : ((short)SubdivisionStrength.Value).ToString()).Append('|');
+        builder.Append(SubdivisionSource is null ? string.Empty : ((short)SubdivisionSource.Value).ToString()).Append('|');
 
         foreach (var participant in Participants.OrderBy(x => x.Ordinal))
         {

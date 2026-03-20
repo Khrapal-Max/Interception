@@ -1,8 +1,9 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -12,10 +13,7 @@ public sealed class ObservationConfiguration : IEntityTypeConfiguration<Observat
 {
     public void Configure(EntityTypeBuilder<Observation> b)
     {
-        b.ToTable("link_observations", tb =>
-        {
-            tb.HasCheckConstraint("ck_link_observations_day_part", "day_part in (1, 2)");
-        });
+        b.ToTable("link_observations");
 
         b.HasKey(x => x.Id);
 
@@ -24,13 +22,7 @@ public sealed class ObservationConfiguration : IEntityTypeConfiguration<Observat
 
         b.Property(x => x.ObservedDate)
             .HasColumnName("observed_date")
-            .HasColumnType("date")
-            .IsRequired();
-
-        b.Property(x => x.DayPart)
-            .HasColumnName("day_part")
-            .HasConversion<short>()
-            .HasColumnType("smallint")
+            .HasColumnType("timestamp without time zone")
             .IsRequired();
 
         b.Property(x => x.ObservationActionId)
@@ -65,6 +57,26 @@ public sealed class ObservationConfiguration : IEntityTypeConfiguration<Observat
             .HasColumnName("action_norm")
             .HasMaxLength(256)
             .IsRequired();
+
+        b.Property(x => x.SubdivisionRaw)
+            .HasColumnName("subdivision_raw")
+            .HasMaxLength(256);
+
+        b.Property(x => x.SubdivisionNorm)
+            .HasColumnName("subdivision_norm")
+            .HasMaxLength(256);
+
+        b.Property(x => x.SubdivisionStrength)
+            .HasColumnName("subdivision_strength")
+            .HasConversion(
+                value => value.HasValue ? (short?)value.Value : null,
+                value => value.HasValue ? (SubdivisionLinkStrength?)value.Value : null);
+
+        b.Property(x => x.SubdivisionSource)
+            .HasColumnName("subdivision_source")
+            .HasConversion(
+                value => value.HasValue ? (short?)value.Value : null,
+                value => value.HasValue ? (ObservationSubdivisionSource?)value.Value : null);
 
         b.Property(x => x.Note)
             .HasColumnName("note")
@@ -103,16 +115,32 @@ public sealed class ObservationConfiguration : IEntityTypeConfiguration<Observat
         b.HasMany(x => x.Participants)
             .WithOne(x => x.Observation)
             .HasForeignKey(x => x.ObservationId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
-        b.HasIndex(x => new { x.ObservedDate, x.DayPart })
-            .HasDatabaseName("ix_link_observations_date_part");
+        b.HasMany(x => x.Tags)
+            .WithOne(x => x.Observation)
+            .HasForeignKey(x => x.ObservationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        b.HasMany(x => x.ProbableActions)
+            .WithOne(x => x.Observation)
+            .HasForeignKey(x => x.ObservationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        b.HasIndex(x => x.ObservedDate)
+            .HasDatabaseName("ix_link_observations_observed_date");
 
         b.HasIndex(x => x.ObservationActionId)
-            .HasDatabaseName("ix_link_observations_action_id");
+            .HasDatabaseName("ix_link_observations_observation_action_id");
 
         b.HasIndex(x => x.ActionNorm)
             .HasDatabaseName("ix_link_observations_action_norm");
+
+        b.HasIndex(x => x.SubdivisionNorm)
+            .HasDatabaseName("ix_link_observations_subdivision_norm");
+
+        b.HasIndex(x => new { x.Layer, x.RmRaw })
+            .HasDatabaseName("ix_link_observations_layer_rm_raw");
 
         b.HasIndex(x => x.ContentHash)
             .IsUnique()
