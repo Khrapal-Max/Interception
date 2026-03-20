@@ -5,6 +5,7 @@
 using Interception.UI.Application.Observations.Abstractions;
 using Interception.UI.Application.Observations.Dtos;
 using Interception.UI.Application.Toasts;
+using Interception.UI.Components.Pages.Observations.Models;
 using Interception.UI.Domain.Enums;
 using Microsoft.AspNetCore.Components;
 
@@ -29,8 +30,7 @@ public partial class ObservationsPage : ComponentBase, IDisposable
     private string? _subdivisionStrengthText;
 
     private bool _radioDrawerOpen;
-    private string? _observedFromText;
-    private string? _observedToText;
+    private ObservationCreateSeedModel? _pendingCreateSeed;
 
     [Inject] private IObservationRegistryService RegistryService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
@@ -97,12 +97,24 @@ public partial class ObservationsPage : ComponentBase, IDisposable
     private Task HandleCreateDrawerChangedAsync(bool isOpen)
     {
         _createDrawerOpen = isOpen;
+
+        if (!isOpen)
+            _pendingCreateSeed = null;
+
         return Task.CompletedTask;
     }
 
     private Task HandleRadioDrawerChangedAsync(bool isOpen)
     {
         _radioDrawerOpen = isOpen;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRadioParsedAsync(ObservationCreateSeedModel seed)
+    {
+        _pendingCreateSeed = seed;
+        _radioDrawerOpen = false;
+        _createDrawerOpen = true;
         return Task.CompletedTask;
     }
 
@@ -114,14 +126,8 @@ public partial class ObservationsPage : ComponentBase, IDisposable
 
     private async Task HandleSavedAsync(Guid observationId)
     {
+        _pendingCreateSeed = null;
         _createDrawerOpen = false;
-        await LoadAsync();
-        Navigation.NavigateTo($"/observations/{observationId}");
-    }
-
-    private async Task HandleRadioSavedAsync(Guid observationId)
-    {
-        _radioDrawerOpen = false;
         await LoadAsync();
         Navigation.NavigateTo($"/observations/{observationId}");
     }

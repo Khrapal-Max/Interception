@@ -9,14 +9,14 @@ public sealed class ObservationRadioDrawerModel
     public bool IsParsed { get; set; }
     public string? SourcePost { get; set; }
     public string? SuggestedActionRaw { get; set; }
-    public ObservationEditorModel Draft { get; set; } = new();
+    public ObservationCreateSeedModel Seed { get; set; } = new();
     public List<ObservationRadioTagSuggestionRow> SuggestedTags { get; set; } = [];
     public List<string> Warnings { get; set; } = [];
 
     public static ObservationRadioDrawerModel CreateEmpty()
         => new()
         {
-            Draft = new ObservationEditorModel
+            Seed = new ObservationCreateSeedModel
             {
                 ObservedDate = DateTime.Now
             }

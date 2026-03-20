@@ -12,6 +12,16 @@
         CloseOnEscape="true">
     <ChildContent>
         <div class="obs-drawer-body d-flex flex-column gap-3">
+            @if (_seedApplied && ObservationId is null)
+            {
+                <div class="alert alert-info rounded-0 py-2 px-3 mb-0">
+                    <div class="fw-semibold mb-1">Чернетка заповнена з службового р/о</div>
+                    <div class="small">
+                        Перевір поля, типізовану дію, мітки і підказки по відомих учасниках перед збереженням.
+                    </div>
+                </div>
+            }
+
             <div class="row g-2">
                 <div class="col-12 col-lg-4">
                     <label class="form-label small mb-1">Дата і час</label>
@@ -82,8 +92,8 @@
 
             <div class="row g-2">
                 <div class="col-12 col-md-6 col-xl-4">
-                    <label class="form-label small mb-1">Частота</label>
-                    <input class="form-control form-control-sm rounded-0" @bind="_model.Layer" placeholder="Частота" />
+                    <label class="form-label small mb-1">Шар</label>
+                    <input class="form-control form-control-sm rounded-0" @bind="_model.Layer" placeholder="Шар" />
                 </div>
                 <div class="col-12 col-md-6 col-xl-4">
                     <label class="form-label small mb-1">Р/М</label>
@@ -133,6 +143,11 @@
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <div class="fw-semibold">Учасники</div>
                     <div class="d-flex flex-wrap gap-2">
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm rounded-0"
+                                @onclick="EnrichParticipantsAsync">
+                            Перевірити відомих
+                        </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm rounded-0" @onclick="AddUnknownParticipant">Додати НВ</button>
                         <button type="button" class="btn btn-outline-primary btn-sm rounded-0" @onclick="AddParticipantRow">Додати людину</button>
                     </div>
@@ -160,7 +175,7 @@
                                     class="list-group-item list-group-item-action rounded-0"
                                     @onclick="() => AddSuggestedParticipant(item)">
                                 <div class="fw-semibold">@item.LabelRaw</div>
-                                <div class="small text-muted">@(item.PrimaryRole ?? "—")</div>
+                                <div class="small text-muted">@(item.PrimaryRole ?? "—") · повторів: @item.SeenCount</div>
                             </button>
                         }
                     </div>
@@ -170,25 +185,73 @@
                     <table class="table table-sm align-middle mb-0">
                         <thead class="table-light sticky-top">
                             <tr>
-                                <th style="width: 38%;">Позначення</th>
-                                <th style="width: 28%;">Роль</th>
-                                <th style="width: 12%;">НВ</th>
-                                <th style="width: 12%;">№</th>
+                                <th style="width: 26%;">Позначення</th>
+                                <th style="width: 20%;">Роль</th>
+                                <th style="width: 26%;">Відома особа</th>
+                                <th style="width: 8%;">НВ</th>
+                                <th style="width: 10%;">№</th>
                                 <th style="width: 10%;"></th>
                             </tr>
                         </thead>
                         <tbody>
                             @if (_model.Participants.Count == 0)
                             {
-                                <tr><td colspan="5" class="text-muted">Немає учасників</td></tr>
+                                <tr><td colspan="6" class="text-muted">Немає учасників</td></tr>
                             }
                             else
                             {
-                                @foreach (var row in _model.Participants)
+                                @foreach (var row in _model.Participants.OrderBy(x => x.Ordinal))
                                 {
                                     <tr>
                                         <td><input class="form-control form-control-sm rounded-0" @bind="row.LabelRaw" placeholder="Позначення" /></td>
                                         <td><input class="form-control form-control-sm rounded-0" @bind="row.RoleRaw" placeholder="Роль" /></td>
+                                        <td>
+                                            @if (row.HasKnownSuggestion)
+                                            {
+                                                <div class="d-flex flex-column gap-1">
+                                                    <div class="small fw-semibold">@row.SuggestedKnownLabel</div>
+                                                    <div class="small text-muted">
+                                                        @(string.IsNullOrWhiteSpace(row.SuggestedKnownRole) ? "роль невідома" : row.SuggestedKnownRole)
+                                                        · повторів: @row.SuggestedKnownSeenCount
+                                                    </div>
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                        <button type="button"
+                                                                class="btn btn-outline-primary btn-sm rounded-0"
+                                                                @onclick="() => ApplyKnownSuggestion(row)">
+                                                            Підставити
+                                                        </button>
+                                                        <button type="button"
+                                                                class="btn btn-outline-secondary btn-sm rounded-0"
+                                                                @onclick="() => RefreshKnownSuggestionAsync(row)">
+                                                            Оновити
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            }
+                                            else if (row.KnownLookupChecked && !row.IsUnknown && !string.IsNullOrWhiteSpace(row.LabelRaw))
+                                            {
+                                                <div class="small text-muted d-flex flex-column gap-1">
+                                                    <span>Точний збіг не знайдено</span>
+                                                    <button type="button"
+                                                            class="btn btn-outline-secondary btn-sm rounded-0 align-self-start"
+                                                            @onclick="() => RefreshKnownSuggestionAsync(row)">
+                                                        Перевірити ще раз
+                                                    </button>
+                                                </div>
+                                            }
+                                            else if (!row.IsUnknown && !string.IsNullOrWhiteSpace(row.LabelRaw))
+                                            {
+                                                <button type="button"
+                                                        class="btn btn-outline-secondary btn-sm rounded-0"
+                                                        @onclick="() => RefreshKnownSuggestionAsync(row)">
+                                                    Знайти
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <span class="small text-muted">—</span>
+                                            }
+                                        </td>
                                         <td class="text-center"><input type="checkbox" class="form-check-input" @bind="row.IsUnknown" /></td>
                                         <td><input type="number" class="form-control form-control-sm rounded-0" min="1" @bind="row.Ordinal" /></td>
                                         <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm rounded-0" @onclick="() => RemoveParticipant(row)">×</button></td>

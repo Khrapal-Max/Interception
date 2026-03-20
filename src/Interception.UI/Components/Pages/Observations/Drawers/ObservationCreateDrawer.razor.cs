@@ -2,6 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
+using System.Text.RegularExpressions;
 using Interception.UI.Application.Observations.Abstractions;
 using Interception.UI.Application.Observations.Dtos;
 using Interception.UI.Application.Toasts;
@@ -14,25 +15,29 @@ namespace Interception.UI.Components.Pages.Observations.Drawers;
 
 public partial class ObservationCreateDrawer : ComponentBase, IDisposable
 {
+    private readonly CancellationTokenSource _lifetimeCts = new();
+    private CancellationTokenSource? _actionLookupCts;
+    private CancellationTokenSource? _participantLookupCts;
+    private CancellationTokenSource? _probableLookupCts;
+
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
     [Parameter] public Guid? ObservationId { get; set; }
     [Parameter] public ObservationDetailsDto? Details { get; set; }
+    [Parameter] public ObservationCreateSeedModel? Seed { get; set; }
     [Parameter] public EventCallback<Guid> Saved { get; set; }
 
     [Inject] private IObservationWriteService WriteService { get; set; } = default!;
     [Inject] private IObservationLookupService LookupService { get; set; } = default!;
     [Inject] private ToastService ToastService { get; set; } = default!;
 
-    private readonly CancellationTokenSource _lifetimeCts = new();
-    private CancellationTokenSource? _actionSearchCts;
-    private CancellationTokenSource? _participantSearchCts;
-    private CancellationTokenSource? _probableActionSearchCts;
-
     private Drawer? _drawer;
     private ObservationEditorModel _model = CreateEmptyModel();
     private bool _saving;
     private bool _initialized;
+    private bool _seedApplied;
+    private bool _seedNeedsParticipantEnrichment;
+    private string? _appliedSeedKey;
     private List<ActionCatalogSuggestionDto> _actionSuggestions = [];
     private List<ParticipantSuggestionDto> _participantSuggestions = [];
     private List<ActionCatalogSuggestionDto> _probableActionSuggestions = [];
@@ -79,30 +84,61 @@ public partial class ObservationCreateDrawer : ComponentBase, IDisposable
         if (!IsOpen)
         {
             _initialized = false;
-            CancelLookupRequests();
+            _seedApplied = false;
+            _seedNeedsParticipantEnrichment = false;
+            _appliedSeedKey = null;
             return;
         }
 
-        if (_initialized)
-            return;
+        if (!_initialized)
+        {
+            _initialized = true;
+            _seedApplied = false;
+            _appliedSeedKey = null;
+            _actionSuggestions.Clear();
+            _participantSuggestions.Clear();
+            _probableActionSuggestions.Clear();
+            _actionSearch = null;
+            _participantSearch = null;
+            _probableActionSearch = null;
 
-        _initialized = true;
-        _actionSuggestions.Clear();
-        _participantSuggestions.Clear();
-        _probableActionSuggestions.Clear();
-        _actionSearch = null;
-        _participantSearch = null;
-        _probableActionSearch = null;
-        _model = BuildModel(Details);
+            _model = BuildModel(Details);
+        }
+
+        if (ObservationId is null && Seed is not null)
+        {
+            var seedKey = BuildSeedKey(Seed);
+            if (!string.Equals(seedKey, _appliedSeedKey, StringComparison.Ordinal))
+            {
+                _model = CreateEmptyModel();
+                ApplySeed(_model, Seed);
+                _seedApplied = true;
+                _seedNeedsParticipantEnrichment = _model.Participants.Count > 0;
+                _appliedSeedKey = seedKey;
+                _actionSearch = _model.ObservationActionName ?? _model.ActionRaw;
+            }
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_seedNeedsParticipantEnrichment)
+        {
+            _seedNeedsParticipantEnrichment = false;
+            await EnrichParticipantsAsync();
+            StateHasChanged();
+        }
     }
 
     private async Task SearchActionsAsync()
     {
-        var token = ReplaceSearchCts(ref _actionSearchCts);
+        _actionLookupCts?.Cancel();
+        _actionLookupCts?.Dispose();
+        _actionLookupCts = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCts.Token);
 
         try
         {
-            _actionSuggestions = [.. await LookupService.SearchActionCatalogSuggestionsAsync(_actionSearch ?? string.Empty, 10, token)];
+            _actionSuggestions = [.. (await LookupService.SearchActionCatalogSuggestionsAsync(_actionSearch ?? string.Empty, 10, _actionLookupCts.Token))];
         }
         catch (OperationCanceledException)
         {
@@ -111,11 +147,13 @@ public partial class ObservationCreateDrawer : ComponentBase, IDisposable
 
     private async Task SearchParticipantsAsync()
     {
-        var token = ReplaceSearchCts(ref _participantSearchCts);
+        _participantLookupCts?.Cancel();
+        _participantLookupCts?.Dispose();
+        _participantLookupCts = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCts.Token);
 
         try
         {
-            _participantSuggestions = [.. await LookupService.SearchParticipantSuggestionsAsync(_participantSearch ?? string.Empty, 10, token)];
+            _participantSuggestions = [.. (await LookupService.SearchParticipantSuggestionsAsync(_participantSearch ?? string.Empty, 10, _participantLookupCts.Token))];
         }
         catch (OperationCanceledException)
         {
@@ -124,11 +162,13 @@ public partial class ObservationCreateDrawer : ComponentBase, IDisposable
 
     private async Task SearchProbableActionsAsync()
     {
-        var token = ReplaceSearchCts(ref _probableActionSearchCts);
+        _probableLookupCts?.Cancel();
+        _probableLookupCts?.Dispose();
+        _probableLookupCts = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCts.Token);
 
         try
         {
-            _probableActionSuggestions = [.. await LookupService.SearchActionCatalogSuggestionsAsync(_probableActionSearch ?? string.Empty, 10, token)];
+            _probableActionSuggestions = [.. (await LookupService.SearchActionCatalogSuggestionsAsync(_probableActionSearch ?? string.Empty, 10, _probableLookupCts.Token))];
         }
         catch (OperationCanceledException)
         {
@@ -168,7 +208,12 @@ public partial class ObservationCreateDrawer : ComponentBase, IDisposable
             LabelRaw = item.LabelRaw,
             RoleRaw = item.PrimaryRole,
             IsUnknown = false,
-            Ordinal = GetNextOrdinal()
+            Ordinal = GetNextOrdinal(),
+            SuggestedKnownLabel = item.LabelRaw,
+            SuggestedKnownRole = item.PrimaryRole,
+            SuggestedKnownSeenCount = item.SeenCount,
+            KnownLookupChecked = true,
+            KnownSuggestionApplied = true
         });
 
         _participantSearch = item.LabelRaw;
@@ -200,16 +245,73 @@ public partial class ObservationCreateDrawer : ComponentBase, IDisposable
 
     private void RemoveProbableAction(ObservationProbableActionEditorRow row) => _model.ProbableActions.Remove(row);
 
+    private async Task EnrichParticipantsAsync()
+    {
+        foreach (var row in _model.Participants.OrderBy(x => x.Ordinal))
+        {
+            await RefreshKnownSuggestionAsync(row);
+        }
+    }
+
+    private async Task RefreshKnownSuggestionAsync(ObservationParticipantEditorRow row)
+    {
+        if (row.IsUnknown || string.IsNullOrWhiteSpace(row.LabelRaw))
+        {
+            row.ClearKnownSuggestion();
+            return;
+        }
+
+        try
+        {
+            var suggestions = await LookupService.SearchParticipantSuggestionsAsync(
+                row.LabelRaw.Trim(),
+                5,
+                _lifetimeCts.Token);
+
+            row.KnownLookupChecked = true;
+            var match = SelectKnownSuggestion(row.LabelRaw, suggestions);
+
+            if (match is null)
+            {
+                row.SuggestedKnownLabel = null;
+                row.SuggestedKnownRole = null;
+                row.SuggestedKnownSeenCount = 0;
+                row.KnownSuggestionApplied = false;
+                return;
+            }
+
+            row.SuggestedKnownLabel = match.LabelRaw;
+            row.SuggestedKnownRole = match.PrimaryRole;
+            row.SuggestedKnownSeenCount = match.SeenCount;
+            row.KnownSuggestionApplied = false;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private void ApplyKnownSuggestion(ObservationParticipantEditorRow row)
+    {
+        if (!row.HasKnownSuggestion)
+            return;
+
+        row.LabelRaw = row.SuggestedKnownLabel;
+        if (string.IsNullOrWhiteSpace(row.RoleRaw))
+            row.RoleRaw = row.SuggestedKnownRole;
+
+        row.IsUnknown = false;
+        row.KnownSuggestionApplied = true;
+    }
+
     private async Task SaveAsync()
     {
         try
         {
             _saving = true;
             var request = BuildRequest();
-            var token = _lifetimeCts.Token;
             var result = ObservationId is null
-                ? await WriteService.CreateAsync(request, token)
-                : await WriteService.UpdateAsync(ObservationId.Value, request, token);
+                ? await WriteService.CreateAsync(request, _lifetimeCts.Token)
+                : await WriteService.UpdateAsync(ObservationId.Value, request, _lifetimeCts.Token);
 
             if (result.IsDuplicate)
             {
@@ -251,7 +353,8 @@ public partial class ObservationCreateDrawer : ComponentBase, IDisposable
     private async Task HandleDrawerClosedAsync()
     {
         _initialized = false;
-        CancelLookupRequests();
+        _seedApplied = false;
+        _appliedSeedKey = null;
         await IsOpenChanged.InvokeAsync(false);
     }
 
@@ -308,48 +411,6 @@ public partial class ObservationCreateDrawer : ComponentBase, IDisposable
     private int GetNextOrdinal()
         => _model.Participants.Count == 0 ? 1 : _model.Participants.Max(x => x.Ordinal) + 1;
 
-    public void Dispose()
-    {
-        CancelAndDispose(ref _actionSearchCts);
-        CancelAndDispose(ref _participantSearchCts);
-        CancelAndDispose(ref _probableActionSearchCts);
-        _lifetimeCts.Cancel();
-        _lifetimeCts.Dispose();
-
-        GC.SuppressFinalize(this);
-    }
-
-    private void CancelLookupRequests()
-    {
-        CancelAndDispose(ref _actionSearchCts);
-        CancelAndDispose(ref _participantSearchCts);
-        CancelAndDispose(ref _probableActionSearchCts);
-    }
-
-    private CancellationToken ReplaceSearchCts(ref CancellationTokenSource? current)
-    {
-        CancelAndDispose(ref current);
-        current = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCts.Token);
-        return current.Token;
-    }
-
-    private static void CancelAndDispose(ref CancellationTokenSource? source)
-    {
-        if (source is null)
-            return;
-
-        try
-        {
-            source.Cancel();
-        }
-        catch
-        {
-        }
-
-        source.Dispose();
-        source = null;
-    }
-
     private static ObservationEditorModel BuildModel(ObservationDetailsDto? details)
     {
         if (details is null)
@@ -404,6 +465,92 @@ public partial class ObservationCreateDrawer : ComponentBase, IDisposable
     private static ObservationEditorModel CreateEmptyModel()
         => new() { ObservedDate = DateTime.Now, SubdivisionSource = ObservationSubdivisionSource.Manual };
 
+    private static string BuildSeedKey(ObservationCreateSeedModel seed)
+    {
+        var participantKey = string.Join('|', seed.Participants
+            .OrderBy(x => x.Ordinal)
+            .Select(x => $"{x.Ordinal}:{x.IsUnknown}:{x.LabelRaw}:{x.RoleRaw}"));
+
+        var tagKey = string.Join('|', seed.Tags
+            .OrderBy(x => x.RawValue)
+            .Select(x => $"{x.Kind}:{x.Source}:{x.RawValue}"));
+
+        return string.Join("||",
+            seed.ObservedDate.ToString("O"),
+            seed.ObservationActionId?.ToString() ?? string.Empty,
+            seed.ObservationActionName ?? string.Empty,
+            seed.ActionRaw ?? string.Empty,
+            seed.Layer ?? string.Empty,
+            seed.RmRaw ?? string.Empty,
+            seed.PointRaw ?? string.Empty,
+            seed.LocationRaw ?? string.Empty,
+            seed.DistrictRaw ?? string.Empty,
+            seed.SubdivisionRaw ?? string.Empty,
+            seed.SubdivisionStrength?.ToString() ?? string.Empty,
+            seed.SubdivisionSource.ToString(),
+            seed.Note ?? string.Empty,
+            participantKey,
+            tagKey);
+    }
+
+    private static void ApplySeed(ObservationEditorModel model, ObservationCreateSeedModel seed)
+    {
+        model.ObservedDate = seed.ObservedDate;
+        model.ObservationActionId = seed.ObservationActionId;
+        model.ObservationActionName = seed.ObservationActionName;
+        model.ActionRaw = seed.ActionRaw;
+        model.Layer = seed.Layer;
+        model.RmRaw = seed.RmRaw;
+        model.PointRaw = seed.PointRaw;
+        model.LocationRaw = seed.LocationRaw;
+        model.DistrictRaw = seed.DistrictRaw;
+        model.SubdivisionRaw = seed.SubdivisionRaw;
+        model.SubdivisionStrength = seed.SubdivisionStrength;
+        model.SubdivisionSource = seed.SubdivisionSource;
+        model.Note = seed.Note;
+        model.Participants = seed.Participants
+            .OrderBy(x => x.Ordinal)
+            .Select(x => new ObservationParticipantEditorRow
+            {
+                LabelRaw = x.LabelRaw,
+                RoleRaw = x.RoleRaw,
+                IsUnknown = x.IsUnknown,
+                Ordinal = x.Ordinal
+            })
+            .ToList();
+        model.Tags = seed.Tags
+            .Select(x => new ObservationTagEditorRow
+            {
+                RawValue = x.RawValue,
+                Kind = x.Kind,
+                Source = x.Source
+            })
+            .ToList();
+    }
+
+    private static ParticipantSuggestionDto? SelectKnownSuggestion(string? label, IReadOnlyList<ParticipantSuggestionDto> suggestions)
+    {
+        var normalizedLabel = NormalizeParticipant(label);
+        if (string.IsNullOrWhiteSpace(normalizedLabel))
+            return null;
+
+        var exactMatches = suggestions
+            .Where(x =>
+                NormalizeParticipant(x.LabelRaw) == normalizedLabel ||
+                NormalizeParticipant(x.LabelNorm) == normalizedLabel)
+            .ToList();
+
+        if (exactMatches.Count == 1)
+            return exactMatches[0];
+
+        return null;
+    }
+
+    private static string NormalizeParticipant(string? value)
+        => Regex.Replace(value ?? string.Empty, @"[\s\p{P}\p{S}_]+", string.Empty)
+            .Trim()
+            .ToUpperInvariant();
+
     private static string GetActionCategoryText(ObservationActionCategory value)
         => value switch
         {
@@ -419,4 +566,17 @@ public partial class ObservationCreateDrawer : ComponentBase, IDisposable
 
     private static string? Clean(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    public void Dispose()
+    {
+        _actionLookupCts?.Cancel();
+        _actionLookupCts?.Dispose();
+        _participantLookupCts?.Cancel();
+        _participantLookupCts?.Dispose();
+        _probableLookupCts?.Cancel();
+        _probableLookupCts?.Dispose();
+        _lifetimeCts.Cancel();
+        _lifetimeCts.Dispose();
+        GC.SuppressFinalize(this);
+    }
 }

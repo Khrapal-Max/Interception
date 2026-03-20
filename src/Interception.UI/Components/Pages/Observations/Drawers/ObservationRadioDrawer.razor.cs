@@ -16,16 +16,15 @@ public partial class ObservationRadioDrawer : ComponentBase, IDisposable
 
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
-    [Parameter] public EventCallback<Guid> Saved { get; set; }
+    [Parameter] public EventCallback<ObservationCreateSeedModel> ParsedToCreate { get; set; }
 
-    [Inject] private IObservationWriteService WriteService { get; set; } = default!;
     [Inject] private IObservationLookupService LookupService { get; set; } = default!;
     [Inject] private ToastService ToastService { get; set; } = default!;
 
     private Drawer? _drawer;
     private ObservationRadioDrawerModel _model = ObservationRadioDrawerModel.CreateEmpty();
     private bool _initialized;
-    private bool _saving;
+    private bool _transferring;
     private List<ActionCatalogSuggestionDto> _actionSuggestions = [];
     private string? _actionSearch;
 
@@ -52,32 +51,25 @@ public partial class ObservationRadioDrawer : ComponentBase, IDisposable
 
         if (!result.IsSuccess)
         {
+            var rawText = _model.RawText;
             ToastService.Warning("Не вдалося розібрати блок", result.ErrorMessage ?? "Перевірте формат тексту.");
-            _model.IsParsed = false;
-            _model.SourcePost = null;
-            _model.SuggestedActionRaw = null;
-            _model.Draft = ObservationRadioDrawerModel.CreateEmpty().Draft;
-            _model.SuggestedTags.Clear();
-            _model.Warnings.Clear();
+            _model = ObservationRadioDrawerModel.CreateEmpty();
+            _model.RawText = rawText;
             return;
         }
 
         _model.IsParsed = true;
         _model.SourcePost = result.SourcePost;
         _model.SuggestedActionRaw = result.SuggestedActionRaw;
-        _model.Draft = result.Draft;
+        _model.Seed = result.Seed;
         _model.SuggestedTags = result.SuggestedTags;
         _model.Warnings = result.Warnings;
-        _actionSearch = _model.Draft.ActionRaw;
+        _actionSearch = _model.Seed.ActionRaw;
 
         if (_model.Warnings.Count > 0)
-        {
-            ToastService.Warning("Блок розібрано частково", "Перевірте витягнуті поля перед збереженням.");
-        }
+            ToastService.Warning("Блок розібрано частково", "Перевірте витягнуті поля перед передачею у форму.");
         else
-        {
             ToastService.Success("Блок розібрано");
-        }
     }
 
     private async Task SearchActionsAsync()
@@ -102,14 +94,16 @@ public partial class ObservationRadioDrawer : ComponentBase, IDisposable
 
     private void SelectBoundAction(ActionCatalogSuggestionDto item)
     {
-        _model.Draft.ObservationActionId = item.Id;
+        _model.Seed.ObservationActionId = item.Id;
+        _model.Seed.ObservationActionName = item.Name;
         _actionSearch = item.Name;
         _actionSuggestions.Clear();
     }
 
     private void ClearBoundAction()
     {
-        _model.Draft.ObservationActionId = null;
+        _model.Seed.ObservationActionId = null;
+        _model.Seed.ObservationActionName = null;
         _actionSearch = null;
         _actionSuggestions.Clear();
     }
@@ -117,16 +111,16 @@ public partial class ObservationRadioDrawer : ComponentBase, IDisposable
     private void ApplySuggestedAction()
     {
         if (!string.IsNullOrWhiteSpace(_model.SuggestedActionRaw))
-            _model.Draft.ActionRaw = _model.SuggestedActionRaw;
+            _model.Seed.ActionRaw = _model.SuggestedActionRaw;
     }
 
-    private void AddTagRow() => _model.Draft.Tags.Add(new ObservationTagEditorRow());
+    private void AddTagRow() => _model.Seed.Tags.Add(new ObservationTagSeedRow());
 
-    private void RemoveTag(ObservationTagEditorRow row) => _model.Draft.Tags.Remove(row);
+    private void RemoveTag(ObservationTagSeedRow row) => _model.Seed.Tags.Remove(row);
 
     private void ApplySuggestedTag(ObservationRadioTagSuggestionRow suggestion)
     {
-        if (_model.Draft.Tags.Any(x =>
+        if (_model.Seed.Tags.Any(x =>
                 string.Equals(x.RawValue?.Trim(), suggestion.Value.Trim(), StringComparison.OrdinalIgnoreCase) &&
                 x.Kind == suggestion.Kind))
         {
@@ -134,7 +128,7 @@ public partial class ObservationRadioDrawer : ComponentBase, IDisposable
             return;
         }
 
-        _model.Draft.Tags.Add(new ObservationTagEditorRow
+        _model.Seed.Tags.Add(new ObservationTagSeedRow
         {
             RawValue = suggestion.Value,
             Kind = suggestion.Kind,
@@ -146,16 +140,16 @@ public partial class ObservationRadioDrawer : ComponentBase, IDisposable
 
     private void AddParticipantRow()
     {
-        _model.Draft.Participants.Add(new ObservationParticipantEditorRow
+        _model.Seed.Participants.Add(new ObservationParticipantSeedRow
         {
             Ordinal = GetNextOrdinal()
         });
     }
 
-    private void RemoveParticipant(ObservationParticipantEditorRow row)
-        => _model.Draft.Participants.Remove(row);
+    private void RemoveParticipant(ObservationParticipantSeedRow row)
+        => _model.Seed.Participants.Remove(row);
 
-    private async Task SaveAsync()
+    private async Task TransferToCreateAsync()
     {
         if (!_model.IsParsed)
         {
@@ -163,7 +157,7 @@ public partial class ObservationRadioDrawer : ComponentBase, IDisposable
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(_model.Draft.ActionRaw))
+        if (string.IsNullOrWhiteSpace(_model.Seed.ActionRaw))
         {
             ToastService.Warning("Потрібна дія", "Вкажіть первинний текст дії.");
             return;
@@ -171,78 +165,24 @@ public partial class ObservationRadioDrawer : ComponentBase, IDisposable
 
         try
         {
-            _saving = true;
+            _transferring = true;
 
-            var request = BuildRequest();
-            var result = await WriteService.CreateAsync(request, _lifetimeCts.Token);
-
-            if (result.IsDuplicate)
+            if (!ParsedToCreate.HasDelegate)
             {
-                ToastService.Warning("Дублікат", "Такий запис уже існує.");
+                ToastService.Warning("Немає обробника", "На сторінці не підключено передачу seed у форму створення.");
                 return;
             }
 
-            ToastService.Success("Спостереження збережено");
-
-            if (Saved.HasDelegate)
-                await Saved.InvokeAsync(result.ObservationId);
-
-            await CloseDrawerAsync();
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (Exception ex)
-        {
-            ToastService.Error("Не вдалося зберегти спостереження.", ex.Message);
+            await ParsedToCreate.InvokeAsync(_model.Seed.Clone());
         }
         finally
         {
-            _saving = false;
+            _transferring = false;
         }
     }
 
-    private ObservationUpsertRequestDto BuildRequest()
-    {
-        return new ObservationUpsertRequestDto
-        {
-            ObservedDate = _model.Draft.ObservedDate,
-            ObservationActionId = _model.Draft.ObservationActionId,
-            ActionRaw = _model.Draft.ActionRaw.Trim(),
-            Layer = Clean(_model.Draft.Layer),
-            RmRaw = Clean(_model.Draft.RmRaw),
-            PointRaw = Clean(_model.Draft.PointRaw),
-            LocationRaw = Clean(_model.Draft.LocationRaw),
-            DistrictRaw = Clean(_model.Draft.DistrictRaw),
-            SubdivisionRaw = Clean(_model.Draft.SubdivisionRaw),
-            SubdivisionStrength = _model.Draft.SubdivisionStrength,
-            SubdivisionSource = _model.Draft.SubdivisionSource,
-            Note = Clean(_model.Draft.Note),
-            Participants = _model.Draft.Participants
-                .Where(x => !string.IsNullOrWhiteSpace(x.LabelRaw) || !string.IsNullOrWhiteSpace(x.RoleRaw) || x.IsUnknown)
-                .Select(x => new ObservationParticipantUpsertDto
-                {
-                    LabelRaw = Clean(x.LabelRaw),
-                    RoleRaw = Clean(x.RoleRaw),
-                    IsUnknown = x.IsUnknown,
-                    Ordinal = x.Ordinal
-                })
-                .ToList(),
-            Tags = _model.Draft.Tags
-                .Where(x => !string.IsNullOrWhiteSpace(x.RawValue))
-                .Select(x => new ObservationTagUpsertDto
-                {
-                    RawValue = x.RawValue!.Trim(),
-                    Kind = x.Kind,
-                    Source = x.Source
-                })
-                .ToList(),
-            ProbableActions = Array.Empty<ObservationProbableActionUpsertDto>()
-        };
-    }
-
     private int GetNextOrdinal()
-        => _model.Draft.Participants.Count == 0 ? 1 : _model.Draft.Participants.Max(x => x.Ordinal) + 1;
+        => _model.Seed.Participants.Count == 0 ? 1 : _model.Seed.Participants.Max(x => x.Ordinal) + 1;
 
     private static string GetTagKindText(TagKind value)
         => value switch
@@ -280,7 +220,4 @@ public partial class ObservationRadioDrawer : ComponentBase, IDisposable
         _lifetimeCts.Dispose();
         GC.SuppressFinalize(this);
     }
-
-    private static string? Clean(string? value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

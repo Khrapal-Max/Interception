@@ -25,7 +25,7 @@
                     <button type="button"
                             class="btn btn-success btn-sm rounded-0"
                             @onclick="OpenRadioDrawer">
-                        Спостереження
+                        Parser
                     </button>
 
                     <button type="button"
@@ -223,7 +223,9 @@
     </div>
 </div>
 
+
 <ObservationCreateDrawer IsOpen="@_createDrawerOpen"
+                         Seed="@_pendingCreateSeed"
                          IsOpenChanged="HandleCreateDrawerChangedAsync"
                          Saved="HandleSavedAsync" />
 
@@ -233,4 +235,4 @@
 
 <ObservationRadioDrawer IsOpen="@_radioDrawerOpen"
                         IsOpenChanged="HandleRadioDrawerChangedAsync"
-                        Saved="HandleRadioSavedAsync" />
+                        ParsedToCreate="HandleRadioParsedAsync" />

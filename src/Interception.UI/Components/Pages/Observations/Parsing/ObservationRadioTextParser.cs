@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using Interception.UI.Components.Pages.Observations.Models;
 using Interception.UI.Domain.Enums;
@@ -23,8 +24,9 @@ internal static partial class ObservationRadioTextParser
         }
 
         var normalizedText = Normalize(rawText);
-        var lines = normalizedText.Split('\n')
-            .Select(x => x.TrimEnd())
+        var lines = normalizedText
+            .Split('\n')
+            .Select(CleanLine)
             .ToArray();
 
         var dateIndex = FindDateLineIndex(lines);
@@ -36,7 +38,7 @@ internal static partial class ObservationRadioTextParser
             };
         }
 
-        var observedDateText = lines[dateIndex].Trim();
+        var observedDateText = lines[dateIndex];
         if (!DateTime.TryParseExact(
                 observedDateText,
                 "dd.MM.yyyy, HH:mm:ss",
@@ -61,12 +63,12 @@ internal static partial class ObservationRadioTextParser
             };
         }
 
-        var frequency = lines[frequencyIndex].Trim();
-        var rmLine = lines[rmIndex].Trim();
+        var frequency = CleanValue(lines[frequencyIndex]);
+        var rmLine = CleanValue(lines[rmIndex]);
 
         var participants = ExtractParticipants(lines, rmIndex + 1, out var bodyStartIndex);
         var body = bodyStartIndex >= 0
-            ? string.Join(Environment.NewLine, lines.Skip(bodyStartIndex)).Trim()
+            ? BuildBody(lines, bodyStartIndex)
             : string.Empty;
 
         var (rmRaw, districtRaw) = SplitRmAndDistrict(rmLine);
@@ -77,14 +79,15 @@ internal static partial class ObservationRadioTextParser
             IsSuccess = true,
             SourcePost = sourcePost,
             SuggestedActionRaw = DefaultAction,
-            Draft = new ObservationEditorModel
+            Seed = new ObservationCreateSeedModel
             {
                 ObservedDate = observedDate,
                 ActionRaw = DefaultAction,
-                Layer = Clean(frequency),
-                RmRaw = Clean(rmRaw),
-                DistrictRaw = Clean(districtRaw),
-                Note = Clean(body)
+                Layer = frequency,
+                RmRaw = rmRaw,
+                DistrictRaw = districtRaw,
+                Note = CleanValue(body),
+                SourcePost = sourcePost
             }
         };
 
@@ -94,8 +97,8 @@ internal static partial class ObservationRadioTextParser
         }
         else
         {
-            result.Draft.Participants = participants
-                .Select((value, index) => new ObservationParticipantEditorRow
+            result.Seed.Participants = participants
+                .Select((value, index) => new ObservationParticipantSeedRow
                 {
                     LabelRaw = value,
                     Ordinal = index + 1,
@@ -106,26 +109,49 @@ internal static partial class ObservationRadioTextParser
 
         result.SuggestedTags = BuildSuggestedTags(sourcePost, rmRaw, districtRaw);
 
-        if (string.IsNullOrWhiteSpace(result.Draft.Layer))
+        if (string.IsNullOrWhiteSpace(result.Seed.Layer))
             result.Warnings.Add("Частоту не вдалося визначити.");
 
-        if (string.IsNullOrWhiteSpace(result.Draft.RmRaw))
+        if (string.IsNullOrWhiteSpace(result.Seed.RmRaw))
             result.Warnings.Add("Р/М не вдалося визначити.");
 
-        if (string.IsNullOrWhiteSpace(result.Draft.DistrictRaw))
+        if (string.IsNullOrWhiteSpace(result.Seed.DistrictRaw))
             result.Warnings.Add("Район не знайдено у рядку р/м.");
 
-        if (string.IsNullOrWhiteSpace(result.Draft.Note))
-            result.Warnings.Add("Текст комунікації не знайдено. Перевірте формат блоку.");
+        if (string.IsNullOrWhiteSpace(result.Seed.Note))
+            result.Warnings.Add("Текст комунікації не знайдено. Перевірте блок.");
 
         return result;
     }
+
+    private static string Normalize(string text)
+    {
+        var builder = new StringBuilder(text.Length);
+        foreach (var ch in text)
+        {
+            builder.Append(ch switch
+            {
+                '\u00A0' => ' ',
+                '\uFEFF' => ' ',
+                '\u200B' => ' ',
+                '\u200C' => ' ',
+                '\u200D' => ' ',
+                '\r' => '\n',
+                _ => ch
+            });
+        }
+
+        return builder.ToString();
+    }
+
+    private static string CleanLine(string value)
+        => value.Replace('\t', ' ').Trim();
 
     private static int FindDateLineIndex(IReadOnlyList<string> lines)
     {
         for (var i = 0; i < lines.Count; i++)
         {
-            if (DateLineRegex().IsMatch(lines[i].Trim()))
+            if (Regex.IsMatch(lines[i], @"^\d{2}\.\d{2}\.\d{4},\s*\d{2}:\d{2}:\d{2}$"))
                 return i;
         }
 
@@ -136,14 +162,8 @@ internal static partial class ObservationRadioTextParser
     {
         for (var i = startIndex; i < lines.Count; i++)
         {
-            var value = lines[i].Trim();
-            if (string.IsNullOrWhiteSpace(value))
-                continue;
-
-            if (IsSeparatorLine(value))
-                continue;
-
-            return i;
+            if (!string.IsNullOrWhiteSpace(lines[i]) && !IsSeparator(lines[i]))
+                return i;
         }
 
         return -1;
@@ -151,63 +171,84 @@ internal static partial class ObservationRadioTextParser
 
     private static List<string> ExtractParticipants(IReadOnlyList<string> lines, int startIndex, out int bodyStartIndex)
     {
-        var result = new List<string>();
         bodyStartIndex = -1;
+        var participants = new List<string>();
 
         for (var i = startIndex; i < lines.Count; i++)
         {
-            var current = lines[i].Trim();
-
-            if (string.IsNullOrWhiteSpace(current))
-            {
-                if (result.Count == 0)
-                    continue;
-
-                bodyStartIndex = NextNonEmptyLineIndex(lines, i + 1);
-                return result;
-            }
-
-            if (IsSeparatorLine(current))
+            var line = lines[i];
+            if (string.IsNullOrWhiteSpace(line) || IsSeparator(line))
                 continue;
 
-            if (LooksLikeDialogueLine(current))
+            if (LooksLikeDialogue(line) || line.StartsWith("Коментар:", StringComparison.OrdinalIgnoreCase))
             {
                 bodyStartIndex = i;
-                return result;
+                break;
             }
 
-            foreach (var token in SplitParticipants(current))
+            foreach (var item in line.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
             {
-                if (!result.Any(x => string.Equals(x, token, StringComparison.OrdinalIgnoreCase)))
-                    result.Add(token);
+                var cleaned = CleanParticipantToken(item);
+                if (!string.IsNullOrWhiteSpace(cleaned))
+                    participants.Add(cleaned);
             }
         }
 
-        return result;
+        return participants
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
-    private static (string? RmRaw, string? DistrictRaw) SplitRmAndDistrict(string? rmLine)
+    private static string BuildBody(IReadOnlyList<string> lines, int startIndex)
+    {
+        var bodyLines = lines
+            .Skip(startIndex)
+            .Where(x => !IsSeparator(x))
+            .Select(CleanBodyLine)
+            .Where(x => !string.IsNullOrWhiteSpace(x));
+
+        return string.Join(Environment.NewLine, bodyLines);
+    }
+
+    private static string CleanBodyLine(string line)
+        => CleanValue(line) ?? string.Empty;
+
+    private static bool LooksLikeDialogue(string line)
+        => line.StartsWith("—") || line.StartsWith('-') || line.Contains("прием", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSeparator(string line)
+        => SeparatorRegex().IsMatch(line);
+
+    private static string CleanParticipantToken(string value)
+    {
+        var cleaned = value.Trim();
+        cleaned = cleaned.Trim('"', '«', '»', '“', '”', '\'', '`', '„');
+        cleaned = cleaned.TrimStart('-', '—', '–', '•', '*', '·');
+        cleaned = cleaned.Trim();
+        return CleanValue(cleaned) ?? string.Empty;
+    }
+
+    private static (string? rmRaw, string? districtRaw) SplitRmAndDistrict(string? rmLine)
     {
         if (string.IsNullOrWhiteSpace(rmLine))
             return (null, null);
 
-        var match = DistrictInRmRegex().Match(rmLine.Trim());
-        if (!match.Success)
-            return (Clean(rmLine), null);
+        var districtMatch = DistrictRegex().Match(rmLine);
+        if (!districtMatch.Success)
+            return (CleanValue(rmLine), null);
 
-        var districtRaw = Clean(match.Groups["district"].Value);
-        var rmRaw = Clean(rmLine[..match.Index]);
-
-        return (rmRaw, districtRaw);
+        var district = CleanValue(districtMatch.Value);
+        var rmRaw = CleanValue(rmLine[..districtMatch.Index].Trim(' ', '-', '—', '–', ',', ';'));
+        return (rmRaw, district);
     }
 
-    private static string? ParseSourcePost(IEnumerable<string> lines)
+    private static string? ParseSourcePost(IReadOnlyList<string> lines)
     {
         foreach (var line in lines)
         {
-            var match = SourcePostRegex().Match(line.Trim());
+            var match = SourcePostRegex().Match(line);
             if (match.Success)
-                return Clean(match.Groups["post"].Value);
+                return CleanValue(match.Groups["post"].Value);
         }
 
         return null;
@@ -223,18 +264,19 @@ internal static partial class ObservationRadioTextParser
             {
                 Value = sourcePost.Trim(),
                 Kind = TagKind.Keyword,
-                Reason = "Пост / джерело блоку"
+                Reason = "Пост джерела",
+                Applied = false
             });
         }
 
-        if (!string.IsNullOrWhiteSpace(rmRaw) &&
-            rmRaw.Contains("БПЛА", StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(rmRaw) && rmRaw.Contains("БПЛА", StringComparison.OrdinalIgnoreCase))
         {
             result.Add(new ObservationRadioTagSuggestionRow
             {
                 Value = "БПЛА",
-                Kind = TagKind.Subdivision,
-                Reason = "Зустрічається у рядку р/м"
+                Kind = TagKind.Keyword,
+                Reason = "Знайдено у р/м",
+                Applied = false
             });
         }
 
@@ -244,57 +286,38 @@ internal static partial class ObservationRadioTextParser
             {
                 Value = districtRaw.Trim(),
                 Kind = TagKind.Location,
-                Reason = "Витягнуто з району"
+                Reason = "Знайдено у районі",
+                Applied = false
             });
         }
 
-        return result;
+        return result
+            .Where(x => !string.IsNullOrWhiteSpace(x.Value))
+            .GroupBy(x => new { Value = x.Value.Trim().ToUpperInvariant(), x.Kind })
+            .Select(x => x.First())
+            .ToList();
     }
 
-    private static IEnumerable<string> SplitParticipants(string line)
-    {
-        return line
-            .Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(CleanParticipant)
-            .Where(x => !string.IsNullOrWhiteSpace(x))!;
-    }
-
-    private static string? CleanParticipant(string? value)
+    private static string? CleanValue(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return null;
 
-        var cleaned = value.Trim();
-        cleaned = cleaned.Trim('—', '-', '–', '—', '"', '“', '”', '«', '»');
-        cleaned = Regex.Replace(cleaned, @"\s{2,}", " ");
+        var cleaned = value
+            .Replace('\u00A0', ' ')
+            .Replace('\uFEFF', ' ')
+            .Replace('\u200B', ' ')
+            .Trim();
 
         return string.IsNullOrWhiteSpace(cleaned) ? null : cleaned;
     }
 
-    private static bool LooksLikeDialogueLine(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return false;
+    [GeneratedRegex(@"^\s*[-—–_=]{3,}\s*$", RegexOptions.CultureInvariant)]
+    private static partial Regex SeparatorRegex();
 
-        var trimmed = value.TrimStart();
-        return trimmed.StartsWith("—") || trimmed.StartsWith("-") || trimmed.StartsWith("–");
-    }
+    [GeneratedRegex(@"р-н\s+[^()]+(?:\([^)]*\))?", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex DistrictRegex();
 
-    private static bool IsSeparatorLine(string value)
-        => value.All(x => x is '-' or '—' or '–' or '_');
-
-    private static string Normalize(string text)
-        => text.Replace("\r\n", "\n").Replace('\r', '\n').Trim();
-
-    private static string? Clean(string? value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    [GeneratedRegex(@"^\d{2}\.\d{2}\.\d{4},\s*\d{2}:\d{2}:\d{2}$", RegexOptions.CultureInvariant)]
-    private static partial Regex DateLineRegex();
-
-    [GeneratedRegex(@"Отримано\s+з\s+поста\s+[""«“]?(?<post>[^""»”]+)[""»”]?", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex("""Отримано з поста\s+[\"«“](?<post>[^\"»”]+)[\"»”]""", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex SourcePostRegex();
-
-    [GeneratedRegex(@"\((?<district>р-н.+)\)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-    private static partial Regex DistrictInRmRegex();
 }
