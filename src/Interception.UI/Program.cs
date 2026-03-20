@@ -8,6 +8,8 @@ using Interception.UI.Application.Hypotheses.Abstractions;
 using Interception.UI.Application.Hypotheses.Services;
 using Interception.UI.Application.Observations.Abstractions;
 using Interception.UI.Application.Observations.Services;
+using Interception.UI.Application.Reports.Abstractions;
+using Interception.UI.Application.Reports.Services;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Components;
 using Interception.UI.Extensions;
@@ -43,6 +45,9 @@ builder.Services.AddScoped<IObservationImportService, ObservationImportService>(
 builder.Services.AddScoped<IObservationLookupService, ObservationLookupService>();
 builder.Services.AddScoped<IObservationRegistryService, ObservationRegistryService>();
 builder.Services.AddScoped<IObservationWriteService, ObservationWriteService>();
+
+builder.Services.AddScoped<IDayPictureReportService, DayPictureReportService>();
+builder.Services.AddScoped<ISubdivisionReportService, SubdivisionReportService>();
 
 var app = builder.Build();
 
