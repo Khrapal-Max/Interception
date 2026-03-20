@@ -2,6 +2,12 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
+using Interception.UI.Application.Catalogs.Abstractions;
+using Interception.UI.Application.Catalogs.Services;
+using Interception.UI.Application.Hypotheses.Abstractions;
+using Interception.UI.Application.Hypotheses.Services;
+using Interception.UI.Application.Observations.Abstractions;
+using Interception.UI.Application.Observations.Services;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Components;
 using Interception.UI.Extensions;
@@ -25,6 +31,19 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo("/data-protection-keys"));
 
 builder.Services.AddScoped<ToastService>();
+
+builder.Services.AddScoped<IObservationActionCatalogService, ObservationActionCatalogService>();
+builder.Services.AddScoped<IResolvedSubdivisionCatalogService, ResolvedSubdivisionCatalogService>();
+builder.Services.AddScoped<ITagCatalogService, TagCatalogService>();
+
+builder.Services.AddScoped<IActorHypothesisService, ActorHypothesisService>();
+builder.Services.AddScoped<ISubdivisionHypothesisService, SubdivisionHypothesisService>();
+
+builder.Services.AddScoped<IObservationImportService, ObservationImportService>();
+builder.Services.AddScoped<IObservationLookupService, ObservationLookupService>();
+builder.Services.AddScoped<IObservationRegistryService, ObservationRegistryService>();
+builder.Services.AddScoped<IObservationWriteService, ObservationWriteService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

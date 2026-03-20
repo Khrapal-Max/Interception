@@ -4,7 +4,7 @@
 
 using Interception.UI.Application.Observations.Services;
 
-namespace Interception.Tests.Application;
+namespace Interception.Tests.Application.Observations;
 
 public sealed class ObservationLookupServiceTests
 {

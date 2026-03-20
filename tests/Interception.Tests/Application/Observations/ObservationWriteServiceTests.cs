@@ -8,7 +8,7 @@ using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
-namespace Interception.Tests.Application;
+namespace Interception.Tests.Application.Observations;
 
 public sealed class ObservationWriteServiceTests
 {

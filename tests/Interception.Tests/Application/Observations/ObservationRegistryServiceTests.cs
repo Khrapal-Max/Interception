@@ -7,7 +7,7 @@ using Interception.UI.Application.Observations.Services;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
 
-namespace Interception.Tests.Application;
+namespace Interception.Tests.Application.Observations;
 
 public sealed class ObservationRegistryServiceTests
 {
