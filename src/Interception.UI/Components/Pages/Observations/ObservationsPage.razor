@@ -1,0 +1,236 @@
+@page "/observations"
+
+@using Interception.UI.Components.Pages.Observations.Drawers
+@using Interception.UI.Domain.Enums
+
+<PageTitle>Спостереження</PageTitle>
+
+<div class="obs-page-shell">
+    <div class="card rounded-0 shadow-sm obs-page-card">
+        <div class="card-body d-flex flex-column gap-1 h-100 overflow-hidden">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div>
+                    <div class="fw-semibold">Спостереження</div>
+                    <div class="small text-muted">Реєстр внесених фактів</div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button"
+                            class="btn btn-secondary btn-sm rounded-0"
+                            @onclick="RefreshAsync"
+                            disabled="@_loading">
+                        Оновити
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-success btn-sm rounded-0"
+                            @onclick="OpenRadioDrawer">
+                        Спостереження
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-warning btn-sm rounded-0"
+                            @onclick="OpenImportDrawer">
+                        Імпорт
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-primary btn-sm rounded-0"
+                            @onclick="OpenCreateDrawer">
+                        Створити
+                    </button>
+                </div>
+            </div>
+
+            <div class="border rounded-0 px-2">
+                <div class="row g-1 align-items-end">
+                    <div class="col-12 col-xl-2">
+                        <label class="form-label small mb-1">Пошук</label>
+                        <input class="form-control form-control-sm rounded-0"
+                               @bind="_filter.Query"
+                               @bind:event="oninput"
+                               placeholder="Дія, людина, район, підрозділ" />
+                    </div>
+
+                    <div class="col-6 col-md-3 col-xl-2">
+                        <label class="form-label small mb-1">Від</label>
+                        <input type="datetime-local"
+                               class="form-control form-control-sm rounded-0"
+                               value="@FormatDateTimeLocal(_observedFrom)"
+                               @onchange="OnObservedFromChanged" />
+                    </div>
+
+                    <div class="col-6 col-md-3 col-xl-2">
+                        <label class="form-label small mb-1">До</label>
+                        <input type="datetime-local"
+                               class="form-control form-control-sm rounded-0"
+                               value="@FormatDateTimeLocal(_observedTo)"
+                               @onchange="OnObservedToChanged" />
+                    </div>
+
+                    <div class="col-6 col-md-3 col-xl-2">
+                        <label class="form-label small mb-1">Зв'язок підрозділу</label>
+                        <select class="form-select form-select-sm rounded-0"
+                                @bind="_subdivisionStrengthText">
+                            <option value="">Усі</option>
+                            <option value="1">Слабкий</option>
+                            <option value="2">Середній</option>
+                            <option value="3">Сильний</option>
+                        </select>
+                    </div>
+
+                    <div class="col-6 col-md-3 col-xl-2">
+                        <div class="d-flex flex-column gap-2 pt-md-4">
+                            <div class="form-check mb-0">
+                                <input id="onlyUnknownParticipants"
+                                       class="form-check-input"
+                                       type="checkbox"
+                                       @bind="_filter.OnlyUnknownParticipants" />
+                                <label class="form-check-label small" for="onlyUnknownParticipants">Лише НВ</label>
+                            </div>
+
+                            <div class="form-check mb-0">
+                                <input id="onlyTypedAction"
+                                       class="form-check-input"
+                                       type="checkbox"
+                                       @bind="_filter.OnlyBoundAction" />
+                                <label class="form-check-label small" for="onlyTypedAction">Лише типізовані</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-3 col-xl-2">
+                        <div class="d-flex flex-wrap gap-2 justify-content-end">
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm rounded-0"
+                                    @onclick="ClearFiltersAsync"
+                                    disabled="@_loading">
+                                Очистити
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-primary btn-sm rounded-0"
+                                    @onclick="SearchAsync"
+                                    disabled="@_loading">
+                                Знайти
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="obs-table-wrap border rounded-0">
+                <div class="table-responsive h-100">
+                    <table class="table table-sm table-hover align-middle mb-0 obs-table">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width: 170px;">Час</th>
+                                <th>Дія</th>
+                                <th style="width: 140px;">Тип</th>
+                                <th style="width: 110px;">Шар</th>
+                                <th style="width: 140px;">Р/М</th>
+                                <th style="width: 180px;">Локація</th>
+                                <th style="width: 180px;">Підрозділ</th>
+                                <th style="width: 240px;">Учасники</th>
+                                <th style="width: 90px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (_loading)
+                            {
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted py-4">Завантаження…</td>
+                                </tr>
+                            }
+                            else if (_page.Items.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted py-4">Записів не знайдено</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var item in _page.Items)
+                                {
+                                    <tr>
+                                        <td>@item.ObservedDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                        <td>
+                                            <div class="fw-semibold">@item.ActionRaw</div>
+                                            @if (!string.IsNullOrWhiteSpace(item.DistrictRaw) || !string.IsNullOrWhiteSpace(item.LocationRaw))
+                                            {
+                                                <div class="small text-muted">@(item.DistrictRaw ?? item.LocationRaw)</div>
+                                            }
+                                        </td>
+                                        <td>@(item.ObservationActionName ?? "—")</td>
+                                        <td>@(item.Layer ?? "—")</td>
+                                        <td>@(item.RmRaw ?? "—")</td>
+                                        <td>@(item.LocationRaw ?? "—")</td>
+                                        <td>
+                                            <div>@(item.SubdivisionRaw ?? "—")</div>
+                                            @if (item.HasUnknownParticipants)
+                                            {
+                                                <div class="small text-danger">Є НВ</div>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (item.ParticipantsPreview.Count == 0)
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                            else
+                                            {
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    @foreach (var preview in item.ParticipantsPreview)
+                                                    {
+                                                        <span class="badge text-bg-light border rounded-0">@preview</span>
+                                                    }
+                                                </div>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <button type="button"
+                                                    class="btn btn-outline-primary btn-sm rounded-0"
+                                                    @onclick="() => OpenDetails(item.Id)">
+                                                Відкрити
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 small text-muted">
+                <div>Всього: @_page.TotalCount</div>
+                <div class="d-flex gap-2">
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm rounded-0"
+                            @onclick="PreviousAsync"
+                            disabled="@(_loading || _filter.Skip <= 0)">
+                        Назад
+                    </button>
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm rounded-0"
+                            @onclick="NextAsync"
+                            disabled="@(_loading || (_filter.Skip + _filter.Take) >= _page.TotalCount)">
+                        Далі
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<ObservationCreateDrawer IsOpen="@_createDrawerOpen"
+                         IsOpenChanged="HandleCreateDrawerChangedAsync"
+                         Saved="HandleSavedAsync" />
+
+<ObservationImportDrawer IsOpen="@_importDrawerOpen"
+                         IsOpenChanged="HandleImportDrawerChangedAsync"
+                         Imported="HandleImportedAsync" />
+
+<ObservationRadioDrawer IsOpen="@_radioDrawerOpen"
+                        IsOpenChanged="HandleRadioDrawerChangedAsync"
+                        Saved="HandleRadioSavedAsync" />

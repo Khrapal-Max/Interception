@@ -1,0 +1,342 @@
+@using Interception.UI.Components.Pages.Observations.Models
+@using Interception.UI.Domain.Enums
+@using Microsoft.AspNetCore.Components.Forms
+
+<Drawer @ref="_drawer"
+        IsOpen="@IsOpen"
+        IsOpenChanged="@IsOpenChanged"
+        OnClosed="@HandleDrawerClosedAsync"
+        Title="@(ObservationId is null ? "Створити спостереження" : "Редагувати спостереження")"
+        DisableClose="@_saving"
+        CloseOnBackdrop="true"
+        CloseOnEscape="true">
+    <ChildContent>
+        <div class="obs-drawer-body d-flex flex-column gap-3">
+            <div class="row g-2">
+                <div class="col-12 col-lg-4">
+                    <label class="form-label small mb-1">Дата і час</label>
+                    <input type="datetime-local"
+                           class="form-control form-control-sm rounded-0"
+                           @bind-value="_model.ObservedDate"
+                           @bind-value:format="yyyy-MM-ddTHH:mm" />
+                </div>
+
+                <div class="col-12 col-lg-8">
+                    <label class="form-label small mb-1">Дія</label>
+                    <input class="form-control form-control-sm rounded-0"
+                           @bind="_model.ActionRaw"
+                           placeholder="Первинний текст дії" />
+                </div>
+            </div>
+
+            <div class="border rounded-0 p-2 d-flex flex-column gap-2">
+                <div class="d-flex flex-wrap justify-content-between gap-2 align-items-center">
+                    <div class="fw-semibold">Типізована дія</div>
+                    @if (_model.ObservationActionId is not null)
+                    {
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm rounded-0"
+                                @onclick="ClearBoundAction">
+                            Очистити
+                        </button>
+                    }
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_model.ObservationActionName))
+                {
+                    <div class="small">Обрано: <span class="fw-semibold">@_model.ObservationActionName</span></div>
+                }
+
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-lg-8">
+                        <label class="form-label small mb-1">Пошук дії</label>
+                        <input class="form-control form-control-sm rounded-0"
+                               @bind="_actionSearch"
+                               @bind:event="oninput"
+                               placeholder="Назва дії" />
+                    </div>
+                    <div class="col-12 col-lg-4">
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm rounded-0 w-100"
+                                @onclick="SearchActionsAsync">
+                            Знайти
+                        </button>
+                    </div>
+                </div>
+
+                @if (_actionSuggestions.Count > 0)
+                {
+                    <div class="list-group obs-suggest-list">
+                        @foreach (var item in _actionSuggestions)
+                        {
+                            <button type="button"
+                                    class="list-group-item list-group-item-action rounded-0"
+                                    @onclick="() => SelectBoundAction(item)">
+                                <div class="fw-semibold">@item.Name</div>
+                                <div class="small text-muted">@GetActionCategoryText(item.Category)</div>
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="row g-2">
+                <div class="col-12 col-md-6 col-xl-4">
+                    <label class="form-label small mb-1">Частота</label>
+                    <input class="form-control form-control-sm rounded-0" @bind="_model.Layer" placeholder="Частота" />
+                </div>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <label class="form-label small mb-1">Р/М</label>
+                    <input class="form-control form-control-sm rounded-0" @bind="_model.RmRaw" placeholder="Р/М" />
+                </div>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <label class="form-label small mb-1">Точка</label>
+                    <input class="form-control form-control-sm rounded-0" @bind="_model.PointRaw" placeholder="Точка" />
+                </div>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <label class="form-label small mb-1">Локація</label>
+                    <input class="form-control form-control-sm rounded-0" @bind="_model.LocationRaw" placeholder="Локація" />
+                </div>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <label class="form-label small mb-1">Район</label>
+                    <input class="form-control form-control-sm rounded-0" @bind="_model.DistrictRaw" placeholder="Район" />
+                </div>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <label class="form-label small mb-1">Підрозділ</label>
+                    <input class="form-control form-control-sm rounded-0" @bind="_model.SubdivisionRaw" placeholder="Підрозділ" />
+                </div>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <label class="form-label small mb-1">Сила зв'язку</label>
+                    <InputSelect class="form-select form-select-sm rounded-0"
+                                 @bind-Value="_model.SubdivisionStrength"
+                                 TValue="SubdivisionLinkStrength?">
+                        <option value="">—</option>
+                        <option value="@SubdivisionLinkStrength.Weak">Слабкий</option>
+                        <option value="@SubdivisionLinkStrength.Medium">Середній</option>
+                        <option value="@SubdivisionLinkStrength.Strong">Сильний</option>
+                    </InputSelect>
+                </div>
+                <div class="col-12 col-md-6 col-xl-4">
+                    <label class="form-label small mb-1">Джерело зв'язку</label>
+                    <InputSelect class="form-select form-select-sm rounded-0"
+                                 @bind-Value="_model.SubdivisionSource"
+                                 TValue="ObservationSubdivisionSource">
+                        @foreach (var option in _subdivisionSourceOptions)
+                        {
+                            <option value="@option.Value">@option.Label</option>
+                        }
+                    </InputSelect>
+                </div>
+            </div>
+
+            <div class="border rounded-0 p-2 d-flex flex-column gap-2">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="fw-semibold">Учасники</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-0" @onclick="AddUnknownParticipant">Додати НВ</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-0" @onclick="AddParticipantRow">Додати людину</button>
+                    </div>
+                </div>
+
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-lg-8">
+                        <label class="form-label small mb-1">Пошук людини</label>
+                        <input class="form-control form-control-sm rounded-0"
+                               @bind="_participantSearch"
+                               @bind:event="oninput"
+                               placeholder="Відома людина" />
+                    </div>
+                    <div class="col-12 col-lg-4">
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-0 w-100" @onclick="SearchParticipantsAsync">Знайти</button>
+                    </div>
+                </div>
+
+                @if (_participantSuggestions.Count > 0)
+                {
+                    <div class="list-group obs-suggest-list">
+                        @foreach (var item in _participantSuggestions)
+                        {
+                            <button type="button"
+                                    class="list-group-item list-group-item-action rounded-0"
+                                    @onclick="() => AddSuggestedParticipant(item)">
+                                <div class="fw-semibold">@item.LabelRaw</div>
+                                <div class="small text-muted">@(item.PrimaryRole ?? "—")</div>
+                            </button>
+                        }
+                    </div>
+                }
+
+                <div class="table-responsive obs-inline-table">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width: 38%;">Позначення</th>
+                                <th style="width: 28%;">Роль</th>
+                                <th style="width: 12%;">НВ</th>
+                                <th style="width: 12%;">№</th>
+                                <th style="width: 10%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (_model.Participants.Count == 0)
+                            {
+                                <tr><td colspan="5" class="text-muted">Немає учасників</td></tr>
+                            }
+                            else
+                            {
+                                @foreach (var row in _model.Participants)
+                                {
+                                    <tr>
+                                        <td><input class="form-control form-control-sm rounded-0" @bind="row.LabelRaw" placeholder="Позначення" /></td>
+                                        <td><input class="form-control form-control-sm rounded-0" @bind="row.RoleRaw" placeholder="Роль" /></td>
+                                        <td class="text-center"><input type="checkbox" class="form-check-input" @bind="row.IsUnknown" /></td>
+                                        <td><input type="number" class="form-control form-control-sm rounded-0" min="1" @bind="row.Ordinal" /></td>
+                                        <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm rounded-0" @onclick="() => RemoveParticipant(row)">×</button></td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="border rounded-0 p-2 d-flex flex-column gap-2">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="fw-semibold">Мітки</div>
+                    <button type="button" class="btn btn-outline-primary btn-sm rounded-0" @onclick="AddTagRow">Додати мітку</button>
+                </div>
+
+                <div class="table-responsive obs-inline-table">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width: 45%;">Значення</th>
+                                <th style="width: 25%;">Тип</th>
+                                <th style="width: 20%;">Джерело</th>
+                                <th style="width: 10%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (_model.Tags.Count == 0)
+                            {
+                                <tr><td colspan="4" class="text-muted">Немає міток</td></tr>
+                            }
+                            else
+                            {
+                                @foreach (var row in _model.Tags)
+                                {
+                                    <tr>
+                                        <td><input class="form-control form-control-sm rounded-0" @bind="row.RawValue" placeholder="Мітка" /></td>
+                                        <td>
+                                            <InputSelect class="form-select form-select-sm rounded-0" @bind-Value="row.Kind" TValue="TagKind">
+                                                @foreach (var option in _tagKindOptions)
+                                                {
+                                                    <option value="@option.Value">@option.Label</option>
+                                                }
+                                            </InputSelect>
+                                        </td>
+                                        <td>
+                                            <InputSelect class="form-select form-select-sm rounded-0" @bind-Value="row.Source" TValue="ObservationTagSource">
+                                                @foreach (var option in _tagSourceOptions)
+                                                {
+                                                    <option value="@option.Value">@option.Label</option>
+                                                }
+                                            </InputSelect>
+                                        </td>
+                                        <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm rounded-0" @onclick="() => RemoveTag(row)">×</button></td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="border rounded-0 p-2 d-flex flex-column gap-2">
+                <div class="d-flex flex-wrap justify-content-between gap-2 align-items-center">
+                    <div class="fw-semibold">Ймовірні дії</div>
+                </div>
+
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-lg-8">
+                        <label class="form-label small mb-1">Пошук ймовірної дії</label>
+                        <input class="form-control form-control-sm rounded-0"
+                               @bind="_probableActionSearch"
+                               @bind:event="oninput"
+                               placeholder="Назва дії" />
+                    </div>
+                    <div class="col-12 col-lg-4">
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-0 w-100" @onclick="SearchProbableActionsAsync">Знайти</button>
+                    </div>
+                </div>
+
+                @if (_probableActionSuggestions.Count > 0)
+                {
+                    <div class="list-group obs-suggest-list">
+                        @foreach (var item in _probableActionSuggestions)
+                        {
+                            <button type="button"
+                                    class="list-group-item list-group-item-action rounded-0"
+                                    @onclick="() => AddProbableAction(item)">
+                                <div class="fw-semibold">@item.Name</div>
+                                <div class="small text-muted">@GetActionCategoryText(item.Category)</div>
+                            </button>
+                        }
+                    </div>
+                }
+
+                <div class="table-responsive obs-inline-table">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width: 30%;">Дія</th>
+                                <th style="width: 15%;">Впевненість</th>
+                                <th style="width: 20%;">Джерело</th>
+                                <th style="width: 25%;">Причина</th>
+                                <th style="width: 10%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (_model.ProbableActions.Count == 0)
+                            {
+                                <tr><td colspan="5" class="text-muted">Немає ймовірних дій</td></tr>
+                            }
+                            else
+                            {
+                                @foreach (var row in _model.ProbableActions)
+                                {
+                                    <tr>
+                                        <td><div class="small fw-semibold">@row.ObservationActionName</div></td>
+                                        <td><input type="number" min="0" max="1" step="0.01" class="form-control form-control-sm rounded-0" @bind="row.Confidence" /></td>
+                                        <td>
+                                            <InputSelect class="form-select form-select-sm rounded-0" @bind-Value="row.Source" TValue="ProbableActionSource">
+                                                @foreach (var option in _probableSourceOptions)
+                                                {
+                                                    <option value="@option.Value">@option.Label</option>
+                                                }
+                                            </InputSelect>
+                                        </td>
+                                        <td><input class="form-control form-control-sm rounded-0" @bind="row.Reason" placeholder="Причина" /></td>
+                                        <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm rounded-0" @onclick="() => RemoveProbableAction(row)">×</button></td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div>
+                <label class="form-label small mb-1">Примітка</label>
+                <textarea class="form-control form-control-sm rounded-0" rows="4" @bind="_model.Note" placeholder="Примітка"></textarea>
+            </div>
+        </div>
+    </ChildContent>
+
+    <FooterContent>
+        <div class="d-flex flex-wrap justify-content-end gap-2 w-100">
+            <button type="button" class="btn btn-outline-secondary btn-sm rounded-0" @onclick="CloseDrawerAsync" disabled="@_saving">Закрити</button>
+            <button type="button" class="btn btn-primary btn-sm rounded-0" @onclick="SaveAsync" disabled="@_saving">Зберегти</button>
+        </div>
+    </FooterContent>
+</Drawer>

@@ -1,0 +1,422 @@
+//-----------------------------------------------------------------------------
+// All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
+//-----------------------------------------------------------------------------
+
+using Interception.UI.Application.Observations.Abstractions;
+using Interception.UI.Application.Observations.Dtos;
+using Interception.UI.Application.Toasts;
+using Interception.UI.Components.Pages.Observations.Models;
+using Interception.UI.Components.Shared.Drawer;
+using Interception.UI.Domain.Enums;
+using Microsoft.AspNetCore.Components;
+
+namespace Interception.UI.Components.Pages.Observations.Drawers;
+
+public partial class ObservationCreateDrawer : ComponentBase, IDisposable
+{
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public Guid? ObservationId { get; set; }
+    [Parameter] public ObservationDetailsDto? Details { get; set; }
+    [Parameter] public EventCallback<Guid> Saved { get; set; }
+
+    [Inject] private IObservationWriteService WriteService { get; set; } = default!;
+    [Inject] private IObservationLookupService LookupService { get; set; } = default!;
+    [Inject] private ToastService ToastService { get; set; } = default!;
+
+    private readonly CancellationTokenSource _lifetimeCts = new();
+    private CancellationTokenSource? _actionSearchCts;
+    private CancellationTokenSource? _participantSearchCts;
+    private CancellationTokenSource? _probableActionSearchCts;
+
+    private Drawer? _drawer;
+    private ObservationEditorModel _model = CreateEmptyModel();
+    private bool _saving;
+    private bool _initialized;
+    private List<ActionCatalogSuggestionDto> _actionSuggestions = [];
+    private List<ParticipantSuggestionDto> _participantSuggestions = [];
+    private List<ActionCatalogSuggestionDto> _probableActionSuggestions = [];
+    private string? _actionSearch;
+    private string? _participantSearch;
+    private string? _probableActionSearch;
+
+    private readonly IReadOnlyList<SelectOptionModel> _subdivisionSourceOptions =
+    [
+        new(ObservationSubdivisionSource.Manual.ToString(), "Вручну"),
+        new(ObservationSubdivisionSource.Layer.ToString(), "Шар"),
+        new(ObservationSubdivisionSource.Rm.ToString(), "Р/М"),
+        new(ObservationSubdivisionSource.Note.ToString(), "Примітка"),
+        new(ObservationSubdivisionSource.Derived.ToString(), "Похідне"),
+        new(ObservationSubdivisionSource.Import.ToString(), "Імпорт")
+    ];
+
+    private readonly IReadOnlyList<SelectOptionModel> _tagKindOptions =
+    [
+        new(TagKind.Keyword.ToString(), "Ключове"),
+        new(TagKind.Person.ToString(), "Людина"),
+        new(TagKind.Location.ToString(), "Місце"),
+        new(TagKind.Subdivision.ToString(), "Підрозділ"),
+        new(TagKind.Callsign.ToString(), "Позивний"),
+        new(TagKind.Other.ToString(), "Інше")
+    ];
+
+    private readonly IReadOnlyList<SelectOptionModel> _tagSourceOptions =
+    [
+        new(ObservationTagSource.Manual.ToString(), "Вручну"),
+        new(ObservationTagSource.Import.ToString(), "Імпорт"),
+        new(ObservationTagSource.Derived.ToString(), "Похідне")
+    ];
+
+    private readonly IReadOnlyList<SelectOptionModel> _probableSourceOptions =
+    [
+        new(ProbableActionSource.Manual.ToString(), "Вручну"),
+        new(ProbableActionSource.Rule.ToString(), "Правило"),
+        new(ProbableActionSource.Derived.ToString(), "Похідне")
+    ];
+
+    protected override void OnParametersSet()
+    {
+        if (!IsOpen)
+        {
+            _initialized = false;
+            CancelLookupRequests();
+            return;
+        }
+
+        if (_initialized)
+            return;
+
+        _initialized = true;
+        _actionSuggestions.Clear();
+        _participantSuggestions.Clear();
+        _probableActionSuggestions.Clear();
+        _actionSearch = null;
+        _participantSearch = null;
+        _probableActionSearch = null;
+        _model = BuildModel(Details);
+    }
+
+    private async Task SearchActionsAsync()
+    {
+        var token = ReplaceSearchCts(ref _actionSearchCts);
+
+        try
+        {
+            _actionSuggestions = [.. await LookupService.SearchActionCatalogSuggestionsAsync(_actionSearch ?? string.Empty, 10, token)];
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task SearchParticipantsAsync()
+    {
+        var token = ReplaceSearchCts(ref _participantSearchCts);
+
+        try
+        {
+            _participantSuggestions = [.. await LookupService.SearchParticipantSuggestionsAsync(_participantSearch ?? string.Empty, 10, token)];
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task SearchProbableActionsAsync()
+    {
+        var token = ReplaceSearchCts(ref _probableActionSearchCts);
+
+        try
+        {
+            _probableActionSuggestions = [.. await LookupService.SearchActionCatalogSuggestionsAsync(_probableActionSearch ?? string.Empty, 10, token)];
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private void SelectBoundAction(ActionCatalogSuggestionDto item)
+    {
+        _model.ObservationActionId = item.Id;
+        _model.ObservationActionName = item.Name;
+        _actionSearch = item.Name;
+        _actionSuggestions.Clear();
+    }
+
+    private void ClearBoundAction()
+    {
+        _model.ObservationActionId = null;
+        _model.ObservationActionName = null;
+        _actionSearch = null;
+    }
+
+    private void AddParticipantRow()
+        => _model.Participants.Add(new ObservationParticipantEditorRow { Ordinal = GetNextOrdinal() });
+
+    private void AddUnknownParticipant()
+        => _model.Participants.Add(new ObservationParticipantEditorRow
+        {
+            LabelRaw = "НВ",
+            IsUnknown = true,
+            Ordinal = GetNextOrdinal()
+        });
+
+    private void AddSuggestedParticipant(ParticipantSuggestionDto item)
+    {
+        _model.Participants.Add(new ObservationParticipantEditorRow
+        {
+            LabelRaw = item.LabelRaw,
+            RoleRaw = item.PrimaryRole,
+            IsUnknown = false,
+            Ordinal = GetNextOrdinal()
+        });
+
+        _participantSearch = item.LabelRaw;
+        _participantSuggestions.Clear();
+    }
+
+    private void RemoveParticipant(ObservationParticipantEditorRow row) => _model.Participants.Remove(row);
+
+    private void AddTagRow() => _model.Tags.Add(new ObservationTagEditorRow());
+
+    private void RemoveTag(ObservationTagEditorRow row) => _model.Tags.Remove(row);
+
+    private void AddProbableAction(ActionCatalogSuggestionDto item)
+    {
+        if (_model.ProbableActions.Any(x => x.ObservationActionId == item.Id))
+            return;
+
+        _model.ProbableActions.Add(new ObservationProbableActionEditorRow
+        {
+            ObservationActionId = item.Id,
+            ObservationActionName = item.Name,
+            Confidence = 0.50m,
+            Source = ProbableActionSource.Manual
+        });
+
+        _probableActionSearch = item.Name;
+        _probableActionSuggestions.Clear();
+    }
+
+    private void RemoveProbableAction(ObservationProbableActionEditorRow row) => _model.ProbableActions.Remove(row);
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            _saving = true;
+            var request = BuildRequest();
+            var token = _lifetimeCts.Token;
+            var result = ObservationId is null
+                ? await WriteService.CreateAsync(request, token)
+                : await WriteService.UpdateAsync(ObservationId.Value, request, token);
+
+            if (result.IsDuplicate)
+            {
+                ToastService.Warning("Дублікат", "Такий запис уже існує.");
+                return;
+            }
+
+            ToastService.Success("Спостереження збережено");
+
+            if (Saved.HasDelegate)
+                await Saved.InvokeAsync(result.ObservationId);
+
+            await CloseDrawerAsync();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Не вдалося зберегти спостереження.", ex.Message);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task CloseDrawerAsync()
+    {
+        if (_drawer is not null)
+        {
+            await _drawer.CloseAsync();
+            return;
+        }
+
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private async Task HandleDrawerClosedAsync()
+    {
+        _initialized = false;
+        CancelLookupRequests();
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private ObservationUpsertRequestDto BuildRequest()
+    {
+        if (string.IsNullOrWhiteSpace(_model.ActionRaw))
+            throw new InvalidOperationException("Потрібно вказати дію.");
+
+        return new ObservationUpsertRequestDto
+        {
+            ObservedDate = _model.ObservedDate,
+            ObservationActionId = _model.ObservationActionId,
+            ActionRaw = _model.ActionRaw.Trim(),
+            Layer = Clean(_model.Layer),
+            RmRaw = Clean(_model.RmRaw),
+            PointRaw = Clean(_model.PointRaw),
+            LocationRaw = Clean(_model.LocationRaw),
+            DistrictRaw = Clean(_model.DistrictRaw),
+            SubdivisionRaw = Clean(_model.SubdivisionRaw),
+            SubdivisionStrength = _model.SubdivisionStrength,
+            SubdivisionSource = _model.SubdivisionSource,
+            Note = Clean(_model.Note),
+            Participants = [.. _model.Participants
+                .Where(x => !string.IsNullOrWhiteSpace(x.LabelRaw) || !string.IsNullOrWhiteSpace(x.RoleRaw) || x.IsUnknown)
+                .Select(x => new ObservationParticipantUpsertDto
+                {
+                    Id = x.Id,
+                    LabelRaw = Clean(x.LabelRaw),
+                    IsUnknown = x.IsUnknown,
+                    RoleRaw = Clean(x.RoleRaw),
+                    Ordinal = x.Ordinal
+                })],
+            Tags = [.. _model.Tags
+                .Where(x => !string.IsNullOrWhiteSpace(x.RawValue))
+                .Select(x => new ObservationTagUpsertDto
+                {
+                    Id = x.Id,
+                    RawValue = x.RawValue!.Trim(),
+                    Kind = x.Kind,
+                    Source = x.Source
+                })],
+            ProbableActions = [.. _model.ProbableActions
+                .Select(x => new ObservationProbableActionUpsertDto
+                {
+                    Id = x.Id,
+                    ObservationActionId = x.ObservationActionId,
+                    Confidence = x.Confidence,
+                    Reason = Clean(x.Reason),
+                    Source = x.Source
+                })]
+        };
+    }
+
+    private int GetNextOrdinal()
+        => _model.Participants.Count == 0 ? 1 : _model.Participants.Max(x => x.Ordinal) + 1;
+
+    public void Dispose()
+    {
+        CancelAndDispose(ref _actionSearchCts);
+        CancelAndDispose(ref _participantSearchCts);
+        CancelAndDispose(ref _probableActionSearchCts);
+        _lifetimeCts.Cancel();
+        _lifetimeCts.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
+    private void CancelLookupRequests()
+    {
+        CancelAndDispose(ref _actionSearchCts);
+        CancelAndDispose(ref _participantSearchCts);
+        CancelAndDispose(ref _probableActionSearchCts);
+    }
+
+    private CancellationToken ReplaceSearchCts(ref CancellationTokenSource? current)
+    {
+        CancelAndDispose(ref current);
+        current = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCts.Token);
+        return current.Token;
+    }
+
+    private static void CancelAndDispose(ref CancellationTokenSource? source)
+    {
+        if (source is null)
+            return;
+
+        try
+        {
+            source.Cancel();
+        }
+        catch
+        {
+        }
+
+        source.Dispose();
+        source = null;
+    }
+
+    private static ObservationEditorModel BuildModel(ObservationDetailsDto? details)
+    {
+        if (details is null)
+            return CreateEmptyModel();
+
+        return new ObservationEditorModel
+        {
+            ObservedDate = details.ObservedDate,
+            ObservationActionId = details.ObservationActionId,
+            ObservationActionName = details.ObservationActionName,
+            ActionRaw = details.ActionRaw,
+            Layer = details.Layer,
+            RmRaw = details.RmRaw,
+            PointRaw = details.PointRaw,
+            LocationRaw = details.LocationRaw,
+            DistrictRaw = details.DistrictRaw,
+            SubdivisionRaw = details.SubdivisionRaw,
+            SubdivisionStrength = details.SubdivisionStrength,
+            SubdivisionSource = details.SubdivisionSource ?? ObservationSubdivisionSource.Manual,
+            Note = details.Note,
+            Participants = [.. details.Participants
+                .OrderBy(x => x.Ordinal)
+                .Select(x => new ObservationParticipantEditorRow
+                {
+                    Id = x.Id,
+                    LabelRaw = x.LabelRaw,
+                    RoleRaw = x.RoleRaw,
+                    IsUnknown = x.IsUnknown,
+                    Ordinal = x.Ordinal
+                })],
+            Tags = [.. details.Tags
+                .Select(x => new ObservationTagEditorRow
+                {
+                    Id = x.Id,
+                    RawValue = x.RawValue,
+                    Kind = x.Kind,
+                    Source = x.Source
+                })],
+            ProbableActions = [.. details.ProbableActions
+                .Select(x => new ObservationProbableActionEditorRow
+                {
+                    Id = x.Id,
+                    ObservationActionId = x.ObservationActionId,
+                    ObservationActionName = x.ObservationActionName,
+                    Confidence = x.Confidence,
+                    Reason = x.Reason,
+                    Source = x.Source
+                })]
+        };
+    }
+
+    private static ObservationEditorModel CreateEmptyModel()
+        => new() { ObservedDate = DateTime.Now, SubdivisionSource = ObservationSubdivisionSource.Manual };
+
+    private static string GetActionCategoryText(ObservationActionCategory value)
+        => value switch
+        {
+            ObservationActionCategory.Communication => "Комунікація",
+            ObservationActionCategory.Movement => "Рух",
+            ObservationActionCategory.Fire => "Вогонь",
+            ObservationActionCategory.Command => "Управління",
+            ObservationActionCategory.Recon => "Розвідка",
+            ObservationActionCategory.Logistics => "Логістика",
+            ObservationActionCategory.Support => "Підтримка",
+            _ => "Інше"
+        };
+
+    private static string? Clean(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}

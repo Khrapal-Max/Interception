@@ -1,0 +1,95 @@
+@using Interception.UI.Components.Pages.Observations.Models
+@using Interception.UI.Components.Shared.Drawer
+@using Microsoft.AspNetCore.Components.Forms
+
+<Drawer @ref="_drawer"
+        IsOpen="@IsOpen"
+        IsOpenChanged="@IsOpenChanged"
+        OnClosed="@HandleDrawerClosedAsync"
+        Title="Імпорт спостережень"
+        DisableClose="@_importing"
+        CloseOnBackdrop="true"
+        CloseOnEscape="true">
+    <ChildContent>
+        <div class="d-flex flex-column gap-3">
+            <div class="alert alert-secondary rounded-0 py-2 mb-0 small">
+                Імпорт працює тільки з <span class="fw-semibold">Microsoft Excel (.xlsx)</span>.
+                Береться <span class="fw-semibold">перший лист</span>.
+                Шапка має точно відповідати шаблону.
+            </div>
+
+            <div class="border rounded-0 p-2 small">
+                <div class="fw-semibold mb-2">Шаблон колонок</div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-2 bg-white">
+                        <thead class="table-light">
+                        <tr>
+                            @foreach (var column in TemplateColumns)
+                            {
+                                <th class="text-nowrap">@column</th>
+                            }
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var row in SampleRows)
+                        {
+                            <tr>
+                                @foreach (var cell in row)
+                                {
+                                    <td class="small text-nowrap">@cell</td>
+                                }
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-muted">@ParticipantsHint</div>
+            </div>
+
+            <div>
+                <label class="form-label small mb-1">Excel-файл</label>
+                <InputFile OnChange="OnFileSelected"
+                           class="form-control form-control-sm rounded-0"
+                           accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                @if (!string.IsNullOrWhiteSpace(_model.SelectedFileName))
+                {
+                    <div class="small text-muted mt-1">Обрано: @_model.SelectedFileName</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(_model.FileInfo))
+                {
+                    <div class="small text-muted mt-1">@_model.FileInfo</div>
+                }
+            </div>
+
+            @if (_result is not null)
+            {
+                <div class="border rounded-0 p-2">
+                    <div class="fw-semibold mb-2">Результат</div>
+                    <div class="small">Імпортовано: @_result.ImportedCount</div>
+                    <div class="small">Дублікати: @_result.DuplicateCount</div>
+                    <div class="small">Помилки: @_result.ErrorCount</div>
+
+                    @if (_result.Errors.Count > 0)
+                    {
+                        <div class="mt-2 overflow-auto" style="max-height: 14rem;">
+                            @foreach (var error in _result.Errors)
+                            {
+                                <div class="border rounded-0 p-2 mb-1 small">
+                                    <div class="fw-semibold">Рядок @error.RowNumber</div>
+                                    <div>@error.Message</div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </ChildContent>
+
+    <FooterContent>
+        <div class="d-flex flex-wrap justify-content-end gap-2 w-100">
+            <button type="button" class="btn btn-outline-secondary btn-sm rounded-0" @onclick="CloseDrawerAsync" disabled="@_importing">Закрити</button>
+            <button type="button" class="btn btn-primary btn-sm rounded-0" @onclick="ImportAsync" disabled="@_importing">Імпортувати</button>
+        </div>
+    </FooterContent>
+</Drawer>

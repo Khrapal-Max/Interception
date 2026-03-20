@@ -8,12 +8,19 @@ namespace Interception.UI.Application.Observations.Abstractions;
 
 /// <summary>
 /// Batch import service for raw observations.
-/// Parsing stays outside; this service validates, normalizes and persists rows.
+/// Main operator flow is Microsoft Excel (.xlsx) import by a fixed template.
 /// </summary>
 public interface IObservationImportService
 {
     Task<ObservationImportResultDto> ImportAsync(
         IReadOnlyCollection<ObservationImportRowDto> rows,
+        string source,
+        Guid? sourceFileId,
+        string? createdBy,
+        CancellationToken ct);
+
+    Task<ObservationImportResultDto> ImportExcelAsync(
+        Stream excelStream,
         string source,
         Guid? sourceFileId,
         string? createdBy,

@@ -1,0 +1,238 @@
+@page "/observations/{ObservationId:guid}"
+
+@using Interception.UI.Components.Pages.Observations.Drawers
+
+<PageTitle>Деталі спостереження</PageTitle>
+
+<div class="obs-details-shell">
+    <div class="card rounded-0 shadow-sm obs-details-card">
+        <div class="card-body p-2 d-flex flex-column h-100 overflow-hidden">
+            <div class="d-flex flex-wrap align-items-center justify-content-between">
+                <div>
+                    <div class="fw-semibold">Деталі спостереження</div>
+                    @if (_details is not null)
+                    {
+                        <div class="small text-muted">@_details.ObservedDate.ToString("dd.MM.yyyy HH:mm")</div>
+                    }
+                </div>
+
+                <div class="d-flex flex-wrap gap-1">
+                    <button type="button"
+                            class="btn btn-secondary btn-sm rounded-0"
+                            @onclick="GoBack">
+                        До реєстру
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-warning btn-sm rounded-0"
+                            @onclick="ReloadAsync"
+                            disabled="@_loading">
+                        Оновити
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-primary btn-sm rounded-0"
+                            @onclick="OpenEditDrawer"
+                            disabled="@(_loading || _details is null)">
+                        Редагувати
+                    </button>
+                </div>
+            </div>
+
+            <div class="obs-details-scroll">
+                @if (_loading)
+                {
+                    <div class="text-center text-muted py-5">Завантаження…</div>
+                }
+                else if (_details is null)
+                {
+                    <div class="alert alert-warning rounded-0 mb-0">Запис не знайдено.</div>
+                }
+                else
+                {
+                    <div class="row g-2">
+                        <div class="col-12 col-xl-7">
+                            <div class="card rounded-0 h-100">
+                                <div class="card-header py-2">Основне</div>
+                                <div class="card-body py-2">
+                                    <dl class="row mb-0 small">
+                                        <dt class="col-sm-4">Час</dt>
+                                        <dd class="col-sm-8">@_details.ObservedDate.ToString("dd.MM.yyyy HH:mm")</dd>
+
+                                        <dt class="col-sm-4">Дія</dt>
+                                        <dd class="col-sm-8">@_details.ActionRaw</dd>
+
+                                        <dt class="col-sm-4">Типізована дія</dt>
+                                        <dd class="col-sm-8">@(_details.ObservationActionName ?? "—")</dd>
+
+                                        <dt class="col-sm-4">Шар</dt>
+                                        <dd class="col-sm-8">@(_details.Layer ?? "—")</dd>
+
+                                        <dt class="col-sm-4">Р/М</dt>
+                                        <dd class="col-sm-8">@(_details.RmRaw ?? "—")</dd>
+
+                                        <dt class="col-sm-4">Точка</dt>
+                                        <dd class="col-sm-8">@(_details.PointRaw ?? "—")</dd>
+
+                                        <dt class="col-sm-4">Локація</dt>
+                                        <dd class="col-sm-8">@(_details.LocationRaw ?? "—")</dd>
+
+                                        <dt class="col-sm-4">Район</dt>
+                                        <dd class="col-sm-8">@(_details.DistrictRaw ?? "—")</dd>
+
+                                        <dt class="col-sm-4">Підрозділ</dt>
+                                        <dd class="col-sm-8">@(_details.SubdivisionRaw ?? "—")</dd>
+
+                                        <dt class="col-sm-4">Сила зв'язку</dt>
+                                        <dd class="col-sm-8">@GetSubdivisionStrengthText(_details.SubdivisionStrength)</dd>
+
+                                        <dt class="col-sm-4">Джерело зв'язку</dt>
+                                        <dd class="col-sm-8">@GetSubdivisionSourceText(_details.SubdivisionSource)</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-xl-5">
+                            <div class="card rounded-0 h-100">
+                                <div class="card-header py-2">Службове</div>
+                                <div class="card-body py-2">
+                                    <dl class="row mb-0 small">
+                                        <dt class="col-sm-4">Джерело</dt>
+                                        <dd class="col-sm-8">@_details.Source</dd>
+
+                                        <dt class="col-sm-4">Файл</dt>
+                                        <dd class="col-sm-8">@(_details.SourceFileId?.ToString() ?? "—")</dd>
+
+                                        <dt class="col-sm-4">Рядок</dt>
+                                        <dd class="col-sm-8">@(_details.SourceRow?.ToString() ?? "—")</dd>
+
+                                        <dt class="col-sm-4">Hash</dt>
+                                        <dd class="col-sm-8 obs-hash">@_details.ContentHash</dd>
+
+                                        <dt class="col-sm-4">Створено</dt>
+                                        <dd class="col-sm-8">@_details.CreatedAtUtc.ToString("dd.MM.yyyy HH:mm")</dd>
+
+                                        <dt class="col-sm-4">Ким</dt>
+                                        <dd class="col-sm-8">@(_details.CreatedBy ?? "—")</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="card rounded-0">
+                                <div class="card-header py-2">Примітка</div>
+                                <div class="card-body py-2 small">
+                                    @if (string.IsNullOrWhiteSpace(_details.Note))
+                                    {
+                                        <span class="text-muted">Немає</span>
+                                    }
+                                    else
+                                    {
+                                        <div class="obs-note">@_details.Note</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-xl-4">
+                            <div class="card rounded-0 h-100">
+                                <div class="card-header py-2">Учасники</div>
+                                <div class="card-body py-2 obs-inner-list">
+                                    @if (_details.Participants.Count == 0)
+                                    {
+                                        <div class="text-muted small">Немає учасників</div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var participant in _details.Participants.OrderBy(x => x.Ordinal))
+                                        {
+                                            <div class="border rounded-0 p-2 mb-2 small">
+                                                <div class="d-flex justify-content-between gap-2">
+                                                    <div class="fw-semibold">@(participant.LabelRaw ?? $"Учасник {participant.Ordinal}")</div>
+                                                    <div class="text-muted">#@participant.Ordinal</div>
+                                                </div>
+                                                <div class="mt-1">@(participant.RoleRaw ?? "—")</div>
+                                                <div class="d-flex flex-wrap gap-1 mt-2">
+                                                    @if (participant.IsUnknown)
+                                                    {
+                                                        <span class="badge text-bg-warning rounded-0">НВ</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge text-bg-light border rounded-0">Відомий</span>
+                                                    }
+
+                                                    @if (participant.StartedAsUnknown)
+                                                    {
+                                                        <span class="badge text-bg-light border rounded-0">Починав як НВ</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-xl-4">
+                            <div class="card rounded-0 h-100">
+                                <div class="card-header py-2">Мітки</div>
+                                <div class="card-body py-2 obs-inner-list">
+                                    @if (_details.Tags.Count == 0)
+                                    {
+                                        <div class="text-muted small">Немає міток</div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var tag in _details.Tags)
+                                        {
+                                            <div class="border rounded-0 p-2 mb-2 small">
+                                                <div class="fw-semibold">@tag.RawValue</div>
+                                                <div class="text-muted">@GetTagKindText(tag.Kind)</div>
+                                                <div class="mt-1">@(tag.TagCatalogName ?? "Без каталогу")</div>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-xl-4">
+                            <div class="card rounded-0 h-100">
+                                <div class="card-header py-2">Ймовірні дії</div>
+                                <div class="card-body py-2 obs-inner-list">
+                                    @if (_details.ProbableActions.Count == 0)
+                                    {
+                                        <div class="text-muted small">Немає</div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var item in _details.ProbableActions)
+                                        {
+                                            <div class="border rounded-0 p-2 mb-2 small">
+                                                <div class="fw-semibold">@item.ObservationActionName</div>
+                                                <div class="text-muted">@GetPercent(item.Confidence) · @GetProbableSourceText(item.Source)</div>
+                                                @if (!string.IsNullOrWhiteSpace(item.Reason))
+                                                {
+                                                    <div class="mt-1">@item.Reason</div>
+                                                }
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<ObservationCreateDrawer IsOpen="@_editDrawerOpen"
+                         IsOpenChanged="HandleEditDrawerChangedAsync"
+                         ObservationId="@(_details?.Id)"
+                         Details="@_details"
+                         Saved="HandleSavedAsync" />
