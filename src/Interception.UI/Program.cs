@@ -2,14 +2,9 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Catalogs.Abstractions;
-using Interception.UI.Application.Catalogs.Services;
-using Interception.UI.Application.Hypotheses.Abstractions;
-using Interception.UI.Application.Hypotheses.Services;
-using Interception.UI.Application.Observations.Abstractions;
-using Interception.UI.Application.Observations.Services;
-using Interception.UI.Application.Reports.Abstractions;
-using Interception.UI.Application.Reports.Services;
+using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
+using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Interceptions.Services;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Components;
 using Interception.UI.Extensions;
@@ -34,20 +29,10 @@ builder.Services.AddDataProtection()
 
 builder.Services.AddScoped<ToastService>();
 
-builder.Services.AddScoped<IObservationActionCatalogService, ObservationActionCatalogService>();
-builder.Services.AddScoped<IResolvedSubdivisionCatalogService, ResolvedSubdivisionCatalogService>();
-builder.Services.AddScoped<ITagCatalogService, TagCatalogService>();
-
-builder.Services.AddScoped<IActorHypothesisService, ActorHypothesisService>();
-builder.Services.AddScoped<ISubdivisionHypothesisService, SubdivisionHypothesisService>();
-
-builder.Services.AddScoped<IObservationImportService, ObservationImportService>();
-builder.Services.AddScoped<IObservationLookupService, ObservationLookupService>();
-builder.Services.AddScoped<IObservationRegistryService, ObservationRegistryService>();
-builder.Services.AddScoped<IObservationWriteService, ObservationWriteService>();
-
-builder.Services.AddScoped<IDayPictureReportService, DayPictureReportService>();
-builder.Services.AddScoped<ISubdivisionReportService, SubdivisionReportService>();
+// --- Application services ---
+builder.Services.AddScoped<IInterceptionService, InterceptionService>();
+builder.Services.AddScoped<IInterceptionImportService, InterceptionImportService>();
+builder.Services.AddScoped<IInterceptionActionService, InterceptionActionService>();
 
 var app = builder.Build();
 

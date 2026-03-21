@@ -1,0 +1,100 @@
+//-----------------------------------------------------------------------------
+// All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
+//-----------------------------------------------------------------------------
+
+using Interception.UI.Application.Interceptions.Dtos;
+using Interception.UI.Domain;
+using Interception.UI.Extensions;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+
+namespace Interception.UI.Components.Pages.Interceptions.Drawers;
+
+public partial class InterceptionFormBody : ComponentBase
+{
+    [Parameter, EditorRequired]
+    public InterceptionFormDto Form { get; set; } = default!;
+
+    [Parameter] public IReadOnlyList<InterceptionAction> Actions              { get; set; } = [];
+    [Parameter] public IReadOnlyList<string>             FrequencySuggestions { get; set; } = [];
+    [Parameter] public IReadOnlyList<string>             VectorSuggestions    { get; set; } = [];
+    [Parameter] public EventCallback<string?>            OnFrequencySearch    { get; set; }
+    [Parameter] public EventCallback<string?>            OnVectorSearch       { get; set; }
+    [Parameter] public Func<string?, Task<IReadOnlyList<ParticipantSuggestionDto>>>? OnParticipantSearch { get; set; }
+
+    private readonly Dictionary<int, IReadOnlyList<ParticipantSuggestionDto>> _participantSuggestions = [];
+    private string? _newLabel;
+
+    private void OnObservedDateChange(ChangeEventArgs e)
+    {
+        var parsed = DateTimeConverter.Parse(e.Value?.ToString());
+        if (parsed.HasValue)
+            Form.ObservedDate = parsed.Value;
+    }
+
+    private void OnActionChange(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id))
+            Form.InterceptionActionId = id;
+    }
+
+    private async Task OnFrequencyInput(ChangeEventArgs e)
+    {
+        Form.Frequency = e.Value?.ToString();
+        await OnFrequencySearch.InvokeAsync(Form.Frequency);
+    }
+
+    private async Task OnVectorInput(ChangeEventArgs e)
+    {
+        Form.VectorSignal = e.Value?.ToString();
+        await OnVectorSearch.InvokeAsync(Form.VectorSignal);
+    }
+
+    private void AddParticipant()
+    {
+        var next = Form.Participants.Count == 0
+            ? 1
+            : Form.Participants.Max(p => p.Ordinal) + 1;
+        Form.Participants.Add(new ParticipantFormDto { Ordinal = next, IsUnknown = true });
+    }
+
+    private void RemoveParticipant(ParticipantFormDto p)
+    {
+        Form.Participants.Remove(p);
+        _participantSuggestions.Remove(p.Ordinal);
+    }
+
+    private void OnUnknownToggle(ParticipantFormDto p, bool isUnknown)
+    {
+        p.IsUnknown = isUnknown;
+        if (isUnknown) { p.Name = null; _participantSuggestions.Remove(p.Ordinal); }
+    }
+
+    private async Task OnParticipantNameInput(ParticipantFormDto p, string? value)
+    {
+        p.Name = value;
+        if (OnParticipantSearch is null || string.IsNullOrWhiteSpace(value))
+        { _participantSuggestions.Remove(p.Ordinal); return; }
+        _participantSuggestions[p.Ordinal] = await OnParticipantSearch(value);
+    }
+
+    private void ApplyParticipantSuggestion(ParticipantFormDto p, ParticipantSuggestionDto s)
+    {
+        p.Name = s.Name; p.Role = s.Role; p.IsUnknown = false;
+        _participantSuggestions.Remove(p.Ordinal);
+    }
+
+    private void AddLabel()
+    {
+        if (string.IsNullOrWhiteSpace(_newLabel)) return;
+        var norm = _newLabel.Trim();
+        if (!Form.Labels.Contains(norm, StringComparer.OrdinalIgnoreCase))
+            Form.Labels.Add(norm);
+        _newLabel = null;
+    }
+
+    private void OnLabelKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter") AddLabel();
+    }
+}

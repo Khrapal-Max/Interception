@@ -1,0 +1,79 @@
+@using Interception.UI.Application.Interceptions.Dtos
+@using Interception.UI.Components.Shared.Drawer
+@namespace Interception.UI.Components.Pages.Interceptions.Drawers
+
+<Drawer IsOpen="@IsOpen"
+        IsOpenChanged="IsOpenChanged"
+        Title="Фільтр"
+        CloseOnBackdrop="true"
+        CloseOnEscape="true"
+        OnClosed="OnDrawerClosed">
+    <ChildContent>
+        <div class="row g-2">
+
+            <div class="col-6">
+                <label class="form-label form-label-sm">Дата від</label>
+                <input type="datetime-local" class="form-control form-control-sm"
+                       value="@DateFromStr"
+                       @onchange="e => OnDateFromChange(e.Value?.ToString())" />
+            </div>
+
+            <div class="col-6">
+                <label class="form-label form-label-sm">Дата до</label>
+                <input type="datetime-local" class="form-control form-control-sm"
+                       value="@DateToStr"
+                       @onchange="e => OnDateToChange(e.Value?.ToString())" />
+            </div>
+
+            <div class="col-12">
+                <label class="form-label form-label-sm">Частота</label>
+                <div class="input-group input-group-sm">
+                    <input type="text" class="form-control form-control-sm font-monospace"
+                           placeholder="напр. 157.0250"
+                           value="@_model.Frequency"
+                           @oninput="OnFrequencyInput" />
+                    @if (_frequencySuggestions.Count > 0)
+                    {
+                        <button class="btn btn-outline-secondary dropdown-toggle"
+                                type="button"
+                                data-bs-toggle="dropdown"></button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            @foreach (var freq in _frequencySuggestions)
+                            {
+                                var f = freq;
+                                <li>
+                                    <button class="dropdown-item font-monospace" type="button"
+                                            @onclick="() => _model.Frequency = f">@f</button>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label form-label-sm">Учасник</label>
+                <input type="text" class="form-control form-control-sm"
+                       placeholder="Частина позивного…"
+                       value="@_model.ParticipantName"
+                       @oninput="e => _model.ParticipantName = e.Value?.ToString()" />
+            </div>
+
+            <div class="col-12">
+                <label class="form-label form-label-sm">Мітка</label>
+                <input type="text" class="form-control form-control-sm"
+                       value="@_model.LabelName"
+                       @oninput="e => _model.LabelName = e.Value?.ToString()" />
+            </div>
+
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button class="btn btn-outline-secondary btn-sm" @onclick="ResetAsync">
+            <i class="bi bi-x-circle me-1"></i>Скинути
+        </button>
+        <button class="btn btn-primary btn-sm" @onclick="ApplyAsync">
+            <i class="bi bi-funnel me-1"></i>Застосувати
+        </button>
+    </FooterContent>
+</Drawer>

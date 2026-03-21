@@ -1,0 +1,206 @@
+@using Interception.UI.Application.Interceptions.Dtos
+@using Interception.UI.Domain
+@using Interception.UI.Extensions
+@namespace Interception.UI.Components.Pages.Interceptions.Drawers
+
+<div class="row g-2">
+
+    <div class="col-6">
+        <label class="form-label form-label-sm">Дата та час</label>
+        <input type="datetime-local" class="form-control form-control-sm"
+               value="@DateTimeConverter.Format(Form.ObservedDate)"
+               @onchange="OnObservedDateChange" />
+    </div>
+
+    <div class="col-6">
+        <label class="form-label form-label-sm">
+            Дія <span class="text-danger">*</span>
+        </label>
+        @if (Actions.Count == 0)
+        {
+            <div class="form-control form-control-sm text-muted"
+                 style="background:var(--bs-secondary-bg)">
+                <span class="spinner-border spinner-border-sm me-1"></span>Завантаження…
+            </div>
+        }
+        else
+        {
+            <select class="form-select form-select-sm"
+                    value="@Form.InterceptionActionId"
+                    @onchange="OnActionChange">
+                <option value="@Guid.Empty">— оберіть дію —</option>
+                @foreach (var action in Actions)
+                {
+                    <option value="@action.Id">@action.Name</option>
+                }
+            </select>
+        }
+    </div>
+
+    <div class="col-6">
+        <label class="form-label form-label-sm">Частота</label>
+        <div class="input-group input-group-sm">
+            <input type="text" class="form-control font-monospace"
+                   placeholder="напр. 157.0250"
+                   value="@Form.Frequency"
+                   @oninput="OnFrequencyInput" />
+            @if (FrequencySuggestions.Count > 0)
+            {
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button"
+                        data-bs-toggle="dropdown"></button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    @foreach (var freq in FrequencySuggestions)
+                    {
+                        var f = freq;
+                        <li>
+                            <button class="dropdown-item font-monospace" type="button"
+                                    @onclick="() => Form.Frequency = f">@f</button>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+
+    <div class="col-6">
+        <label class="form-label form-label-sm">Р/М (підрозділ)</label>
+        <input type="text" class="form-control form-control-sm"
+               placeholder="напр. 1 мсб 656 мсп"
+               value="@Form.Division"
+               @oninput="e => Form.Division = e.Value?.ToString()" />
+    </div>
+
+    <div class="col-8">
+        <label class="form-label form-label-sm">Вектор сигналу</label>
+        <div class="input-group input-group-sm">
+            <input type="text" class="form-control"
+                   placeholder="напр. степове-олексіївка"
+                   value="@Form.VectorSignal"
+                   @oninput="OnVectorInput" />
+            @if (VectorSuggestions.Count > 0)
+            {
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button"
+                        data-bs-toggle="dropdown"></button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    @foreach (var vec in VectorSuggestions)
+                    {
+                        var v = vec;
+                        <li>
+                            <button class="dropdown-item" type="button"
+                                    @onclick="() => Form.VectorSignal = v">@v</button>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+
+    <div class="col-4">
+        <label class="form-label form-label-sm">Точка перехвату</label>
+        <input type="text" class="form-control form-control-sm"
+               value="@Form.PointSignal"
+               @oninput="e => Form.PointSignal = e.Value?.ToString()" />
+    </div>
+
+    <!-- Учасники -->
+    <div class="col-12 mt-1">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+            <label class="form-label form-label-sm mb-0">Учасники</label>
+            <button type="button" class="btn btn-outline-secondary btn-sm py-0"
+                    @onclick="AddParticipant">
+                <i class="bi bi-person-plus me-1"></i>Додати
+            </button>
+        </div>
+
+        @foreach (var pt in Form.Participants.OrderBy(x => x.Ordinal))
+        {
+            var participant = pt;
+            <div class="row g-1 align-items-center mb-1">
+                <div class="col-auto text-muted small" style="width:22px">@participant.Ordinal</div>
+                <div class="col-auto">
+                    <div class="form-check form-switch mb-0" title="Невідомий (НВ)">
+                        <input class="form-check-input" type="checkbox"
+                               checked="@participant.IsUnknown"
+                               @onchange="e => OnUnknownToggle(participant, (bool)(e.Value ?? false))" />
+                    </div>
+                </div>
+                <div class="col">
+                    <input type="text" class="form-control form-control-sm"
+                           placeholder="@(participant.IsUnknown ? "НВ" : "Позивний")"
+                           disabled="@participant.IsUnknown"
+                           value="@participant.Name"
+                           @oninput="e => OnParticipantNameInput(participant, e.Value?.ToString())" />
+                </div>
+                <div class="col">
+                    <input type="text" class="form-control form-control-sm"
+                           placeholder="Роль"
+                           value="@participant.Role"
+                           @oninput="e => participant.Role = e.Value?.ToString()" />
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-outline-danger btn-sm py-0 px-1"
+                            @onclick="() => RemoveParticipant(participant)"
+                            disabled="@(Form.Participants.Count <= 1)">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            </div>
+
+            @if (_participantSuggestions.TryGetValue(participant.Ordinal, out var sugs)
+                 && sugs.Count > 0 && !participant.IsUnknown)
+            {
+                <div class="ms-5 mb-1">
+                    @foreach (var sug in sugs.Take(5))
+                    {
+                        var s = sug;
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm py-0 me-1 mb-1"
+                                @onclick="() => ApplyParticipantSuggestion(participant, s)">
+                            @s.Name
+                            @if (!string.IsNullOrWhiteSpace(s.Role))
+                            {
+                                <small class="text-muted ms-1">@s.Role</small>
+                            }
+                        </button>
+                    }
+                </div>
+            }
+        }
+    </div>
+
+    <!-- Мітки -->
+    <div class="col-12">
+        <label class="form-label form-label-sm">Мітки</label>
+        <div class="d-flex flex-wrap gap-1 mb-1">
+            @foreach (var lbl in Form.Labels)
+            {
+                var label = lbl;
+                <span class="badge bg-secondary d-flex align-items-center gap-1">
+                    @label
+                    <button type="button" class="btn-close btn-close-white"
+                            style="font-size:.55rem"
+                            @onclick="() => Form.Labels.Remove(label)"></button>
+                </span>
+            }
+        </div>
+        <div class="input-group input-group-sm">
+            <input type="text" class="form-control form-control-sm"
+                   placeholder="Нова мітка…"
+                   value="@_newLabel"
+                   @oninput="e => _newLabel = e.Value?.ToString()"
+                   @onkeydown="OnLabelKeyDown" />
+            <button class="btn btn-outline-secondary" type="button" @onclick="AddLabel">
+                <i class="bi bi-plus"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Нотатка -->
+    <div class="col-12">
+        <label class="form-label form-label-sm">Деталі / нотатка</label>
+        <textarea class="form-control form-control-sm" rows="2"
+                  value="@Form.Note"
+                  @oninput="e => Form.Note = e.Value?.ToString()"></textarea>
+    </div>
+
+</div>
