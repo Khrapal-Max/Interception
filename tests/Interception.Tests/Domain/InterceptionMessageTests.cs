@@ -20,13 +20,13 @@ public sealed class InterceptionMessageTests
         DateTime? observedDate = null) =>
         InterceptionMessage.Create(
             observedDate ?? DateTime.UtcNow,
-            frequency         : "149.500",
-            division          : "1st Battalion",
-            vectorSignal      : "NE",
+            frequency: "149.500",
+            division: "1st Battalion",
+            vectorSignal: "NE",
             interceptionAction: action ?? MakeAction(),
-            note              : "test note",
-            createdBy         : "operator1",
-            pointSignal       : "Grid 1234");
+            note: "test note",
+            createdBy: "operator1",
+            pointSignal: "Grid 1234");
 
     // -------------------------------------------------------------------------
     // Create
@@ -35,7 +35,7 @@ public sealed class InterceptionMessageTests
     [Fact]
     public void Create_WithValidData_ShouldReturnMessage()
     {
-        var action  = MakeAction();
+        var action = MakeAction();
         var message = MakeMessage(action);
 
         message.Id.Should().NotBeEmpty();
@@ -86,9 +86,9 @@ public sealed class InterceptionMessageTests
     [Fact]
     public void Update_WithValidData_ShouldChangeFields()
     {
-        var message    = MakeMessage();
-        var newAction  = MakeAction();
-        var newDate    = DateTime.UtcNow.AddHours(-2);
+        var message = MakeMessage();
+        var newAction = MakeAction();
+        var newDate = DateTime.UtcNow.AddHours(-2);
 
         message.Update(newDate, "156.000", "2nd Battalion", "SW", newAction, "updated note");
 
@@ -105,9 +105,9 @@ public sealed class InterceptionMessageTests
     [Fact]
     public void Update_ShouldNotChangeCreatedByOrCreatedAt()
     {
-        var message    = MakeMessage();
-        var createdBy  = message.CreatedBy;
-        var createdAt  = message.CreatedAt;
+        var message = MakeMessage();
+        var createdBy = message.CreatedBy;
+        var createdAt = message.CreatedAt;
 
         message.Update(DateTime.UtcNow, "156.000", null, null, MakeAction(), null);
 
@@ -131,7 +131,7 @@ public sealed class InterceptionMessageTests
     [Fact]
     public void AddParticipant_FirstParticipant_ShouldHaveOrdinal1()
     {
-        var message     = MakeMessage();
+        var message = MakeMessage();
         var participant = message.AddParticipant("Alpha", isUnknown: false);
 
         participant.Ordinal.Should().Be(1);
@@ -152,7 +152,7 @@ public sealed class InterceptionMessageTests
     [Fact]
     public void AddParticipant_WithExplicitOrdinal_ShouldUseProvidedOrdinal()
     {
-        var message     = MakeMessage();
+        var message = MakeMessage();
         var participant = message.AddParticipant("Alpha", isUnknown: false, ordinal: 5);
 
         participant.Ordinal.Should().Be(5);
@@ -198,7 +198,7 @@ public sealed class InterceptionMessageTests
     [Fact]
     public void RemoveParticipant_ExistingId_ShouldRemoveFromList()
     {
-        var message     = MakeMessage();
+        var message = MakeMessage();
         var participant = message.AddParticipant("Alpha", isUnknown: false);
 
         message.RemoveParticipant(participant.Id);
@@ -224,7 +224,7 @@ public sealed class InterceptionMessageTests
     public void AddLabel_ValidName_ShouldAddToList()
     {
         var message = MakeMessage();
-        var label   = message.AddLabel("urgent");
+        var label = message.AddLabel("urgent");
 
         label.NameLabel.Should().NotBeNullOrWhiteSpace();
         message.Labels.Should().HaveCount(1);
@@ -257,7 +257,7 @@ public sealed class InterceptionMessageTests
     public void RemoveLabel_ExistingId_ShouldRemoveFromList()
     {
         var message = MakeMessage();
-        var label   = message.AddLabel("urgent");
+        var label = message.AddLabel("urgent");
 
         message.RemoveLabel(label.Id);
 

@@ -12,13 +12,13 @@ namespace Interception.UI.Components.Pages.Catalogs.Drawers;
 public partial class ActionFormDrawer : ComponentBase
 {
     [Inject] private IInterceptionActionService ActionService { get; set; } = default!;
-    [Inject] private ToastService               Toasts        { get; set; } = default!;
+    [Inject] private ToastService Toasts { get; set; } = default!;
 
     // -------------------------------------------------------------------------
     // Parameters
     // -------------------------------------------------------------------------
 
-    [Parameter] public bool                IsOpen        { get; set; }
+    [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
 
     /// <summary>null = створення, не null = редагування</summary>
@@ -32,10 +32,10 @@ public partial class ActionFormDrawer : ComponentBase
 
     private string? _name;
     private string? _description;
-    private bool    _nameError;
+    private bool _nameError;
     private string? _serverError;
-    private bool    _saving;
-    private bool    _initialized;
+    private bool _saving;
+    private bool _initialized;
 
     // -------------------------------------------------------------------------
     // Lifecycle — заповнюємо форму при відкритті
@@ -53,9 +53,9 @@ public partial class ActionFormDrawer : ComponentBase
         _initialized = true;
 
         // Заповнюємо поля з існуючої дії або очищаємо для нової
-        _name        = EditingAction?.Name        ?? string.Empty;
+        _name = EditingAction?.Name ?? string.Empty;
         _description = EditingAction?.Description ?? string.Empty;
-        _nameError   = false;
+        _nameError = false;
         _serverError = null;
     }
 
@@ -63,7 +63,7 @@ public partial class ActionFormDrawer : ComponentBase
     {
         _initialized = false;
         _serverError = null;
-        _nameError   = false;
+        _nameError = false;
     }
 
     // -------------------------------------------------------------------------
@@ -79,7 +79,7 @@ public partial class ActionFormDrawer : ComponentBase
             return;
         }
 
-        _saving      = true;
+        _saving = true;
         _serverError = null;
         try
         {

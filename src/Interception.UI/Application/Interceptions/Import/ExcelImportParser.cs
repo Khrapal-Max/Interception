@@ -85,20 +85,20 @@ public sealed class ExcelImportParser
 
         return new ImportRowDto
         {
-            RowNumber        = rowNumber,
-            Date             = date,
-            Time             = time,
-            Frequency        = NormalizeOptional(row.Cell(3).GetString()),
-            Division         = NormalizeOptional(row.Cell(4).GetString()),
-            PointSignal      = NormalizeOptional(row.Cell(5).GetString()),
-            VectorSignal     = NormalizeOptional(row.Cell(6).GetString()),
-            InitiatorName    = NormalizeParticipant(row.Cell(7).GetString()),
-            InitiatorRole    = NormalizeOptional(row.Cell(8).GetString()),
-            InitiatorDivision= NormalizeOptional(row.Cell(9).GetString()),
-            ResponderName    = NormalizeParticipant(row.Cell(10).GetString()),
-            ResponderRole    = NormalizeOptional(row.Cell(11).GetString()),
-            ActionName       = actionName,
-            Details          = NormalizeOptional(row.Cell(13).GetString()),
+            RowNumber = rowNumber,
+            Date = date,
+            Time = time,
+            Frequency = NormalizeOptional(row.Cell(3).GetString()),
+            Division = NormalizeOptional(row.Cell(4).GetString()),
+            PointSignal = NormalizeOptional(row.Cell(5).GetString()),
+            VectorSignal = NormalizeOptional(row.Cell(6).GetString()),
+            InitiatorName = NormalizeParticipant(row.Cell(7).GetString()),
+            InitiatorRole = NormalizeOptional(row.Cell(8).GetString()),
+            InitiatorDivision = NormalizeOptional(row.Cell(9).GetString()),
+            ResponderName = NormalizeParticipant(row.Cell(10).GetString()),
+            ResponderRole = NormalizeOptional(row.Cell(11).GetString()),
+            ActionName = actionName,
+            Details = NormalizeOptional(row.Cell(13).GetString()),
         };
     }
 
@@ -109,8 +109,8 @@ public sealed class ExcelImportParser
     private static bool TryParseDate(XLCellValue value, out DateOnly result)
     {
         result = default;
-        if (value.IsDateTime)  { result = DateOnly.FromDateTime(value.GetDateTime()); return true; }
-        if (value.IsText)      { return DateOnly.TryParse(value.GetText(), out result); }
+        if (value.IsDateTime) { result = DateOnly.FromDateTime(value.GetDateTime()); return true; }
+        if (value.IsText) { return DateOnly.TryParse(value.GetText(), out result); }
         return false;
     }
 

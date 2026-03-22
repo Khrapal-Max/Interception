@@ -13,21 +13,21 @@ namespace Interception.UI.Components.Pages.Interceptions.Drawers;
 
 public partial class InterceptionFormDrawer : ComponentBase
 {
-    [Inject] private IInterceptionService       InterceptionService { get; set; } = default!;
-    [Inject] private IInterceptionActionService ActionService       { get; set; } = default!;
-    [Inject] private ToastService               Toasts              { get; set; } = default!;
+    [Inject] private IInterceptionService InterceptionService { get; set; } = default!;
+    [Inject] private IInterceptionActionService ActionService { get; set; } = default!;
+    [Inject] private ToastService Toasts { get; set; } = default!;
 
-    [Parameter] public bool                IsOpen        { get; set; }
+    [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
-    [Parameter] public Guid?               EditingId     { get; set; }
-    [Parameter] public EventCallback       OnSaved       { get; set; }
+    [Parameter] public Guid? EditingId { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
 
-    private InterceptionFormDto?              _form;
-    private IReadOnlyList<InterceptionAction> _actions              = [];
-    private IReadOnlyList<string>             _frequencySuggestions = [];
-    private IReadOnlyList<string>             _vectorSuggestions    = [];
-    private bool                              _saving;
-    private bool                              _initialized;
+    private InterceptionFormDto? _form;
+    private IReadOnlyList<InterceptionAction> _actions = [];
+    private IReadOnlyList<FrequencySuggestionDto> _frequencySuggestions = [];
+    private IReadOnlyList<string> _vectorSuggestions = [];
+    private bool _saving;
+    private bool _initialized;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -46,20 +46,29 @@ public partial class InterceptionFormDrawer : ComponentBase
     private void OnDrawerClosed()
     {
         _initialized = false;
-        _form        = null;
+        _form = null;
     }
+
+    // -------------------------------------------------------------------------
+    // Ініціалізація
+    // -------------------------------------------------------------------------
 
     private async Task InitCreateAsync()
     {
-        _frequencySuggestions = await InterceptionService.GetFrequencySuggestionsAsync();
-        _vectorSuggestions    = await InterceptionService.GetVectorSignalSuggestionsAsync();
+        _frequencySuggestions = await InterceptionService.GetFrequencyWithDivisionAsync();
+
+        var topFreq = _frequencySuggestions.Count > 0 ? _frequencySuggestions[0] : null;
+
+        // FIX: frequency — другий параметр, не перший
+        _vectorSuggestions = await InterceptionService
+            .GetVectorSignalSuggestionsAsync(query: null, frequency: topFreq?.Frequency);
 
         _form = new InterceptionFormDto
         {
-            // ToDisplay конвертує UTC → локальний час для datetime-local інпута
-            ObservedDate         = DateTimeConverter.ToDisplay(DateTimeConverter.Now),
-            Frequency            = _frequencySuggestions.Count > 0 ? _frequencySuggestions[0] : null,
-            VectorSignal         = _vectorSuggestions.Count    > 0 ? _vectorSuggestions[0]    : null,
+            ObservedDate = DateTimeConverter.ToDisplay(DateTimeConverter.Now),
+            Frequency = topFreq?.Frequency,
+            Division = topFreq?.Division,
+            VectorSignal = topFreq?.VectorSignal,
             InterceptionActionId = _actions.Count == 1 ? _actions[0].Id : Guid.Empty,
             Participants =
             [
@@ -79,17 +88,23 @@ public partial class InterceptionFormDrawer : ComponentBase
             return;
         }
 
+        _frequencySuggestions = await InterceptionService
+            .GetFrequencyWithDivisionAsync(message.Frequency);
+
+        // FIX: frequency — другий параметр
+        _vectorSuggestions = await InterceptionService
+            .GetVectorSignalSuggestionsAsync(query: null, frequency: message.Frequency);
+
         _form = new InterceptionFormDto
         {
-            // UTC з БД → локальний час для відображення в datetime-local інпуті
-            ObservedDate         = DateTimeConverter.ToDisplay(message.ObservedDate),
-            Frequency            = message.Frequency,
-            Division             = message.Division,
-            PointSignal          = message.PointSignal,
-            VectorSignal         = message.VectorSignal,
+            ObservedDate = DateTimeConverter.ToDisplay(message.ObservedDate),
+            Frequency = message.Frequency,
+            Division = message.Division,
+            PointSignal = message.PointSignal,
+            VectorSignal = message.VectorSignal,
             InterceptionActionId = message.InterceptionActionId ?? Guid.Empty,
-            Note                 = message.Note,
-            Participants         = [.. message.Participants
+            Note = message.Note,
+            Participants = [.. message.Participants
                 .OrderBy(pt => pt.Ordinal)
                 .Select(pt => new ParticipantFormDto
                 {
@@ -102,14 +117,47 @@ public partial class InterceptionFormDrawer : ComponentBase
         };
     }
 
-    private async Task SearchFrequencyAsync(string? query)
-        => _frequencySuggestions = await InterceptionService.GetFrequencySuggestionsAsync(query);
+    // -------------------------------------------------------------------------
+    // Suggestions
+    // -------------------------------------------------------------------------
 
-    private async Task SearchVectorAsync(string? query)
-        => _vectorSuggestions = await InterceptionService.GetVectorSignalSuggestionsAsync(query);
+    internal async Task SearchFrequencyAsync(string? query)
+    {
+        _frequencySuggestions = await InterceptionService
+            .GetFrequencyWithDivisionAsync(query);
+        StateHasChanged();
+    }
 
-    private Task<IReadOnlyList<ParticipantSuggestionDto>> SearchParticipantsAsync(string? query)
+    /// <summary>
+    /// Оператор вибрав частоту з dropdown.
+    /// Оновлюємо VectorSuggestions контекстно — тільки вектори цієї частоти.
+    /// </summary>
+    internal async Task ApplyFrequencySuggestion(FrequencySuggestionDto s)
+    {
+        // FIX: frequency — другий параметр
+        _vectorSuggestions = await InterceptionService
+            .GetVectorSignalSuggestionsAsync(query: null, frequency: s.Frequency);
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Оператор набирає текст у полі вектора.
+    /// Шукаємо в межах поточної частоти форми (контекстний пошук).
+    /// </summary>
+    internal async Task SearchVectorAsync(string? query)
+    {
+        // FIX: передаємо поточну частоту як контекст
+        _vectorSuggestions = await InterceptionService
+            .GetVectorSignalSuggestionsAsync(query: query, frequency: _form?.Frequency);
+        StateHasChanged();
+    }
+
+    internal Task<IReadOnlyList<ParticipantSuggestionDto>> SearchParticipantsAsync(string? query)
         => InterceptionService.GetParticipantSuggestionsAsync(query);
+
+    // -------------------------------------------------------------------------
+    // Save / Close
+    // -------------------------------------------------------------------------
 
     private async Task SaveAsync()
     {

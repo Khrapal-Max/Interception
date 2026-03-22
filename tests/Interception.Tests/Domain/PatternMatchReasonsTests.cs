@@ -14,11 +14,11 @@ public sealed class PatternMatchReasonsTests
     {
         var reasons = new PatternMatchReasons
         {
-            SameFrequency    = true,
-            SameVector       = true,
-            SamePointSignal  = true,
-            SameDivision     = true,
-            CloseInTime      = true
+            SameFrequency = true,
+            SameVector = true,
+            SamePointSignal = true,
+            SameDivision = true,
+            CloseInTime = true
         };
 
         reasons.MatchCount.Should().Be(5);
@@ -33,20 +33,20 @@ public sealed class PatternMatchReasonsTests
     }
 
     [Theory]
-    [InlineData(true,  false, false, false, false, 1)]
-    [InlineData(true,  true,  false, false, false, 2)]
-    [InlineData(true,  true,  true,  false, false, 3)]
-    [InlineData(true,  true,  true,  true,  false, 4)]
+    [InlineData(true, false, false, false, false, 1)]
+    [InlineData(true, true, false, false, false, 2)]
+    [InlineData(true, true, true, false, false, 3)]
+    [InlineData(true, true, true, true, false, 4)]
     public void MatchCount_PartialMatch_ShouldReturnCorrectCount(
         bool freq, bool vec, bool point, bool div, bool time, int expected)
     {
         var reasons = new PatternMatchReasons
         {
-            SameFrequency    = freq,
-            SameVector       = vec,
-            SamePointSignal  = point,
-            SameDivision     = div,
-            CloseInTime      = time
+            SameFrequency = freq,
+            SameVector = vec,
+            SamePointSignal = point,
+            SameDivision = div,
+            CloseInTime = time
         };
 
         reasons.MatchCount.Should().Be(expected);
@@ -68,11 +68,11 @@ public sealed class PatternRecognitionOptionsTests
     {
         var options = new PatternRecognitionOptions
         {
-            FrequencyWeight   = 0.40,
-            VectorWeight      = 0.30,
+            FrequencyWeight = 0.40,
+            VectorWeight = 0.30,
             PointSignalWeight = 0.15,
-            DivisionWeight    = 0.10,
-            TimeWeight        = 0.05
+            DivisionWeight = 0.10,
+            TimeWeight = 0.05
         };
 
         options.WeightSumIsValid().Should().BeTrue();
@@ -83,11 +83,11 @@ public sealed class PatternRecognitionOptionsTests
     {
         var options = new PatternRecognitionOptions
         {
-            FrequencyWeight   = 0.50,
-            VectorWeight      = 0.50,
+            FrequencyWeight = 0.50,
+            VectorWeight = 0.50,
             PointSignalWeight = 0.50,
-            DivisionWeight    = 0.50,
-            TimeWeight        = 0.50
+            DivisionWeight = 0.50,
+            TimeWeight = 0.50
         };
 
         options.WeightSumIsValid().Should().BeFalse();

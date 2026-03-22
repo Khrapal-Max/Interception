@@ -100,7 +100,7 @@ internal sealed class ImportContextCache(IEnumerable<InterceptionAction> actions
     /// </summary>
     public void ResetSignalDefaults()
     {
-        _lastFrequency   = null;
+        _lastFrequency = null;
         _lastVectorSignal = null;
     }
 }

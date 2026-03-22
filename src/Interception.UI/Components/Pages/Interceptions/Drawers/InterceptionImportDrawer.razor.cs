@@ -13,24 +13,24 @@ namespace Interception.UI.Components.Pages.Interceptions.Drawers;
 public partial class InterceptionImportDrawer : ComponentBase
 {
     [Inject] private IInterceptionImportService ImportService { get; set; } = default!;
-    [Inject] private ToastService               Toasts        { get; set; } = default!;
+    [Inject] private ToastService Toasts { get; set; } = default!;
 
     // -------------------------------------------------------------------------
     // Parameters
     // -------------------------------------------------------------------------
 
-    [Parameter] public bool                IsOpen        { get; set; }
+    [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
-    [Parameter] public EventCallback       OnImported    { get; set; }
+    [Parameter] public EventCallback OnImported { get; set; }
 
     // -------------------------------------------------------------------------
     // Стан
     // -------------------------------------------------------------------------
 
     private IBrowserFile? _file;
-    private string?       _fileName;
+    private string? _fileName;
     private ImportResult? _lastResult;
-    private bool          _importing;
+    private bool _importing;
 
     // -------------------------------------------------------------------------
     // Скидання стану при закритті
@@ -38,8 +38,8 @@ public partial class InterceptionImportDrawer : ComponentBase
 
     private void OnDrawerClosed()
     {
-        _file       = null;
-        _fileName   = null;
+        _file = null;
+        _fileName = null;
         _lastResult = null;
     }
 
@@ -49,8 +49,8 @@ public partial class InterceptionImportDrawer : ComponentBase
 
     private void OnFileSelected(InputFileChangeEventArgs e)
     {
-        _file       = e.File;
-        _fileName   = e.File.Name;
+        _file = e.File;
+        _fileName = e.File.Name;
         _lastResult = null;
     }
 

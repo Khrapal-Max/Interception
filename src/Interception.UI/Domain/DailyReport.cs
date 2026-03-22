@@ -9,13 +9,13 @@ namespace Interception.UI.Domain;
 
 public class DailyReport
 {
-    public Guid              Id            { get; private set; } = Guid.NewGuid();
-    public DateOnly          ReportDate    { get; private set; }
-    public int               TotalMessages { get; private set; }
-    public DailyReportStatus Status        { get; private set; } = DailyReportStatus.Draft;
-    public string?           GeneratedBy   { get; private set; }
-    public DateTime          GeneratedAt   { get; private set; }
-    public DateTime?         PublishedAt   { get; private set; }
+    public Guid Id { get; private set; } = Guid.NewGuid();
+    public DateOnly ReportDate { get; private set; }
+    public int TotalMessages { get; private set; }
+    public DailyReportStatus Status { get; private set; } = DailyReportStatus.Draft;
+    public string? GeneratedBy { get; private set; }
+    public DateTime GeneratedAt { get; private set; }
+    public DateTime? PublishedAt { get; private set; }
 
     public List<MessageGroup> Groups { get; private set; } = [];
     public ParticipantMatrix? Matrix { get; private set; }
@@ -29,11 +29,11 @@ public class DailyReport
 
         var report = new DailyReport
         {
-            ReportDate    = reportDate,
+            ReportDate = reportDate,
             TotalMessages = messages.Count,
-            GeneratedBy   = NormalizeOptional(generatedBy),
-            GeneratedAt   = DateTimeConverter.Now,
-            Status        = DailyReportStatus.Draft
+            GeneratedBy = NormalizeOptional(generatedBy),
+            GeneratedAt = DateTimeConverter.Now,
+            Status = DailyReportStatus.Draft
         };
 
         report.Groups = BuildGroups(report.Id, messages);
@@ -50,7 +50,7 @@ public class DailyReport
         if (string.IsNullOrWhiteSpace(publishedBy))
             throw new ArgumentException("Ідентифікатор оператора обов'язковий.", nameof(publishedBy));
 
-        Status      = DailyReportStatus.Published;
+        Status = DailyReportStatus.Published;
         PublishedAt = DateTimeConverter.Now;
     }
 

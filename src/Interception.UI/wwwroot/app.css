@@ -2,9 +2,7 @@ html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-a, .btn-link {
-    color: #006bb7;
-}
+a, .btn-link { color: #006bb7; }
 
 .btn-primary {
     color: #fff;
@@ -90,14 +88,12 @@ h1:focus { outline: none; }
 /* =========================
    Registry page
    ========================= */
-
-/* Toolbar сторінки реєстру */
 .registry-toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: .5rem .75rem;
-    background: #1a1d21;          /* темна панель */
+    background: #1a1d21;
     border-radius: 8px;
     margin-bottom: .5rem;
     gap: .5rem;
@@ -123,8 +119,59 @@ h1:focus { outline: none; }
     white-space: nowrap;
 }
 
-/* Рядки таблиці */
 .registry-row:hover td { background: rgba(37, 99, 235, .04); }
 
-/* thead dark — текст завжди білий */
 .table-dark th { font-size: .75rem; font-weight: 500; letter-spacing: .03em; }
+
+/* =========================
+   Autocomplete
+   ========================= */
+.autocomplete-wrap {
+    position: relative;
+}
+
+.autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1060;
+    margin: 2px 0 0;
+    padding: 0;
+    list-style: none;
+
+    /* ↓ Явний світлий фон і темний текст — не залежить від теми сторінки */
+    background: #ffffff;
+    color: #212529;
+
+    border: 1px solid rgba(0,0,0,.15);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.12);
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.autocomplete-item {
+    padding: .4rem .75rem;
+    cursor: pointer;
+    font-size: .85rem;
+    color: #212529;                          /* ← явний темний текст */
+    border-bottom: 1px solid rgba(0,0,0,.05);
+    display: flex;
+    align-items: baseline;
+    gap: .5rem;
+}
+    .autocomplete-item:last-child { border-bottom: none; }
+
+    .autocomplete-item:hover {
+        background: #eef2ff;                 /* ← світло-синій hover */
+        color: #1d4ed8;
+    }
+
+    .autocomplete-item small {
+        color: #6c757d;                      /* ← підрозділ завжди сірий */
+    }
+
+    .autocomplete-item:hover small {
+        color: #4f7ef0;
+    }

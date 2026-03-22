@@ -23,7 +23,7 @@ public class InterceptionAction
 
         return new InterceptionAction
         {
-            Name        = name.Trim(),
+            Name = name.Trim(),
             Description = description?.Trim() ?? string.Empty
         };
     }
@@ -37,7 +37,7 @@ public class InterceptionAction
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Назва дії обов'язкова.", nameof(name));
 
-        Name        = name.Trim();
+        Name = name.Trim();
         Description = description?.Trim() ?? string.Empty;
     }
 }

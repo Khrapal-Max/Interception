@@ -3,7 +3,6 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Domain;
 
 namespace Interception.Tests.Domain;
 
@@ -16,7 +15,7 @@ public sealed class InterceptionMessageParticipantTests
     [Fact]
     public void Constructor_WithValidKnownParticipant_ShouldSetProperties()
     {
-        var msgId       = Guid.NewGuid();
+        var msgId = Guid.NewGuid();
         var participant = new InterceptionMessageParticipantBuilder()
             .WithMessageId(msgId)
             .WithName("Alpha")

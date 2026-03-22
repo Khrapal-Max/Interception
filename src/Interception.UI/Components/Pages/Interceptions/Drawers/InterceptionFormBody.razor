@@ -5,6 +5,7 @@
 
 <div class="row g-2">
 
+    <!-- Дата та час -->
     <div class="col-6">
         <label class="form-label form-label-sm">Дата та час</label>
         <input type="datetime-local" class="form-control form-control-sm"
@@ -12,6 +13,7 @@
                @onchange="OnObservedDateChange" />
     </div>
 
+    <!-- Дія -->
     <div class="col-6">
         <label class="form-label form-label-sm">
             Дія <span class="text-danger">*</span>
@@ -37,24 +39,31 @@
         }
     </div>
 
+    <!-- Частота — autocomplete список під інпутом -->
     <div class="col-6">
         <label class="form-label form-label-sm">Частота</label>
-        <div class="input-group input-group-sm">
-            <input type="text" class="form-control font-monospace"
+        <div class="autocomplete-wrap">
+            <input type="text" class="form-control form-control-sm font-monospace"
                    placeholder="напр. 157.0250"
                    value="@Form.Frequency"
-                   @oninput="OnFrequencyInput" />
-            @if (FrequencySuggestions.Count > 0)
+                   autocomplete="off"
+                   @oninput="OnFrequencyInput"
+                   @onfocus="OnFrequencyFocus"
+                   @onblur="OnFrequencyBlur" />
+            @if (_freqOpen && FrequencySuggestions.Count > 0)
             {
-                <button class="btn btn-outline-secondary dropdown-toggle" type="button"
-                        data-bs-toggle="dropdown"></button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    @foreach (var freq in FrequencySuggestions)
+                <ul class="autocomplete-list">
+                    @foreach (var sug in FrequencySuggestions)
                     {
-                        var f = freq;
-                        <li>
-                            <button class="dropdown-item font-monospace" type="button"
-                                    @onclick="() => Form.Frequency = f">@f</button>
+                        var s = sug;
+                        <li class="autocomplete-item"
+                            @onmousedown:preventDefault
+                            @onmousedown="() => OnFrequencySuggestionSelected(s)">
+                            <span class="font-monospace fw-semibold">@s.Frequency</span>
+                            @if (!string.IsNullOrWhiteSpace(s.Division))
+                            {
+                                <small class="text-muted ms-2">@s.Division</small>
+                            }
                         </li>
                     }
                 </ul>
@@ -62,6 +71,7 @@
         </div>
     </div>
 
+    <!-- Р/М -->
     <div class="col-6">
         <label class="form-label form-label-sm">Р/М (підрозділ)</label>
         <input type="text" class="form-control form-control-sm"
@@ -70,24 +80,27 @@
                @oninput="e => Form.Division = e.Value?.ToString()" />
     </div>
 
+    <!-- Вектор сигналу — autocomplete список під інпутом -->
     <div class="col-8">
         <label class="form-label form-label-sm">Вектор сигналу</label>
-        <div class="input-group input-group-sm">
-            <input type="text" class="form-control"
+        <div class="autocomplete-wrap">
+            <input type="text" class="form-control form-control-sm"
                    placeholder="напр. степове-олексіївка"
                    value="@Form.VectorSignal"
-                   @oninput="OnVectorInput" />
-            @if (VectorSuggestions.Count > 0)
+                   autocomplete="off"
+                   @oninput="OnVectorInput"
+                   @onfocus="OnVectorFocus"
+                   @onblur="OnVectorBlur" />
+            @if (_vecOpen && VectorSuggestions.Count > 0)
             {
-                <button class="btn btn-outline-secondary dropdown-toggle" type="button"
-                        data-bs-toggle="dropdown"></button>
-                <ul class="dropdown-menu dropdown-menu-end">
+                <ul class="autocomplete-list">
                     @foreach (var vec in VectorSuggestions)
                     {
                         var v = vec;
-                        <li>
-                            <button class="dropdown-item" type="button"
-                                    @onclick="() => Form.VectorSignal = v">@v</button>
+                        <li class="autocomplete-item"
+                            @onmousedown:preventDefault
+                            @onmousedown="() => { Form.VectorSignal = v; _vecOpen = false; }">
+                            @v
                         </li>
                     }
                 </ul>
@@ -95,6 +108,7 @@
         </div>
     </div>
 
+    <!-- Точка перехвату -->
     <div class="col-4">
         <label class="form-label form-label-sm">Точка перехвату</label>
         <input type="text" class="form-control form-control-sm"

@@ -12,7 +12,7 @@ namespace Interception.UI.Components.Pages.Interceptions;
 public partial class InterceptionRegistry : ComponentBase
 {
     [Inject] private IInterceptionService InterceptionService { get; set; } = default!;
-    [Inject] private ToastService         Toasts              { get; set; } = default!;
+    [Inject] private ToastService Toasts { get; set; } = default!;
 
     // -------------------------------------------------------------------------
     // Стан таблиці
@@ -20,15 +20,15 @@ public partial class InterceptionRegistry : ComponentBase
 
     private PagedResult<InterceptionListItemDto>? _pagedResult;
     private bool _loading;
-    private int  _currentPage = 1;
+    private int _currentPage = 1;
     private const int PageSize = 50;
 
     private InterceptionFilter _filter = new();
 
     private bool HasActiveFilter =>
-        _filter.DateFrom.HasValue                           ||
-        _filter.DateTo.HasValue                             ||
-        !string.IsNullOrWhiteSpace(_filter.Frequency)       ||
+        _filter.DateFrom.HasValue ||
+        _filter.DateTo.HasValue ||
+        !string.IsNullOrWhiteSpace(_filter.Frequency) ||
         !string.IsNullOrWhiteSpace(_filter.ParticipantName) ||
         !string.IsNullOrWhiteSpace(_filter.LabelName);
 
@@ -36,7 +36,7 @@ public partial class InterceptionRegistry : ComponentBase
     // Стан драверів — IsOpen binding
     // -------------------------------------------------------------------------
 
-    private bool  _formOpen;
+    private bool _formOpen;
     private Guid? _editingId;
 
     private bool _filterOpen;
@@ -86,17 +86,17 @@ public partial class InterceptionRegistry : ComponentBase
     private void OpenCreate()
     {
         _editingId = null;
-        _formOpen  = true;
+        _formOpen = true;
     }
 
     private void OpenEdit(Guid id)
     {
         _editingId = id;
-        _formOpen  = true;
+        _formOpen = true;
     }
 
-    private void OpenFilter()  => _filterOpen = true;
-    private void OpenImport()  => _importOpen = true;
+    private void OpenFilter() => _filterOpen = true;
+    private void OpenImport() => _importOpen = true;
 
     // -------------------------------------------------------------------------
     // Callbacks від драверів
@@ -104,21 +104,21 @@ public partial class InterceptionRegistry : ComponentBase
 
     private async Task OnFilterApplied(InterceptionFilter filter)
     {
-        _filter      = filter;
+        _filter = filter;
         _currentPage = 1;
         await LoadPageAsync();
     }
 
     private async Task OnFilterReset()
     {
-        _filter      = new InterceptionFilter();
+        _filter = new InterceptionFilter();
         _currentPage = 1;
         await LoadPageAsync();
     }
 
     private async Task ResetFilter()
     {
-        _filter      = new InterceptionFilter();
+        _filter = new InterceptionFilter();
         _currentPage = 1;
         await LoadPageAsync();
     }

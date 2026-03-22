@@ -12,13 +12,13 @@ namespace Interception.UI.Components.Pages.Catalogs;
 public partial class ActionCatalog : ComponentBase
 {
     [Inject] private IInterceptionActionService ActionService { get; set; } = default!;
-    [Inject] private ToastService               Toasts        { get; set; } = default!;
+    [Inject] private ToastService Toasts { get; set; } = default!;
 
     private IReadOnlyList<InterceptionAction>? _actions;
-    private bool                               _loading;
+    private bool _loading;
 
     // Дравер
-    private bool               _drawerOpen;
+    private bool _drawerOpen;
     private InterceptionAction? _editingAction; // null = створення
 
     // -------------------------------------------------------------------------
@@ -57,12 +57,12 @@ public partial class ActionCatalog : ComponentBase
     private void OpenCreate()
     {
         _editingAction = null;
-        _drawerOpen    = true;
+        _drawerOpen = true;
     }
 
     private void OpenEdit(InterceptionAction action)
     {
         _editingAction = action;
-        _drawerOpen    = true;
+        _drawerOpen = true;
     }
 }

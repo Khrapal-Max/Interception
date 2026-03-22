@@ -2,7 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Services;
 using Interception.UI.Application.Toasts;

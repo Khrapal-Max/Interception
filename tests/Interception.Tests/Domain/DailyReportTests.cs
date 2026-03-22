@@ -17,9 +17,9 @@ public sealed class DailyReportTests
     private static readonly DateOnly Today = DateOnly.FromDateTime(DateTime.UtcNow);
 
     private static InterceptionMessage MakeMessage(
-        string? frequency   = "149.500",
-        string? vector      = "NE",
-        string? division    = "1st Battalion",
+        string? frequency = "149.500",
+        string? vector = "NE",
+        string? division = "1st Battalion",
         params string[] participantNames)
     {
         var msg = InterceptionMessage.Create(
@@ -157,7 +157,7 @@ public sealed class ParticipantMatrixTests
     public void Build_TwoParticipantsInOneMessage_ShouldCreateOneCell()
     {
         var messages = new[] { MakeMessage("Alpha", "Bravo") };
-        var matrix   = ParticipantMatrix.Build(Guid.NewGuid(), messages);
+        var matrix = ParticipantMatrix.Build(Guid.NewGuid(), messages);
 
         matrix.Cells.Should().HaveCount(1);
 
@@ -187,7 +187,7 @@ public sealed class ParticipantMatrixTests
     {
         // 3 учасники → 3 пари: (A,B), (A,C), (B,C)
         var messages = new[] { MakeMessage("Alpha", "Bravo", "Charlie") };
-        var matrix   = ParticipantMatrix.Build(Guid.NewGuid(), messages);
+        var matrix = ParticipantMatrix.Build(Guid.NewGuid(), messages);
 
         matrix.Cells.Should().HaveCount(3);
     }
@@ -197,7 +197,7 @@ public sealed class ParticipantMatrixTests
     {
         // "Zulu" > "Alpha" лексикографічно — матриця має впорядкувати їх
         var messages = new[] { MakeMessage("Zulu", "Alpha") };
-        var matrix   = ParticipantMatrix.Build(Guid.NewGuid(), messages);
+        var matrix = ParticipantMatrix.Build(Guid.NewGuid(), messages);
 
         var cell = matrix.Cells.Single();
         string.Compare(cell.ParticipantA, cell.ParticipantB, StringComparison.Ordinal)
@@ -230,11 +230,11 @@ public sealed class ParticipantMatrixTests
             MakeMessage("Alpha", "Bravo")
         };
 
-        var matrix  = ParticipantMatrix.Build(Guid.NewGuid(), messages);
+        var matrix = ParticipantMatrix.Build(Guid.NewGuid(), messages);
         var results = matrix.GetInteractionsFor("Alpha").ToList();
 
         results.Should().HaveCount(2);
-        results.Should().ContainSingle(r => r.Partner == "Bravo"   && r.Count == 2);
+        results.Should().ContainSingle(r => r.Partner == "Bravo" && r.Count == 2);
         results.Should().ContainSingle(r => r.Partner == "Charlie" && r.Count == 1);
         // Відсортовано за спаданням
         results[0].Count.Should().BeGreaterThanOrEqualTo(results[1].Count);
@@ -244,7 +244,7 @@ public sealed class ParticipantMatrixTests
     public void GetInteractionsFor_UnknownParticipant_ShouldReturnEmpty()
     {
         var messages = new[] { MakeMessage("Alpha", "Bravo") };
-        var matrix   = ParticipantMatrix.Build(Guid.NewGuid(), messages);
+        var matrix = ParticipantMatrix.Build(Guid.NewGuid(), messages);
 
         var results = matrix.GetInteractionsFor("Delta").ToList();
 
@@ -267,7 +267,7 @@ public sealed class ParticipantMatrixTests
         };
 
         var matrix = ParticipantMatrix.Build(Guid.NewGuid(), messages);
-        var top    = matrix.GetTopPairs(1).ToList();
+        var top = matrix.GetTopPairs(1).ToList();
 
         top.Should().HaveCount(1);
         top[0].InteractionCount.Should().Be(3);

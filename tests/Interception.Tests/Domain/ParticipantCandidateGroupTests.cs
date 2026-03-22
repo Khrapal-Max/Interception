@@ -23,11 +23,11 @@ public sealed class ParticipantCandidateGroupTests
         bool point = false, bool div = false, bool time = true) =>
         new()
         {
-            SameFrequency   = freq,
-            SameVector      = vector,
+            SameFrequency = freq,
+            SameVector = vector,
             SamePointSignal = point,
-            SameDivision    = div,
-            CloseInTime     = time
+            SameDivision = div,
+            CloseInTime = time
         };
 
     // -------------------------------------------------------------------------
@@ -37,7 +37,7 @@ public sealed class ParticipantCandidateGroupTests
     [Fact]
     public void Create_WithValidData_ShouldReturnOpenGroup()
     {
-        var refs    = MakeRefs();
+        var refs = MakeRefs();
         var reasons = MakeReasons();
 
         var group = ParticipantCandidateGroup.Create(refs, 0.75, reasons, "Alpha");

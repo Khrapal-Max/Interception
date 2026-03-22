@@ -29,8 +29,8 @@ public sealed class InterceptionImportService(
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
-        var cache    = new ImportContextCache(actions);
-        var errors   = new List<ImportRowError>();
+        var cache = new ImportContextCache(actions);
+        var errors = new List<ImportRowError>();
         var imported = 0;
 
         foreach (var (row, parseError) in parsed)
@@ -51,8 +51,8 @@ public sealed class InterceptionImportService(
         return new ImportResult
         {
             ImportedCount = imported,
-            SkippedCount  = errors.Count,
-            Errors        = errors
+            SkippedCount = errors.Count,
+            Errors = errors
         };
     }
 
@@ -61,7 +61,7 @@ public sealed class InterceptionImportService(
         ImportContextCache cache,
         string operatorName)
     {
-        var frequency    = cache.ResolveFrequency(row.Frequency);
+        var frequency = cache.ResolveFrequency(row.Frequency);
         var vectorSignal = cache.ResolveVectorSignal(row.VectorSignal);
 
         var action = cache.FindAction(row.ActionName);
@@ -72,31 +72,31 @@ public sealed class InterceptionImportService(
 
         // ToDateTime з Kind=Local → DateTimeConverter.ToUtc конвертує в UTC
         // щоб Npgsql прийняв для 'timestamp with time zone'
-        var rawDate      = row.Date.ToDateTime(row.Time, DateTimeKind.Local);
+        var rawDate = row.Date.ToDateTime(row.Time, DateTimeKind.Local);
         var observedDate = DateTimeConverter.ToUtc(rawDate);
 
         InterceptionMessage message;
         try
         {
             message = InterceptionMessage.Create(
-                observedDate      : observedDate,
-                frequency         : frequency,
-                division          : row.Division,
-                vectorSignal      : vectorSignal,
+                observedDate: observedDate,
+                frequency: frequency,
+                division: row.Division,
+                vectorSignal: vectorSignal,
                 interceptionAction: action,
-                note              : row.Details,
-                createdBy         : operatorName,
-                pointSignal       : row.PointSignal);
+                note: row.Details,
+                createdBy: operatorName,
+                pointSignal: row.PointSignal);
         }
         catch (Exception ex)
         {
             return (null, new ImportRowError(row.RowNumber, ex.Message));
         }
 
-        var initiatorRole      = cache.ResolveParticipantRole(row.InitiatorName, row.InitiatorRole);
+        var initiatorRole = cache.ResolveParticipantRole(row.InitiatorName, row.InitiatorRole);
         message.AddParticipant(row.InitiatorName, row.InitiatorName is null, initiatorRole, ordinal: 1);
 
-        var responderRole      = cache.ResolveParticipantRole(row.ResponderName, row.ResponderRole);
+        var responderRole = cache.ResolveParticipantRole(row.ResponderName, row.ResponderRole);
         var responderIsUnknown = row.ResponderName is null;
 
         if (!string.Equals(row.InitiatorName, row.ResponderName, StringComparison.OrdinalIgnoreCase)

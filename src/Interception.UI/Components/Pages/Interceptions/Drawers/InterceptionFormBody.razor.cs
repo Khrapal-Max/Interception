@@ -12,18 +12,36 @@ namespace Interception.UI.Components.Pages.Interceptions.Drawers;
 
 public partial class InterceptionFormBody : ComponentBase
 {
+    // -------------------------------------------------------------------------
+    // Parameters
+    // -------------------------------------------------------------------------
+
     [Parameter, EditorRequired]
     public InterceptionFormDto Form { get; set; } = default!;
 
-    [Parameter] public IReadOnlyList<InterceptionAction> Actions              { get; set; } = [];
-    [Parameter] public IReadOnlyList<string>             FrequencySuggestions { get; set; } = [];
-    [Parameter] public IReadOnlyList<string>             VectorSuggestions    { get; set; } = [];
-    [Parameter] public EventCallback<string?>            OnFrequencySearch    { get; set; }
-    [Parameter] public EventCallback<string?>            OnVectorSearch       { get; set; }
+    [Parameter] public IReadOnlyList<InterceptionAction> Actions { get; set; } = [];
+    [Parameter] public IReadOnlyList<FrequencySuggestionDto> FrequencySuggestions { get; set; } = [];
+    [Parameter] public IReadOnlyList<string> VectorSuggestions { get; set; } = [];
+
+    [Parameter] public EventCallback<string?> OnFrequencySearch { get; set; }
+    [Parameter] public EventCallback<FrequencySuggestionDto> OnFrequencySelected { get; set; }
+    [Parameter] public EventCallback<string?> OnVectorSearch { get; set; }
     [Parameter] public Func<string?, Task<IReadOnlyList<ParticipantSuggestionDto>>>? OnParticipantSearch { get; set; }
+
+    // -------------------------------------------------------------------------
+    // Стан autocomplete
+    // -------------------------------------------------------------------------
+
+    // _freqOpen / _vecOpen — чи показувати список прямо зараз
+    private bool _freqOpen;
+    private bool _vecOpen;
 
     private readonly Dictionary<int, IReadOnlyList<ParticipantSuggestionDto>> _participantSuggestions = [];
     private string? _newLabel;
+
+    // -------------------------------------------------------------------------
+    // Дата
+    // -------------------------------------------------------------------------
 
     private void OnObservedDateChange(ChangeEventArgs e)
     {
@@ -32,23 +50,78 @@ public partial class InterceptionFormBody : ComponentBase
             Form.ObservedDate = parsed.Value;
     }
 
+    // -------------------------------------------------------------------------
+    // Дія
+    // -------------------------------------------------------------------------
+
     private void OnActionChange(ChangeEventArgs e)
     {
         if (Guid.TryParse(e.Value?.ToString(), out var id))
             Form.InterceptionActionId = id;
     }
 
+    // -------------------------------------------------------------------------
+    // Частота — autocomplete
+    // -------------------------------------------------------------------------
+
     private async Task OnFrequencyInput(ChangeEventArgs e)
     {
         Form.Frequency = e.Value?.ToString();
+        _freqOpen = true;
         await OnFrequencySearch.InvokeAsync(Form.Frequency);
     }
+
+    private void OnFrequencyFocus()
+    {
+        // Показуємо список при фокусі якщо вже є suggestions
+        if (FrequencySuggestions.Count > 0)
+            _freqOpen = true;
+    }
+
+    private void OnFrequencyBlur()
+    {
+        // Закриваємо список при втраті фокуса.
+        // @onmousedown:preventDefault на li запобігає blur перед кліком.
+        _freqOpen = false;
+    }
+
+    private async Task OnFrequencySuggestionSelected(FrequencySuggestionDto s)
+    {
+        Form.Frequency = s.Frequency;
+
+        if (!string.IsNullOrWhiteSpace(s.Division))
+            Form.Division = s.Division;
+
+        if (!string.IsNullOrWhiteSpace(s.VectorSignal))
+            Form.VectorSignal = s.VectorSignal;
+
+        _freqOpen = false;
+
+        await OnFrequencySelected.InvokeAsync(s);
+    }
+
+    // -------------------------------------------------------------------------
+    // Вектор — autocomplete
+    // -------------------------------------------------------------------------
 
     private async Task OnVectorInput(ChangeEventArgs e)
     {
         Form.VectorSignal = e.Value?.ToString();
+        _vecOpen = true;
         await OnVectorSearch.InvokeAsync(Form.VectorSignal);
     }
+
+    private void OnVectorFocus()
+    {
+        if (VectorSuggestions.Count > 0)
+            _vecOpen = true;
+    }
+
+    private void OnVectorBlur() => _vecOpen = false;
+
+    // -------------------------------------------------------------------------
+    // Учасники
+    // -------------------------------------------------------------------------
 
     private void AddParticipant()
     {
@@ -83,6 +156,10 @@ public partial class InterceptionFormBody : ComponentBase
         p.Name = s.Name; p.Role = s.Role; p.IsUnknown = false;
         _participantSuggestions.Remove(p.Ordinal);
     }
+
+    // -------------------------------------------------------------------------
+    // Мітки
+    // -------------------------------------------------------------------------
 
     private void AddLabel()
     {

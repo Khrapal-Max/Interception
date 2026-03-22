@@ -13,13 +13,13 @@ public class ParticipantCandidateGroup
     public Guid Id { get; private set; } = Guid.NewGuid();
 
     public List<ParticipantRef> ParticipantRefs { get; private set; } = [];
-    public double               ConfidenceScore { get; private set; }
-    public string?              SuggestedName   { get; private set; }
-    public PatternMatchReasons  Reasons         { get; private set; } = new();
-    public CandidateGroupStatus Status          { get; private set; } = CandidateGroupStatus.Open;
-    public string?              ResolvedBy      { get; private set; }
-    public DateTime?            ResolvedAt      { get; private set; }
-    public DateTime             CreatedAt       { get; private set; }
+    public double ConfidenceScore { get; private set; }
+    public string? SuggestedName { get; private set; }
+    public PatternMatchReasons Reasons { get; private set; } = new();
+    public CandidateGroupStatus Status { get; private set; } = CandidateGroupStatus.Open;
+    public string? ResolvedBy { get; private set; }
+    public DateTime? ResolvedAt { get; private set; }
+    public DateTime CreatedAt { get; private set; }
 
     public static ParticipantCandidateGroup Create(
         IReadOnlyList<ParticipantRef> refs,
@@ -40,9 +40,9 @@ public class ParticipantCandidateGroup
         {
             ParticipantRefs = [.. refs],
             ConfidenceScore = confidenceScore,
-            Reasons         = reasons,
-            SuggestedName   = NormalizeOptional(suggestedName),
-            CreatedAt       = DateTimeConverter.Now
+            Reasons = reasons,
+            SuggestedName = NormalizeOptional(suggestedName),
+            CreatedAt = DateTimeConverter.Now
         };
     }
 
@@ -55,9 +55,9 @@ public class ParticipantCandidateGroup
             throw new ArgumentException("Ідентифікатор оператора обов'язковий.", nameof(resolvedBy));
 
         SuggestedName = resolvedName.Trim();
-        Status        = CandidateGroupStatus.Confirmed;
-        ResolvedBy    = resolvedBy.Trim();
-        ResolvedAt    = DateTimeConverter.Now;
+        Status = CandidateGroupStatus.Confirmed;
+        ResolvedBy = resolvedBy.Trim();
+        ResolvedAt = DateTimeConverter.Now;
     }
 
     public void Dismiss(string resolvedBy)
@@ -66,7 +66,7 @@ public class ParticipantCandidateGroup
         if (string.IsNullOrWhiteSpace(resolvedBy))
             throw new ArgumentException("Ідентифікатор оператора обов'язковий.", nameof(resolvedBy));
 
-        Status     = CandidateGroupStatus.Dismissed;
+        Status = CandidateGroupStatus.Dismissed;
         ResolvedBy = resolvedBy.Trim();
         ResolvedAt = DateTimeConverter.Now;
     }

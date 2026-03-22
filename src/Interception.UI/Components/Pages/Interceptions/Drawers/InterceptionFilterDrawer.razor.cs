@@ -13,18 +13,18 @@ public partial class InterceptionFilterDrawer : ComponentBase
 {
     [Inject] private IInterceptionService InterceptionService { get; set; } = default!;
 
-    [Parameter] public bool                IsOpen        { get; set; }
+    [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
-    [Parameter] public InterceptionFilter  Filter        { get; set; } = default!;
+    [Parameter] public InterceptionFilter Filter { get; set; } = default!;
     [Parameter] public EventCallback<InterceptionFilter> OnApplied { get; set; }
-    [Parameter] public EventCallback                     OnReset   { get; set; }
+    [Parameter] public EventCallback OnReset { get; set; }
 
-    private InterceptionFilter    _model                = new();
+    private InterceptionFilter _model = new();
     private IReadOnlyList<string> _frequencySuggestions = [];
-    private bool                  _initialized;
+    private bool _initialized;
 
     private string? DateFromStr => _model.DateFrom?.ToString("yyyy-MM-ddTHH:mm");
-    private string? DateToStr   => _model.DateTo?.ToString("yyyy-MM-ddTHH:mm");
+    private string? DateToStr => _model.DateTo?.ToString("yyyy-MM-ddTHH:mm");
 
     protected override async Task OnParametersSetAsync()
     {
@@ -33,7 +33,9 @@ public partial class InterceptionFilterDrawer : ComponentBase
         _initialized = true;
 
         _model = Clone(Filter);
-        _frequencySuggestions = await InterceptionService.GetFrequencySuggestionsAsync();
+
+        // Фільтру потрібні тільки рядки частот — беремо Frequency з FrequencySuggestionDto
+        _frequencySuggestions = await GetFrequencyStringsAsync();
     }
 
     private void OnDrawerClosed() => _initialized = false;
@@ -41,11 +43,10 @@ public partial class InterceptionFilterDrawer : ComponentBase
     private async Task OnFrequencyInput(ChangeEventArgs e)
     {
         var value = e.Value?.ToString();
-        _model.Frequency      = value;
-        _frequencySuggestions = await InterceptionService.GetFrequencySuggestionsAsync(value);
+        _model.Frequency = value;
+        _frequencySuggestions = await GetFrequencyStringsAsync(value);
     }
 
-    // FIX: DateTime.TryParse → DateTimeConverter.Parse (повертає Kind=Unspecified)
     private void OnDateFromChange(string? value)
         => _model.DateFrom = DateTimeConverter.Parse(value);
 
@@ -65,15 +66,25 @@ public partial class InterceptionFilterDrawer : ComponentBase
         await OnReset.InvokeAsync();
     }
 
+    // -------------------------------------------------------------------------
+    // Helper — фільтру потрібні тільки рядки, не повні DTO
+    // -------------------------------------------------------------------------
+
+    private async Task<IReadOnlyList<string>> GetFrequencyStringsAsync(string? query = null)
+    {
+        var suggestions = await InterceptionService.GetFrequencyWithDivisionAsync(query);
+        return [.. suggestions.Select(s => s.Frequency)];
+    }
+
     private static InterceptionFilter Clone(InterceptionFilter? src)
         => src is null
             ? new InterceptionFilter()
             : new InterceptionFilter
             {
-                DateFrom        = src.DateFrom,
-                DateTo          = src.DateTo,
-                Frequency       = src.Frequency,
+                DateFrom = src.DateFrom,
+                DateTo = src.DateTo,
+                Frequency = src.Frequency,
                 ParticipantName = src.ParticipantName,
-                LabelName       = src.LabelName
+                LabelName = src.LabelName
             };
 }

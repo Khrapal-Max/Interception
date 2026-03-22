@@ -10,70 +10,70 @@ public class InterceptionMessage
 {
     public Guid Id { get; private set; } = Guid.NewGuid();
 
-    public DateTime  ObservedDate { get; private set; }
-    public string?   Frequency    { get; private set; }
-    public string?   Division     { get; private set; }
-    public string?   PointSignal  { get; private set; }
-    public string?   VectorSignal { get; private set; }
+    public DateTime ObservedDate { get; private set; }
+    public string? Frequency { get; private set; }
+    public string? Division { get; private set; }
+    public string? PointSignal { get; private set; }
+    public string? VectorSignal { get; private set; }
 
-    public Guid?               InterceptionActionId { get; private set; }
-    public InterceptionAction? InterceptionAction   { get; private set; }
+    public Guid? InterceptionActionId { get; private set; }
+    public InterceptionAction? InterceptionAction { get; private set; }
 
-    public string?   Note      { get; private set; }
-    public string?   CreatedBy { get; private set; }
-    public DateTime  CreatedAt { get; private set; }
+    public string? Note { get; private set; }
+    public string? CreatedBy { get; private set; }
+    public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
     public List<InterceptionMessageParticipant> Participants { get; private set; } = [];
-    public List<InterceptionMessageLabel>       Labels       { get; private set; } = [];
+    public List<InterceptionMessageLabel> Labels { get; private set; } = [];
 
     public static InterceptionMessage Create(
         DateTime observedDate,
-        string?  frequency,
-        string?  division,
-        string?  vectorSignal,
+        string? frequency,
+        string? division,
+        string? vectorSignal,
         InterceptionAction interceptionAction,
-        string?  note,
-        string?  createdBy,
-        string?  pointSignal = null)
+        string? note,
+        string? createdBy,
+        string? pointSignal = null)
     {
         ArgumentNullException.ThrowIfNull(interceptionAction);
 
         return new InterceptionMessage
         {
-            ObservedDate         = DateTimeConverter.ToUtc(observedDate),
-            Frequency            = NormalizeOptional(frequency),
-            Division             = NormalizeOptional(division),
-            VectorSignal         = NormalizeOptional(vectorSignal),
-            InterceptionAction   = interceptionAction,
+            ObservedDate = DateTimeConverter.ToUtc(observedDate),
+            Frequency = NormalizeOptional(frequency),
+            Division = NormalizeOptional(division),
+            VectorSignal = NormalizeOptional(vectorSignal),
+            InterceptionAction = interceptionAction,
             InterceptionActionId = interceptionAction.Id,
-            Note                 = NormalizeOptional(note),
-            CreatedBy            = NormalizeOptional(createdBy),
-            CreatedAt            = DateTimeConverter.Now,
-            PointSignal          = NormalizeOptional(pointSignal)
+            Note = NormalizeOptional(note),
+            CreatedBy = NormalizeOptional(createdBy),
+            CreatedAt = DateTimeConverter.Now,
+            PointSignal = NormalizeOptional(pointSignal)
         };
     }
 
     public void Update(
         DateTime observedDate,
-        string?  frequency,
-        string?  division,
-        string?  vectorSignal,
+        string? frequency,
+        string? division,
+        string? vectorSignal,
         InterceptionAction interceptionAction,
-        string?  note,
-        string?  pointSignal = null)
+        string? note,
+        string? pointSignal = null)
     {
         ArgumentNullException.ThrowIfNull(interceptionAction);
 
-        ObservedDate         = DateTimeConverter.ToUtc(observedDate);
-        Frequency            = NormalizeOptional(frequency);
-        Division             = NormalizeOptional(division);
-        VectorSignal         = NormalizeOptional(vectorSignal);
-        InterceptionAction   = interceptionAction;
+        ObservedDate = DateTimeConverter.ToUtc(observedDate);
+        Frequency = NormalizeOptional(frequency);
+        Division = NormalizeOptional(division);
+        VectorSignal = NormalizeOptional(vectorSignal);
+        InterceptionAction = interceptionAction;
         InterceptionActionId = interceptionAction.Id;
-        Note                 = NormalizeOptional(note);
-        UpdatedAt            = DateTimeConverter.Now;
-        PointSignal          = NormalizeOptional(pointSignal);
+        Note = NormalizeOptional(note);
+        UpdatedAt = DateTimeConverter.Now;
+        PointSignal = NormalizeOptional(pointSignal);
     }
 
     public InterceptionMessageParticipant AddParticipant(
