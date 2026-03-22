@@ -17,7 +17,7 @@ namespace Interception.UI.Application.Interceptions.Import;
 /// Порожнє поле в рядку Excel означає відсутність інформації, а не
 /// "взяти з попереднього рядка". Кожен рядок імпортується незалежно.
 /// </summary>
-internal sealed class ImportContextCache(IEnumerable<InterceptionAction> actions)
+public sealed class ImportContextCache(IEnumerable<InterceptionAction> actions)
 {
     private readonly Dictionary<string, InterceptionAction> _actions =
         actions.ToDictionary(

@@ -113,6 +113,7 @@ public static partial class TextBlockParser
         //   - Зупиняємось при рядку діалогу (— ...) або "Коментар:"
         // -------------------------------------------------------------------------
         string? initiator = null;
+        var initiatorSet = false;   // розрізняємо "не зустрічали" від "НВ = null"
         var responders = new List<string?>();
         var noteLines = new List<string>();
         var inDialog = false;
@@ -144,15 +145,19 @@ public static partial class TextBlockParser
             // Рядок позивних
             if (IsCallsignLine(line))
             {
-                // Розбиваємо по комі — перший елемент ініціатор якщо ще не встановлений
+                // Розбиваємо по комі.
+                // НВ нормалізується у null але ЗБЕРІГАЄ позицію:
+                //   "НВ"        → ініціатор = null (невідомий)
+                //   "НВ, ЦЫГАН" → ініціатор = null, відповідач = "ЦЫГАН"
+                // initiatorSet відрізняє "ще не зустрічали" від "встановлено як НВ"
                 var parts = line
                     .Split(',')
                     .Select(p => NormalizeCallsign(p.Trim()))
-                    .Where(p => p is not null)
                     .ToList();
 
-                if (initiator is null && parts.Count > 0)
+                if (!initiatorSet)
                 {
+                    initiatorSet = true;
                     initiator = parts[0];
                     responders.AddRange(parts.Skip(1));
                 }
