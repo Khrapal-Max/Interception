@@ -32,9 +32,11 @@ public partial class InterceptionFormBody : ComponentBase
     // Стан autocomplete
     // -------------------------------------------------------------------------
 
-    // _freqOpen / _vecOpen — чи показувати список прямо зараз
     private bool _freqOpen;
     private bool _vecOpen;
+
+    // Які поля імені учасників зараз відкриті (ключ = Ordinal)
+    private readonly HashSet<int> _participantOpen = [];
 
     private readonly Dictionary<int, IReadOnlyList<ParticipantSuggestionDto>> _participantSuggestions = [];
     private string? _newLabel;
@@ -61,7 +63,7 @@ public partial class InterceptionFormBody : ComponentBase
     }
 
     // -------------------------------------------------------------------------
-    // Частота — autocomplete
+    // Частота
     // -------------------------------------------------------------------------
 
     private async Task OnFrequencyInput(ChangeEventArgs e)
@@ -73,35 +75,22 @@ public partial class InterceptionFormBody : ComponentBase
 
     private void OnFrequencyFocus()
     {
-        // Показуємо список при фокусі якщо вже є suggestions
-        if (FrequencySuggestions.Count > 0)
-            _freqOpen = true;
+        if (FrequencySuggestions.Count > 0) _freqOpen = true;
     }
 
-    private void OnFrequencyBlur()
-    {
-        // Закриваємо список при втраті фокуса.
-        // @onmousedown:preventDefault на li запобігає blur перед кліком.
-        _freqOpen = false;
-    }
+    private void OnFrequencyBlur() => _freqOpen = false;
 
     private async Task OnFrequencySuggestionSelected(FrequencySuggestionDto s)
     {
         Form.Frequency = s.Frequency;
-
-        if (!string.IsNullOrWhiteSpace(s.Division))
-            Form.Division = s.Division;
-
-        if (!string.IsNullOrWhiteSpace(s.VectorSignal))
-            Form.VectorSignal = s.VectorSignal;
-
+        if (!string.IsNullOrWhiteSpace(s.Division)) Form.Division = s.Division;
+        if (!string.IsNullOrWhiteSpace(s.VectorSignal)) Form.VectorSignal = s.VectorSignal;
         _freqOpen = false;
-
         await OnFrequencySelected.InvokeAsync(s);
     }
 
     // -------------------------------------------------------------------------
-    // Вектор — autocomplete
+    // Вектор
     // -------------------------------------------------------------------------
 
     private async Task OnVectorInput(ChangeEventArgs e)
@@ -113,14 +102,13 @@ public partial class InterceptionFormBody : ComponentBase
 
     private void OnVectorFocus()
     {
-        if (VectorSuggestions.Count > 0)
-            _vecOpen = true;
+        if (VectorSuggestions.Count > 0) _vecOpen = true;
     }
 
     private void OnVectorBlur() => _vecOpen = false;
 
     // -------------------------------------------------------------------------
-    // Учасники
+    // Учасники — autocomplete
     // -------------------------------------------------------------------------
 
     private void AddParticipant()
@@ -135,26 +123,45 @@ public partial class InterceptionFormBody : ComponentBase
     {
         Form.Participants.Remove(p);
         _participantSuggestions.Remove(p.Ordinal);
+        _participantOpen.Remove(p.Ordinal);
     }
 
     private void OnUnknownToggle(ParticipantFormDto p, bool isUnknown)
     {
         p.IsUnknown = isUnknown;
-        if (isUnknown) { p.Name = null; _participantSuggestions.Remove(p.Ordinal); }
+        if (isUnknown)
+        {
+            p.Name = null;
+            _participantSuggestions.Remove(p.Ordinal);
+            _participantOpen.Remove(p.Ordinal);
+        }
     }
 
     private async Task OnParticipantNameInput(ParticipantFormDto p, string? value)
     {
         p.Name = value;
+
         if (OnParticipantSearch is null || string.IsNullOrWhiteSpace(value))
-        { _participantSuggestions.Remove(p.Ordinal); return; }
+        {
+            _participantSuggestions.Remove(p.Ordinal);
+            _participantOpen.Remove(p.Ordinal);
+            return;
+        }
+
         _participantSuggestions[p.Ordinal] = await OnParticipantSearch(value);
+        _participantOpen.Add(p.Ordinal);
     }
+
+    private void CloseParticipantSuggestions(int ordinal)
+        => _participantOpen.Remove(ordinal);
 
     private void ApplyParticipantSuggestion(ParticipantFormDto p, ParticipantSuggestionDto s)
     {
-        p.Name = s.Name; p.Role = s.Role; p.IsUnknown = false;
+        p.Name = s.Name;
+        p.Role = s.Role;
+        p.IsUnknown = false;
         _participantSuggestions.Remove(p.Ordinal);
+        _participantOpen.Remove(p.Ordinal);
     }
 
     // -------------------------------------------------------------------------

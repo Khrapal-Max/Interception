@@ -39,7 +39,7 @@
         }
     </div>
 
-    <!-- Частота — autocomplete список під інпутом -->
+    <!-- Частота — autocomplete -->
     <div class="col-6">
         <label class="form-label form-label-sm">Частота</label>
         <div class="autocomplete-wrap">
@@ -62,7 +62,7 @@
                             <span class="font-monospace fw-semibold">@s.Frequency</span>
                             @if (!string.IsNullOrWhiteSpace(s.Division))
                             {
-                                <small class="text-muted ms-2">@s.Division</small>
+                                <small class="font-monospace fw-semibold ms-2">@s.Division</small>
                             }
                         </li>
                     }
@@ -80,7 +80,7 @@
                @oninput="e => Form.Division = e.Value?.ToString()" />
     </div>
 
-    <!-- Вектор сигналу — autocomplete список під інпутом -->
+    <!-- Вектор — autocomplete -->
     <div class="col-8">
         <label class="form-label form-label-sm">Вектор сигналу</label>
         <div class="autocomplete-wrap">
@@ -100,7 +100,7 @@
                         <li class="autocomplete-item"
                             @onmousedown:preventDefault
                             @onmousedown="() => { Form.VectorSignal = v; _vecOpen = false; }">
-                            @v
+                            <span class="font-monospace fw-semibold">@v</span>
                         </li>
                     }
                 </ul>
@@ -130,7 +130,11 @@
         {
             var participant = pt;
             <div class="row g-1 align-items-center mb-1">
+
+                <!-- Номер -->
                 <div class="col-auto text-muted small" style="width:22px">@participant.Ordinal</div>
+
+                <!-- НВ toggle -->
                 <div class="col-auto">
                     <div class="form-check form-switch mb-0" title="Невідомий (НВ)">
                         <input class="form-check-input" type="checkbox"
@@ -138,19 +142,48 @@
                                @onchange="e => OnUnknownToggle(participant, (bool)(e.Value ?? false))" />
                     </div>
                 </div>
-                <div class="col">
+
+                <!-- Ім'я / позивний — autocomplete як у частоти -->
+                <div class="col autocomplete-wrap">
                     <input type="text" class="form-control form-control-sm"
                            placeholder="@(participant.IsUnknown ? "НВ" : "Позивний")"
                            disabled="@participant.IsUnknown"
                            value="@participant.Name"
-                           @oninput="e => OnParticipantNameInput(participant, e.Value?.ToString())" />
+                           autocomplete="off"
+                           @oninput="e => OnParticipantNameInput(participant, e.Value?.ToString())"
+                           @onblur="() => CloseParticipantSuggestions(participant.Ordinal)" />
+
+                    @if (_participantOpen.Contains(participant.Ordinal)
+                         && _participantSuggestions.TryGetValue(participant.Ordinal, out var sugs)
+                         && sugs.Count > 0 && !participant.IsUnknown)
+                    {
+                        <ul class="autocomplete-list">
+                            @foreach (var sug in sugs.Take(6))
+                            {
+                                var s = sug;
+                                <li class="autocomplete-item"
+                                    @onmousedown:preventDefault
+                                    @onmousedown="() => ApplyParticipantSuggestion(participant, s)">
+                                    <span class="font-monospace fw-semibold">@s.Name</span>
+                                    @if (!string.IsNullOrWhiteSpace(s.Role))
+                                    {
+                                        <span class="font-monospace fw-semibold ms-2">@s.Role</span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
                 </div>
+
+                <!-- Роль -->
                 <div class="col">
                     <input type="text" class="form-control form-control-sm"
                            placeholder="Роль"
                            value="@participant.Role"
                            @oninput="e => participant.Role = e.Value?.ToString()" />
                 </div>
+
+                <!-- Видалити -->
                 <div class="col-auto">
                     <button type="button" class="btn btn-outline-danger btn-sm py-0 px-1"
                             @onclick="() => RemoveParticipant(participant)"
@@ -158,27 +191,8 @@
                         <i class="bi bi-x"></i>
                     </button>
                 </div>
-            </div>
 
-            @if (_participantSuggestions.TryGetValue(participant.Ordinal, out var sugs)
-                 && sugs.Count > 0 && !participant.IsUnknown)
-            {
-                <div class="ms-5 mb-1">
-                    @foreach (var sug in sugs.Take(5))
-                    {
-                        var s = sug;
-                        <button type="button"
-                                class="btn btn-outline-secondary btn-sm py-0 me-1 mb-1"
-                                @onclick="() => ApplyParticipantSuggestion(participant, s)">
-                            @s.Name
-                            @if (!string.IsNullOrWhiteSpace(s.Role))
-                            {
-                                <small class="text-muted ms-1">@s.Role</small>
-                            }
-                        </button>
-                    }
-                </div>
-            }
+            </div>
         }
     </div>
 
