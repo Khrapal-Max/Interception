@@ -10,6 +10,9 @@
     <!-- Toolbar -->
     <div class="registry-toolbar flex-shrink-0">
         <div class="d-flex ms-auto align-items-center gap-2">
+            <button class="btn btn-warning btn-sm" @onclick="OpenTextBlock">
+                <i class="bi bi-text-paragraph me-1"></i>З тексту
+            </button>
             <button class="btn btn-primary btn-sm" @onclick="OpenCreate">
                 <i class="bi bi-plus-lg me-1"></i>Додати
             </button>
@@ -94,7 +97,7 @@
                                 </button>
                                 <button class="btn btn-danger"
                                         title="Видалити"
-                                        @onclick="() => ConfirmDeleteAsync(item.Id, item.ObservedDate)">
+                                        @onclick="() => DeleteAsync(item.Id, item.ObservedDate)">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
@@ -151,3 +154,7 @@
 
 <InterceptionImportDrawer @bind-IsOpen="_importOpen"
                           OnImported="LoadPageAsync" />
+
+<InterceptionTextBlockDrawer @bind-IsOpen="_textBlockOpen"
+                              Actions="_actions"
+                              OnSaved="LoadPageAsync" />

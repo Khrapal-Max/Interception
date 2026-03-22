@@ -49,11 +49,11 @@ public sealed class InterceptionImportService(
         {
             if (parseError is not null) { errors.Add(parseError); continue; }
 
-            var result = ProcessRow(row!, cache, operatorName);
+            var (Message, Error) = ProcessRow(row!, cache, operatorName);
 
-            if (result.Error is not null) { errors.Add(result.Error); continue; }
+            if (Error is not null) { errors.Add(Error); continue; }
 
-            db.InterceptionMessages.Add(result.Message!);
+            db.InterceptionMessages.Add(Message!);
             imported++;
         }
 

@@ -5,6 +5,7 @@
 using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Toasts;
+using Interception.UI.Domain;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.UI.Components.Pages.Interceptions;
@@ -12,7 +13,12 @@ namespace Interception.UI.Components.Pages.Interceptions;
 public partial class InterceptionRegistry : ComponentBase
 {
     [Inject] private IInterceptionService InterceptionService { get; set; } = default!;
+    [Inject] private IInterceptionActionService ActionService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
+
+    // -------------------------------------------------------------------------
+    // Стан таблиці
+    // -------------------------------------------------------------------------
 
     private PagedResult<InterceptionListItemDto>? _pagedResult;
     private bool _loading;
@@ -29,13 +35,32 @@ public partial class InterceptionRegistry : ComponentBase
         !string.IsNullOrWhiteSpace(_filter.ParticipantName) ||
         !string.IsNullOrWhiteSpace(_filter.LabelName);
 
+    // -------------------------------------------------------------------------
+    // Стан драверів — IsOpen binding
+    // -------------------------------------------------------------------------
+
     private bool _formOpen;
     private Guid? _editingId;
+
     private bool _filterOpen;
     private bool _importOpen;
+    private bool _textBlockOpen;
+
+    private IReadOnlyList<InterceptionAction> _actions = [];
+
+    // -------------------------------------------------------------------------
+    // Lifecycle
+    // -------------------------------------------------------------------------
 
     protected override async Task OnInitializedAsync()
-        => await LoadPageAsync();
+    {
+        _actions = await ActionService.GetAllAsync();
+        await LoadPageAsync();
+    }
+
+    // -------------------------------------------------------------------------
+    // Дані
+    // -------------------------------------------------------------------------
 
     internal async Task LoadPageAsync()
     {
@@ -53,7 +78,7 @@ public partial class InterceptionRegistry : ComponentBase
         finally
         {
             _loading = false;
-            await InvokeAsync(StateHasChanged);
+            StateHasChanged();
         }
     }
 
@@ -63,10 +88,29 @@ public partial class InterceptionRegistry : ComponentBase
         await LoadPageAsync();
     }
 
-    private void OpenCreate() { _editingId = null; _formOpen = true; }
-    private void OpenEdit(Guid id) { _editingId = id; _formOpen = true; }
+    // -------------------------------------------------------------------------
+    // Відкриття драверів
+    // -------------------------------------------------------------------------
+
+    private void OpenCreate()
+    {
+        _editingId = null;
+        _formOpen = true;
+    }
+
+    private void OpenEdit(Guid id)
+    {
+        _editingId = id;
+        _formOpen = true;
+    }
+
     private void OpenFilter() => _filterOpen = true;
     private void OpenImport() => _importOpen = true;
+    private void OpenTextBlock() => _textBlockOpen = true;
+
+    // -------------------------------------------------------------------------
+    // Callbacks від драверів
+    // -------------------------------------------------------------------------
 
     private async Task OnFilterApplied(InterceptionFilter filter)
     {
@@ -89,8 +133,13 @@ public partial class InterceptionRegistry : ComponentBase
         await LoadPageAsync();
     }
 
-    private async Task ConfirmDeleteAsync(Guid id, DateTime observedDate)
+    // -------------------------------------------------------------------------
+    // Видалення
+    // -------------------------------------------------------------------------
+
+    private async Task DeleteAsync(Guid id, DateTime observedDate)
     {
+        // TODO: замінити на модальний діалог підтвердження
         try
         {
             await InterceptionService.DeleteAsync(id);
