@@ -16,18 +16,22 @@ public sealed class ParticipantCandidateGroupTests
     // -------------------------------------------------------------------------
 
     private static List<ParticipantRef> MakeRefs(int count = 2) =>
-        [.. Enumerable.Range(1, count).Select(_ => new ParticipantRef(Guid.NewGuid(), Guid.NewGuid(), 1))];
+        [.. Enumerable.Range(1, count)
+            .Select(_ => new ParticipantRef(Guid.NewGuid(), Guid.NewGuid(), 1))];
 
     private static PatternMatchReasons MakeReasons(
-        bool freq = true, bool vector = true,
-        bool point = false, bool div = false, bool time = true) =>
+        bool freq = true, bool vector = true, bool point = false,
+        bool div = false, bool time = true,
+        bool partners = false, bool labels = false) =>
         new()
         {
             SameFrequency = freq,
             SameVector = vector,
             SamePointSignal = point,
             SameDivision = div,
-            CloseInTime = time
+            CloseInTime = time,
+            SharedPartners = partners,
+            SharedLabels = labels
         };
 
     // -------------------------------------------------------------------------
@@ -40,15 +44,20 @@ public sealed class ParticipantCandidateGroupTests
         var refs = MakeRefs();
         var reasons = MakeReasons();
 
-        var group = ParticipantCandidateGroup.Create(refs, 0.75, reasons, "Alpha");
+        var group = ParticipantCandidateGroup.Create(
+            refs, 0.75, reasons,
+            suggestedName: "Alpha", suggestedRole: "центр", suggestedDivision: "1 мсб");
 
         group.Id.Should().NotBeEmpty();
         group.Status.Should().Be(CandidateGroupStatus.Open);
         group.ConfidenceScore.Should().Be(0.75);
         group.SuggestedName.Should().Be("Alpha");
+        group.SuggestedRole.Should().Be("центр");
+        group.SuggestedDivision.Should().Be("1 мсб");
         group.ParticipantRefs.Should().HaveCount(2);
         group.ResolvedBy.Should().BeNull();
         group.ResolvedAt.Should().BeNull();
+        group.ResolvedParticipantId.Should().BeNull();
         group.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
@@ -59,7 +68,7 @@ public sealed class ParticipantCandidateGroupTests
             MakeRefs(1), 0.75, MakeReasons());
 
         act.Should().Throw<ArgumentException>()
-            .WithMessage("*два*");
+           .WithMessage("*два*");
     }
 
     [Fact]
@@ -81,7 +90,7 @@ public sealed class ParticipantCandidateGroupTests
             MakeRefs(), score, MakeReasons());
 
         act.Should().Throw<ArgumentOutOfRangeException>()
-            .WithParameterName("confidenceScore");
+           .WithParameterName("confidenceScore");
     }
 
     [Theory]
@@ -95,20 +104,34 @@ public sealed class ParticipantCandidateGroupTests
         act.Should().NotThrow();
     }
 
+    [Fact]
+    public void Create_WhitespaceSuggestedFields_NormalizedToNull()
+    {
+        var group = ParticipantCandidateGroup.Create(
+            MakeRefs(), 0.5, MakeReasons(),
+            suggestedName: "   ", suggestedRole: "   ", suggestedDivision: "   ");
+
+        group.SuggestedName.Should().BeNull();
+        group.SuggestedRole.Should().BeNull();
+        group.SuggestedDivision.Should().BeNull();
+    }
+
     // -------------------------------------------------------------------------
     // Confirm
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void Confirm_OpenGroup_ShouldSetConfirmedStatus()
+    public void Confirm_OpenGroup_SetsConfirmedStatusAndResolvedParticipantId()
     {
         var group = ParticipantCandidateGroup.Create(MakeRefs(), 0.8, MakeReasons());
+        var resolvedId = Guid.NewGuid();
 
-        group.Confirm("Alpha", "operator1");
+        group.Confirm("Alpha", "operator1", resolvedId);
 
         group.Status.Should().Be(CandidateGroupStatus.Confirmed);
         group.SuggestedName.Should().Be("Alpha");
         group.ResolvedBy.Should().Be("operator1");
+        group.ResolvedParticipantId.Should().Be(resolvedId);
         group.ResolvedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
@@ -119,10 +142,10 @@ public sealed class ParticipantCandidateGroupTests
     {
         var group = ParticipantCandidateGroup.Create(MakeRefs(), 0.8, MakeReasons());
 
-        var act = () => group.Confirm(name, "operator1");
+        var act = () => group.Confirm(name, "operator1", Guid.NewGuid());
 
         act.Should().Throw<ArgumentException>()
-            .WithParameterName("resolvedName");
+           .WithParameterName("resolvedName");
     }
 
     [Theory]
@@ -132,22 +155,22 @@ public sealed class ParticipantCandidateGroupTests
     {
         var group = ParticipantCandidateGroup.Create(MakeRefs(), 0.8, MakeReasons());
 
-        var act = () => group.Confirm("Alpha", op);
+        var act = () => group.Confirm("Alpha", op, Guid.NewGuid());
 
         act.Should().Throw<ArgumentException>()
-            .WithParameterName("resolvedBy");
+           .WithParameterName("resolvedBy");
     }
 
     [Fact]
     public void Confirm_AlreadyConfirmed_ShouldThrowInvalidOperationException()
     {
         var group = ParticipantCandidateGroup.Create(MakeRefs(), 0.8, MakeReasons());
-        group.Confirm("Alpha", "operator1");
+        group.Confirm("Alpha", "operator1", Guid.NewGuid());
 
-        var act = () => group.Confirm("Bravo", "operator2");
+        var act = () => group.Confirm("Bravo", "operator2", Guid.NewGuid());
 
         act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Confirmed*");
+           .WithMessage("*Confirmed*");
     }
 
     // -------------------------------------------------------------------------
@@ -164,6 +187,7 @@ public sealed class ParticipantCandidateGroupTests
         group.Status.Should().Be(CandidateGroupStatus.Dismissed);
         group.ResolvedBy.Should().Be("operator1");
         group.ResolvedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        group.ResolvedParticipantId.Should().BeNull();
     }
 
     [Fact]
@@ -181,7 +205,7 @@ public sealed class ParticipantCandidateGroupTests
     public void Dismiss_AfterConfirm_ShouldThrowInvalidOperationException()
     {
         var group = ParticipantCandidateGroup.Create(MakeRefs(), 0.8, MakeReasons());
-        group.Confirm("Alpha", "operator1");
+        group.Confirm("Alpha", "operator1", Guid.NewGuid());
 
         var act = () => group.Dismiss("operator2");
 
@@ -189,26 +213,42 @@ public sealed class ParticipantCandidateGroupTests
     }
 
     // -------------------------------------------------------------------------
-    // UpdateSuggestedName
+    // UpdateSuggestions (замінює старий UpdateSuggestedName)
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void UpdateSuggestedName_OpenGroup_ShouldUpdateName()
+    public void UpdateSuggestions_OpenGroup_UpdatesAllFields()
     {
-        var group = ParticipantCandidateGroup.Create(MakeRefs(), 0.8, MakeReasons(), "Alpha");
+        var group = ParticipantCandidateGroup.Create(
+            MakeRefs(), 0.8, MakeReasons(), "Alpha", "стара роль", "старий підрозділ");
 
-        group.UpdateSuggestedName("Bravo");
+        group.UpdateSuggestions("Bravo", "нова роль", "новий підрозділ");
 
         group.SuggestedName.Should().Be("Bravo");
+        group.SuggestedRole.Should().Be("нова роль");
+        group.SuggestedDivision.Should().Be("новий підрозділ");
     }
 
     [Fact]
-    public void UpdateSuggestedName_OnConfirmedGroup_ShouldThrowInvalidOperationException()
+    public void UpdateSuggestions_NullValues_ClearsToNull()
+    {
+        var group = ParticipantCandidateGroup.Create(
+            MakeRefs(), 0.8, MakeReasons(), "Alpha", "роль", "підрозділ");
+
+        group.UpdateSuggestions(null, null, null);
+
+        group.SuggestedName.Should().BeNull();
+        group.SuggestedRole.Should().BeNull();
+        group.SuggestedDivision.Should().BeNull();
+    }
+
+    [Fact]
+    public void UpdateSuggestions_OnConfirmedGroup_ShouldThrowInvalidOperationException()
     {
         var group = ParticipantCandidateGroup.Create(MakeRefs(), 0.8, MakeReasons());
-        group.Confirm("Alpha", "operator1");
+        group.Confirm("Alpha", "operator1", Guid.NewGuid());
 
-        var act = () => group.UpdateSuggestedName("Bravo");
+        var act = () => group.UpdateSuggestions("Bravo");
 
         act.Should().Throw<InvalidOperationException>();
     }

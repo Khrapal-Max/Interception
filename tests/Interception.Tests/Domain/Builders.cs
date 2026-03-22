@@ -68,3 +68,26 @@ internal sealed class InterceptionMessageParticipantBuilder
     public InterceptionMessageParticipant Build() =>
         new(_messageId, _name, _isUnknown, _role, _ordinal);
 }
+
+// ---------------------------------------------------------------------------
+// ResolvedParticipantBuilder
+// ---------------------------------------------------------------------------
+
+/// <summary>
+/// Builder для ResolvedParticipant в тестах.
+/// </summary>
+internal sealed class ResolvedParticipantBuilder
+{
+    private string _name = "ШАПКА";
+    private string _confirmedBy = "operator";
+    private string? _role = null;
+    private string? _division = null;
+
+    public ResolvedParticipantBuilder WithName(string name) { _name = name; return this; }
+    public ResolvedParticipantBuilder WithConfirmedBy(string op) { _confirmedBy = op; return this; }
+    public ResolvedParticipantBuilder WithRole(string? role) { _role = role; return this; }
+    public ResolvedParticipantBuilder WithDivision(string? division) { _division = division; return this; }
+
+    public ResolvedParticipant Build() =>
+        ResolvedParticipant.Create(_name, _confirmedBy, _role, _division);
+}

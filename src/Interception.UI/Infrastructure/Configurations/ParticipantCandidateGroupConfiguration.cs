@@ -30,6 +30,14 @@ internal sealed class ParticipantCandidateGroupConfiguration
             .HasColumnName("suggested_name")
             .HasMaxLength(200);
 
+        builder.Property(x => x.SuggestedRole)
+            .HasColumnName("suggested_role")
+            .HasMaxLength(200);
+
+        builder.Property(x => x.SuggestedDivision)
+            .HasColumnName("suggested_division")
+            .HasMaxLength(300);
+
         builder.Property(x => x.Status)
             .HasColumnName("status")
             .HasConversion<string>()
@@ -47,7 +55,17 @@ internal sealed class ParticipantCandidateGroupConfiguration
             .HasColumnName("created_at")
             .IsRequired();
 
-        // PatternMatchReasons зберігаємо як owned entity (один рядок у тій самій таблиці)
+        // FK → ResolvedParticipant (nullable — null поки Open/Dismissed)
+        builder.Property(x => x.ResolvedParticipantId)
+            .HasColumnName("resolved_participant_id");
+
+        builder.HasOne<ResolvedParticipant>()
+            .WithMany()
+            .HasForeignKey(x => x.ResolvedParticipantId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // PatternMatchReasons — owned entity в тій самій таблиці
         builder.OwnsOne(x => x.Reasons, r =>
         {
             r.Property(x => x.SameFrequency)
@@ -69,15 +87,24 @@ internal sealed class ParticipantCandidateGroupConfiguration
             r.Property(x => x.CloseInTime)
                 .HasColumnName("reason_close_in_time")
                 .IsRequired();
+
+            r.Property(x => x.SharedPartners)
+                .HasColumnName("reason_shared_partners")
+                .IsRequired();
+
+            r.Property(x => x.SharedLabels)
+                .HasColumnName("reason_shared_labels")
+                .IsRequired();
         });
 
-        // ParticipantRefs зберігаємо як owned collection → окрема таблиця
+        // ParticipantRefs — owned collection → окрема таблиця
         builder.OwnsMany(x => x.ParticipantRefs, pr =>
         {
             pr.ToTable("participant_candidate_group_refs");
 
             pr.WithOwner().HasForeignKey("CandidateGroupId");
-            pr.Property<Guid>("CandidateGroupId").HasColumnName("candidate_group_id");
+            pr.Property<Guid>("CandidateGroupId")
+                .HasColumnName("candidate_group_id");
 
             pr.Property(x => x.MessageId)
                 .HasColumnName("message_id")
@@ -94,11 +121,13 @@ internal sealed class ParticipantCandidateGroupConfiguration
             pr.HasKey("CandidateGroupId", nameof(ParticipantRef.ParticipantId));
         });
 
-        // Індекс для фільтрації Open-груп (найчастіший запит в UI)
         builder.HasIndex(x => x.Status)
             .HasDatabaseName("ix_candidate_groups_status");
 
         builder.HasIndex(x => x.ConfidenceScore)
             .HasDatabaseName("ix_candidate_groups_confidence");
+
+        builder.HasIndex(x => x.ResolvedParticipantId)
+            .HasDatabaseName("ix_candidate_groups_resolved_participant");
     }
 }

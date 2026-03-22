@@ -15,6 +15,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<InterceptionMessageParticipant> InterceptionMessageParticipants { get; init; }
 
     public DbSet<ParticipantCandidateGroup> ParticipantCandidateGroups { get; init; }
+    public DbSet<ResolvedParticipant> ResolvedParticipants { get; init; }
+
     public DbSet<DailyReport> DailyReports { get; init; }
     public DbSet<MessageGroup> MessageGroups { get; init; }
     public DbSet<ParticipantMatrix> ParticipantMatrices { get; init; }
