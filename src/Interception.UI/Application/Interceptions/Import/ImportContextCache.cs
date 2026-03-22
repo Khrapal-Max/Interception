@@ -11,61 +11,32 @@ namespace Interception.UI.Application.Interceptions.Import;
 ///
 /// Зберігає:
 ///   1. Довідник InterceptionAction (ключ — назва в нижньому регістрі)
-///   2. Останню відому Frequency і VectorSignal для автопідстановки
-///   3. Останніх відомих учасників (ім'я → роль) для автопідстановки ролі
+///   2. Останніх відомих учасників (ім'я → роль) для автопідстановки ролі
+///
+/// Примітка: автопідстановка Frequency і VectorSignal прибрана навмисно.
+/// Порожнє поле в рядку Excel означає відсутність інформації, а не
+/// "взяти з попереднього рядка". Кожен рядок імпортується незалежно.
 /// </summary>
 internal sealed class ImportContextCache(IEnumerable<InterceptionAction> actions)
 {
-    // --- InterceptionAction lookup ---
-    private readonly Dictionary<string, InterceptionAction> _actions = actions.ToDictionary(
+    private readonly Dictionary<string, InterceptionAction> _actions =
+        actions.ToDictionary(
             a => a.Name.Trim().ToLowerInvariant(),
             a => a);
 
-    // --- Автопідстановка сигнальних полів ---
-    private string? _lastFrequency;
-    private string? _lastVectorSignal;
-
-    // --- Автопідстановка ролі учасника: ім'я (lower) → остання відома роль ---
-    private readonly Dictionary<string, string> _participantRoles = new(StringComparer.OrdinalIgnoreCase);
+    // Автопідстановка ролі учасника: ім'я (lower) → остання відома роль
+    private readonly Dictionary<string, string> _participantRoles =
+        new(StringComparer.OrdinalIgnoreCase);
 
     // -------------------------------------------------------------------------
     // InterceptionAction
     // -------------------------------------------------------------------------
 
-    /// <summary>
-    /// Шукає дію за назвою (case-insensitive).
-    /// Повертає null якщо не знайдено.
-    /// </summary>
     public InterceptionAction? FindAction(string? name)
     {
         if (string.IsNullOrWhiteSpace(name)) return null;
         _actions.TryGetValue(name.Trim().ToLowerInvariant(), out var action);
         return action;
-    }
-
-    // -------------------------------------------------------------------------
-    // Автопідстановка сигнальних полів
-    // -------------------------------------------------------------------------
-
-    /// <summary>
-    /// Повертає частоту: якщо в рядку є значення — оновлює кеш і повертає його,
-    /// інакше повертає останнє відоме.
-    /// </summary>
-    public string? ResolveFrequency(string? rowValue)
-    {
-        if (!string.IsNullOrWhiteSpace(rowValue))
-            _lastFrequency = rowValue.Trim();
-        return _lastFrequency;
-    }
-
-    /// <summary>
-    /// Аналогічно для вектора сигналу.
-    /// </summary>
-    public string? ResolveVectorSignal(string? rowValue)
-    {
-        if (!string.IsNullOrWhiteSpace(rowValue))
-            _lastVectorSignal = rowValue.Trim();
-        return _lastVectorSignal;
     }
 
     // -------------------------------------------------------------------------
@@ -76,7 +47,7 @@ internal sealed class ImportContextCache(IEnumerable<InterceptionAction> actions
     /// Повертає роль учасника:
     ///   — якщо в рядку є роль → зберігає в кеші та повертає її
     ///   — інакше повертає останню відому роль для цього імені
-    ///   — якщо учасник невідомий (name == null) → повертає null
+    ///   — якщо учасник невідомий (name == null) → null
     /// </summary>
     public string? ResolveParticipantRole(string? name, string? rowRole)
     {
@@ -92,15 +63,5 @@ internal sealed class ImportContextCache(IEnumerable<InterceptionAction> actions
 
         _participantRoles.TryGetValue(key, out var cachedRole);
         return cachedRole;
-    }
-
-    /// <summary>
-    /// Скидає кеш автопідстановки сигнальних полів.
-    /// Використовується якщо оператор явно хоче почати нову сесію.
-    /// </summary>
-    public void ResetSignalDefaults()
-    {
-        _lastFrequency = null;
-        _lastVectorSignal = null;
     }
 }

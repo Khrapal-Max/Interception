@@ -20,14 +20,26 @@ public sealed class InterceptionImportService(
         string operatorName,
         CancellationToken cancellationToken = default)
     {
+        // ClosedXML читає синхронно — копіюємо в MemoryStream асинхронно
+        using var memoryStream = new MemoryStream();
+        await stream.CopyToAsync(memoryStream, cancellationToken);
+        memoryStream.Position = 0;
+
         var parser = new ExcelImportParser();
-        var parsed = parser.Parse(stream);
+        var parsed = parser.Parse(memoryStream);
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
         var actions = await db.InterceptionActions
             .AsNoTracking()
             .ToListAsync(cancellationToken);
+
+        // FIX: Attach кожну дію один раз щоб EF не намагався їх вставити повторно.
+        // Без Attach — при db.InterceptionMessages.Add(message) EF бачить
+        // навігаційну властивість message.InterceptionAction і додає її в ChangeTracker
+        // як Added, що призводить до duplicate key (23505) при SaveChangesAsync.
+        foreach (var action in actions)
+            db.InterceptionActions.Attach(action);
 
         var cache = new ImportContextCache(actions);
         var errors = new List<ImportRowError>();
@@ -61,17 +73,12 @@ public sealed class InterceptionImportService(
         ImportContextCache cache,
         string operatorName)
     {
-        var frequency = cache.ResolveFrequency(row.Frequency);
-        var vectorSignal = cache.ResolveVectorSignal(row.VectorSignal);
-
         var action = cache.FindAction(row.ActionName);
         if (action is null)
             return (null, new ImportRowError(
                 row.RowNumber,
                 $"Дію '{row.ActionName}' не знайдено в довіднику. Рядок пропущено."));
 
-        // ToDateTime з Kind=Local → DateTimeConverter.ToUtc конвертує в UTC
-        // щоб Npgsql прийняв для 'timestamp with time zone'
         var rawDate = row.Date.ToDateTime(row.Time, DateTimeKind.Local);
         var observedDate = DateTimeConverter.ToUtc(rawDate);
 
@@ -80,9 +87,9 @@ public sealed class InterceptionImportService(
         {
             message = InterceptionMessage.Create(
                 observedDate: observedDate,
-                frequency: frequency,
+                frequency: row.Frequency,
                 division: row.Division,
-                vectorSignal: vectorSignal,
+                vectorSignal: row.VectorSignal,
                 interceptionAction: action,
                 note: row.Details,
                 createdBy: operatorName,

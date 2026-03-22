@@ -1,9 +1,10 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 // MigrationExtension
 //-----------------------------------------------------------------------------
 
+using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -12,6 +13,37 @@ namespace Interception.UI.Extensions;
 
 public static class MigrationExtension
 {
+    // -------------------------------------------------------------------------
+    // Еталонний довідник дій
+    // -------------------------------------------------------------------------
+
+    private static readonly IReadOnlyList<(string Name, string Description)> ActionSeed =
+    [
+        ("доповідь 200",                  "В примітках вказати РОВ/СОУ"),
+        ("доповідь 300",                  "В примітках вказати РОВ/СОУ"),
+        ("запит по аеророзвідці",         "Просять дати розвідку"),
+        ("запит по забезпеченню",         "Просять ТЗ (вода, батарейки тощо)"),
+        ("запит по обстановці",           ""),
+        ("запит на ураження",             ""),
+        ("запит по зв'язку",              ""),
+        ("наказ на аеророзвідку",         ""),
+        ("наказ на ураження",             ""),
+        ("доповідь по аеророзвідці",      ""),
+        ("доповідь по забезпеченню",      ""),
+        ("доповідь по обстановці",        "Будь-які дії які не входять в список ДІЇ"),
+        ("доповідь по ураженню",          "Примітки РОВ/СОУ"),
+        ("доповідь по зв'язку",           ""),
+        ("координація переміщення ос",    "Тільки РОВ — якщо СОУ, то це доповідь по обстановці"),
+        ("координація дій",               ""),
+        ("коригування арт вогню",         ""),
+        ("коригування бпла",              ""),
+        ("інше",                          "Якщо важко визначити :)"),
+    ];
+
+    // -------------------------------------------------------------------------
+    // Міграція + сід
+    // -------------------------------------------------------------------------
+
     public static async Task AddMigrationDb(this WebApplication app, CancellationToken ct = default)
     {
         const int maxRetries = 10;
@@ -49,6 +81,10 @@ public static class MigrationExtension
                 {
                     logger.LogInformation("✅ No pending migrations.");
                 }
+
+                // Сід довідника дій — виконується після кожного старту,
+                // SeedActionsAsync пропускає вже існуючі назви
+                await SeedActionsAsync(scope, logger, ct);
 
                 return;
             }
@@ -100,6 +136,42 @@ public static class MigrationExtension
             $"Database migration failed after {maxRetries} attempts.",
             lastError ?? new Exception("Unknown migration error"));
     }
+
+    // -------------------------------------------------------------------------
+    // Сід дій
+    // -------------------------------------------------------------------------
+
+    private static async Task SeedActionsAsync(
+        IServiceScope scope,
+        ILogger logger,
+        CancellationToken ct)
+    {
+        var actionService = scope.ServiceProvider
+            .GetRequiredService<IInterceptionActionService>();
+
+        var added = 0;
+        foreach (var (name, description) in ActionSeed)
+        {
+            try
+            {
+                await actionService.CreateAsync(name, description, ct);
+                added++;
+            }
+            catch (InvalidOperationException)
+            {
+                // Вже існує — пропускаємо
+            }
+        }
+
+        if (added > 0)
+            logger.LogInformation("✅ Seeded {Count} action(s).", added);
+        else
+            logger.LogInformation("✅ Actions already seeded, skipping.");
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
 
     private static bool IsMissingDatabase(PostgresException ex)
         => ex.SqlState == "3D000" // invalid_catalog_name (database does not exist)

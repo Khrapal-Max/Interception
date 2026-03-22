@@ -13,9 +13,9 @@
         <div class="d-flex flex-column gap-3">
 
             <div>
-                <label class="form-label form-label-sm">Excel-файл (.xlsx)</label>
+                <label class="form-label form-label-sm">Excel-файл</label>
                 <InputFile class="form-control form-control-sm"
-                           accept=".xlsx"
+                           accept=".xlsx,.xls,.xlsm,.xlsb"
                            OnChange="OnFileSelected" />
                 @if (_fileName is not null)
                 {
@@ -29,11 +29,11 @@
                 <div class="fw-semibold mb-1">Очікуваний формат колонок:</div>
                 <div class="text-muted">
                     Дата · Час · Частота · Р/М · Точка · Вектор ·
-                    Ініціатор · Роль · Підрозділ · Відповідач · Роль · Дія · Деталі
+                    Ініціатор · Роль ініціатора · Відповідач · Роль відповідача · Дія · Деталі
                 </div>
                 <div class="mt-1 text-muted">
-                    "НВ" або порожнє = невідомий учасник.
-                    Порожні Частота/Вектор підставляються з попереднього рядка.
+                    "НВ" або порожнє поле учасника = невідомий.
+                    Порожні поля зберігаються як відсутність інформації.
                 </div>
             </div>
 

@@ -8,7 +8,7 @@ using Interception.UI.Application.Interceptions.Dtos;
 namespace Interception.UI.Application.Interceptions.Import;
 
 /// <summary>
-/// Парсить Excel-файл (формат зразка) у список <see cref="ImportRowDto"/>.
+/// Парсить Excel-файл у список <see cref="ImportRowDto"/>.
 ///
 /// Очікувана структура аркуша (перший рядок — заголовки, дані з 2-го):
 ///   Col 1  Дата
@@ -19,21 +19,21 @@ namespace Interception.UI.Application.Interceptions.Import;
 ///   Col 6  Вектор сігнала
 ///   Col 7  Ініціатор
 ///   Col 8  Роль ініціатора
-///   Col 9  Підрозділ ініціатора
-///   Col 10 Відповідач
-///   Col 11 Роль відповідача
-///   Col 12 Дія
-///   Col 13 Деталі
+///   Col 9  Відповідач
+///   Col 10 Роль відповідача
+///   Col 11 Дія
+///   Col 12 Деталі
+///
+/// Підтримувані розширення: .xlsx, .xlsm, .xlsb, .xls
 /// </summary>
 public sealed class ExcelImportParser
 {
     private static readonly HashSet<string> UnknownMarkers =
-        new(StringComparer.OrdinalIgnoreCase) { "НВ", "нв", "невідома", "невідомий", "unknown", "" };
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "НВ", "нв", "невідома", "невідомий", "unknown", ""
+        };
 
-    /// <summary>
-    /// Парсить потік Excel-файлу.
-    /// Повертає пари (рядок, помилка?) — помилка null означає успішний рядок.
-    /// </summary>
     public IReadOnlyList<(ImportRowDto? Row, ImportRowError? Error)> Parse(Stream stream)
     {
         using var wb = new XLWorkbook(stream);
@@ -46,18 +46,14 @@ public sealed class ExcelImportParser
         var results = new List<(ImportRowDto?, ImportRowError?)>();
         var lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
 
-        // Рядок 1 — заголовки, починаємо з 2
         for (var r = 2; r <= lastRow; r++)
         {
             var row = ws.Row(r);
-
-            // Пропускаємо повністю порожні рядки
             if (row.IsEmpty()) continue;
 
             try
             {
-                var dto = ParseRow(row, r);
-                results.Add((dto, null));
+                results.Add((ParseRow(row, r), null));
             }
             catch (Exception ex)
             {
@@ -70,18 +66,13 @@ public sealed class ExcelImportParser
 
     private static ImportRowDto ParseRow(IXLRow row, int rowNumber)
     {
-        // --- Дата ---
         var rawDate = row.Cell(1).Value;
         if (!TryParseDate(rawDate, out var date))
             throw new FormatException($"Невірний формат дати: '{rawDate}'");
 
-        // --- Час ---
         var rawTime = row.Cell(2).Value;
         if (!TryParseTime(rawTime, out var time))
             throw new FormatException($"Невірний формат часу: '{rawTime}'");
-
-        // --- Обов'язкова дія ---
-        var actionName = NormalizeOptional(row.Cell(12).GetString());
 
         return new ImportRowDto
         {
@@ -94,11 +85,10 @@ public sealed class ExcelImportParser
             VectorSignal = NormalizeOptional(row.Cell(6).GetString()),
             InitiatorName = NormalizeParticipant(row.Cell(7).GetString()),
             InitiatorRole = NormalizeOptional(row.Cell(8).GetString()),
-            InitiatorDivision = NormalizeOptional(row.Cell(9).GetString()),
-            ResponderName = NormalizeParticipant(row.Cell(10).GetString()),
-            ResponderRole = NormalizeOptional(row.Cell(11).GetString()),
-            ActionName = actionName,
-            Details = NormalizeOptional(row.Cell(13).GetString()),
+            ResponderName = NormalizeParticipant(row.Cell(9).GetString()),
+            ResponderRole = NormalizeOptional(row.Cell(10).GetString()),
+            ActionName = NormalizeOptional(row.Cell(11).GetString()),
+            Details = NormalizeOptional(row.Cell(12).GetString()),
         };
     }
 
@@ -117,30 +107,12 @@ public sealed class ExcelImportParser
     private static bool TryParseTime(XLCellValue value, out TimeOnly result)
     {
         result = default;
-
-        if (value.IsTimeSpan)
-        {
-            result = TimeOnly.FromTimeSpan(value.GetTimeSpan());
-            return true;
-        }
-
-        if (value.IsDateTime)
-        {
-            result = TimeOnly.FromDateTime(value.GetDateTime());
-            return true;
-        }
-
-        if (value.IsText)
-        {
-            return TimeOnly.TryParse(value.GetText(), out result);
-        }
-
+        if (value.IsTimeSpan) { result = TimeOnly.FromTimeSpan(value.GetTimeSpan()); return true; }
+        if (value.IsDateTime) { result = TimeOnly.FromDateTime(value.GetDateTime()); return true; }
+        if (value.IsText) { return TimeOnly.TryParse(value.GetText(), out result); }
         return false;
     }
 
-    /// <summary>
-    /// null / пробіли / "НВ" / "невідома" → null (невідомий учасник).
-    /// </summary>
     private static string? NormalizeParticipant(string? value)
     {
         var trimmed = value?.Trim();
