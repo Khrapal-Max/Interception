@@ -147,6 +147,9 @@ public sealed class InterceptionService(
             q = q.Where(m => m.ObservedDate <= filter.DateTo.Value);
         if (!string.IsNullOrWhiteSpace(filter.Frequency))
             q = q.Where(m => m.Frequency == filter.Frequency);
+        if (!string.IsNullOrWhiteSpace(filter.VectorSignal))
+            q = q.Where(m => m.VectorSignal != null && m.VectorSignal.Contains(filter.VectorSignal));
+
         if (!string.IsNullOrWhiteSpace(filter.ParticipantName))
             q = q.Where(m => m.Participants
                 .Any(p => p.Name != null && p.Name.Contains(filter.ParticipantName)));

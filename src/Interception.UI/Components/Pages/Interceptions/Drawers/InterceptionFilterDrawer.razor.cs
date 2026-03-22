@@ -21,7 +21,10 @@ public partial class InterceptionFilterDrawer : ComponentBase
 
     private InterceptionFilter _model = new();
     private IReadOnlyList<string> _frequencySuggestions = [];
+    private IReadOnlyList<string> _vectorSuggestions = [];
     private bool _initialized;
+    private bool _freqOpen;
+    private bool _vecOpen;
 
     private string? DateFromStr => _model.DateFrom?.ToString("yyyy-MM-ddTHH:mm");
     private string? DateToStr => _model.DateTo?.ToString("yyyy-MM-ddTHH:mm");
@@ -33,25 +36,84 @@ public partial class InterceptionFilterDrawer : ComponentBase
         _initialized = true;
 
         _model = Clone(Filter);
-
-        // Фільтру потрібні тільки рядки частот — беремо Frequency з FrequencySuggestionDto
         _frequencySuggestions = await GetFrequencyStringsAsync();
+
+        // Якщо фільтр вже має частоту — підвантажуємо вектори для неї
+        _vectorSuggestions = await InterceptionService
+            .GetVectorSignalSuggestionsAsync(frequency: _model.Frequency);
     }
 
-    private void OnDrawerClosed() => _initialized = false;
+    private void OnDrawerClosed()
+    {
+        _initialized = false;
+        _freqOpen = false;
+        _vecOpen = false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Частота
+    // -------------------------------------------------------------------------
 
     private async Task OnFrequencyInput(ChangeEventArgs e)
     {
-        var value = e.Value?.ToString();
-        _model.Frequency = value;
-        _frequencySuggestions = await GetFrequencyStringsAsync(value);
+        _model.Frequency = e.Value?.ToString();
+        _freqOpen = true;
+        _frequencySuggestions = await GetFrequencyStringsAsync(_model.Frequency);
     }
+
+    private void OnFrequencyFocus()
+    {
+        if (_frequencySuggestions.Count > 0) _freqOpen = true;
+    }
+
+    private async Task OnFrequencySelected(string freq)
+    {
+        _model.Frequency = freq;
+        _freqOpen = false;
+
+        // Оновлюємо вектори контекстно для вибраної частоти
+        _vectorSuggestions = await InterceptionService
+            .GetVectorSignalSuggestionsAsync(frequency: freq);
+    }
+
+    // -------------------------------------------------------------------------
+    // Вектор
+    // -------------------------------------------------------------------------
+
+    private async Task OnVectorInput(ChangeEventArgs e)
+    {
+        _model.VectorSignal = e.Value?.ToString();
+        _vecOpen = true;
+        _vectorSuggestions = await InterceptionService
+            .GetVectorSignalSuggestionsAsync(
+                query: _model.VectorSignal,
+                frequency: _model.Frequency);
+    }
+
+    private void OnVectorFocus()
+    {
+        if (_vectorSuggestions.Count > 0) _vecOpen = true;
+    }
+
+    private void OnVectorSelected(string vec)
+    {
+        _model.VectorSignal = vec;
+        _vecOpen = false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Дата
+    // -------------------------------------------------------------------------
 
     private void OnDateFromChange(string? value)
         => _model.DateFrom = DateTimeConverter.Parse(value);
 
     private void OnDateToChange(string? value)
         => _model.DateTo = DateTimeConverter.Parse(value);
+
+    // -------------------------------------------------------------------------
+    // Apply / Reset
+    // -------------------------------------------------------------------------
 
     private async Task ApplyAsync()
     {
@@ -67,7 +129,7 @@ public partial class InterceptionFilterDrawer : ComponentBase
     }
 
     // -------------------------------------------------------------------------
-    // Helper — фільтру потрібні тільки рядки, не повні DTO
+    // Helpers
     // -------------------------------------------------------------------------
 
     private async Task<IReadOnlyList<string>> GetFrequencyStringsAsync(string? query = null)
@@ -84,6 +146,7 @@ public partial class InterceptionFilterDrawer : ComponentBase
                 DateFrom = src.DateFrom,
                 DateTo = src.DateTo,
                 Frequency = src.Frequency,
+                VectorSignal = src.VectorSignal,
                 ParticipantName = src.ParticipantName,
                 LabelName = src.LabelName
             };

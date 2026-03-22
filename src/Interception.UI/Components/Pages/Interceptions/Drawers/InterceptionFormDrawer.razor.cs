@@ -125,7 +125,7 @@ public partial class InterceptionFormDrawer : ComponentBase
     {
         _frequencySuggestions = await InterceptionService
             .GetFrequencyWithDivisionAsync(query);
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     /// <summary>
@@ -137,7 +137,7 @@ public partial class InterceptionFormDrawer : ComponentBase
         // FIX: frequency — другий параметр
         _vectorSuggestions = await InterceptionService
             .GetVectorSignalSuggestionsAsync(query: null, frequency: s.Frequency);
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     /// <summary>
@@ -149,7 +149,7 @@ public partial class InterceptionFormDrawer : ComponentBase
         // FIX: передаємо поточну частоту як контекст
         _vectorSuggestions = await InterceptionService
             .GetVectorSignalSuggestionsAsync(query: query, frequency: _form?.Frequency);
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     internal Task<IReadOnlyList<ParticipantSuggestionDto>> SearchParticipantsAsync(string? query)

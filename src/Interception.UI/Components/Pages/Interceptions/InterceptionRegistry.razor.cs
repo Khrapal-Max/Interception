@@ -14,10 +14,6 @@ public partial class InterceptionRegistry : ComponentBase
     [Inject] private IInterceptionService InterceptionService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
-    // -------------------------------------------------------------------------
-    // Стан таблиці
-    // -------------------------------------------------------------------------
-
     private PagedResult<InterceptionListItemDto>? _pagedResult;
     private bool _loading;
     private int _currentPage = 1;
@@ -29,29 +25,17 @@ public partial class InterceptionRegistry : ComponentBase
         _filter.DateFrom.HasValue ||
         _filter.DateTo.HasValue ||
         !string.IsNullOrWhiteSpace(_filter.Frequency) ||
+        !string.IsNullOrWhiteSpace(_filter.VectorSignal) ||
         !string.IsNullOrWhiteSpace(_filter.ParticipantName) ||
         !string.IsNullOrWhiteSpace(_filter.LabelName);
 
-    // -------------------------------------------------------------------------
-    // Стан драверів — IsOpen binding
-    // -------------------------------------------------------------------------
-
     private bool _formOpen;
     private Guid? _editingId;
-
     private bool _filterOpen;
     private bool _importOpen;
 
-    // -------------------------------------------------------------------------
-    // Lifecycle
-    // -------------------------------------------------------------------------
-
     protected override async Task OnInitializedAsync()
         => await LoadPageAsync();
-
-    // -------------------------------------------------------------------------
-    // Дані
-    // -------------------------------------------------------------------------
 
     internal async Task LoadPageAsync()
     {
@@ -69,7 +53,7 @@ public partial class InterceptionRegistry : ComponentBase
         finally
         {
             _loading = false;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -79,28 +63,10 @@ public partial class InterceptionRegistry : ComponentBase
         await LoadPageAsync();
     }
 
-    // -------------------------------------------------------------------------
-    // Відкриття драверів
-    // -------------------------------------------------------------------------
-
-    private void OpenCreate()
-    {
-        _editingId = null;
-        _formOpen = true;
-    }
-
-    private void OpenEdit(Guid id)
-    {
-        _editingId = id;
-        _formOpen = true;
-    }
-
+    private void OpenCreate() { _editingId = null; _formOpen = true; }
+    private void OpenEdit(Guid id) { _editingId = id; _formOpen = true; }
     private void OpenFilter() => _filterOpen = true;
     private void OpenImport() => _importOpen = true;
-
-    // -------------------------------------------------------------------------
-    // Callbacks від драверів
-    // -------------------------------------------------------------------------
 
     private async Task OnFilterApplied(InterceptionFilter filter)
     {
@@ -123,13 +89,8 @@ public partial class InterceptionRegistry : ComponentBase
         await LoadPageAsync();
     }
 
-    // -------------------------------------------------------------------------
-    // Видалення
-    // -------------------------------------------------------------------------
-
-    private async Task DeleteAsync(Guid id, DateTime observedDate)
+    private async Task ConfirmDeleteAsync(Guid id, DateTime observedDate)
     {
-        // TODO: замінити на модальний діалог підтвердження
         try
         {
             await InterceptionService.DeleteAsync(id);

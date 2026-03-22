@@ -157,13 +157,13 @@ h1:focus { outline: none; }
     align-items: baseline;
     gap: .5rem;
     color: black;
-    background-color: #85e575 !important;
+    background-color: #abe38c !important;
     font-weight: 400;
 }
     .autocomplete-item:last-child { border-bottom: none; }
 
     .autocomplete-item:hover {
-        background: black;
+        background-color: #34ee35 !important;
         color: black;
     }
 
