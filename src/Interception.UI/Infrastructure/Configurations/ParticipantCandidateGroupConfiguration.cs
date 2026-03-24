@@ -30,11 +30,22 @@ internal sealed class ParticipantCandidateGroupConfiguration
             .HasColumnName("suggested_name")
             .HasMaxLength(200);
 
+        builder.Property(x => x.SuggestedRole)
+            .HasColumnName("suggested_role")
+            .HasMaxLength(200);
+
+        builder.Property(x => x.SuggestedDivision)
+            .HasColumnName("suggested_division")
+            .HasMaxLength(300);
+
         builder.Property(x => x.Status)
             .HasColumnName("status")
             .HasConversion<string>()
             .HasMaxLength(20)
             .IsRequired();
+
+        builder.Property(x => x.ResolvedParticipantId)
+            .HasColumnName("resolved_participant_id");
 
         builder.Property(x => x.ResolvedBy)
             .HasColumnName("resolved_by")
@@ -103,10 +114,18 @@ internal sealed class ParticipantCandidateGroupConfiguration
             pr.HasKey("CandidateGroupId", nameof(ParticipantRef.ParticipantId));
         });
 
+        builder.HasOne<ResolvedParticipant>()
+            .WithMany()
+            .HasForeignKey(x => x.ResolvedParticipantId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.HasIndex(x => x.Status)
             .HasDatabaseName("ix_candidate_groups_status");
 
         builder.HasIndex(x => x.ConfidenceScore)
             .HasDatabaseName("ix_candidate_groups_confidence");
+
+        builder.HasIndex(x => x.ResolvedParticipantId)
+            .HasDatabaseName("ix_candidate_groups_resolved_participant");
     }
 }

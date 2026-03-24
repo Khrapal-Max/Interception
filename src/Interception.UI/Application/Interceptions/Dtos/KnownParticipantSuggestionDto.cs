@@ -16,6 +16,9 @@ public sealed class KnownParticipantSuggestionDto
     /// <summary>Остання відома роль.</summary>
     public string? Role { get; init; }
 
+    /// <summary>Домінуючий підрозділ кандидата.</summary>
+    public string? Division { get; init; }
+
     /// <summary>Зважений score збігу [0.0 – 1.0].</summary>
     public double MatchScore { get; init; }
 
@@ -37,6 +40,14 @@ public sealed class KnownSuggestionReasonsDto
     public bool SameDivision { get; init; }
     public bool CloseInTime { get; init; }
     public bool SharedLabels { get; init; }
+
+    /// <summary>Кількість активних причин — корисно для secondary sort.</summary>
+    public int MatchCount =>
+        (SameFrequency ? 1 : 0) +
+        (SameVector ? 1 : 0) +
+        (SameDivision ? 1 : 0) +
+        (CloseInTime ? 1 : 0) +
+        (SharedLabels ? 1 : 0);
 
     public IReadOnlyList<string> ActiveReasons
     {

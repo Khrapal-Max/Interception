@@ -14,9 +14,32 @@ public class ParticipantCandidateGroup
 
     public List<ParticipantRef> ParticipantRefs { get; private set; } = [];
     public double ConfidenceScore { get; private set; }
+
+    /// <summary>
+    /// Запропонований системою позивний / назва.
+    /// Для Open групи може бути null, якщо достатньо впевненого кандидата ще немає.
+    /// </summary>
     public string? SuggestedName { get; private set; }
+
+    /// <summary>
+    /// Запропонована системою роль.
+    /// </summary>
+    public string? SuggestedRole { get; private set; }
+
+    /// <summary>
+    /// Запропонований системою підрозділ.
+    /// Зазвичай це домінуюче значення в групі або значення з підтвердженої особи.
+    /// </summary>
+    public string? SuggestedDivision { get; private set; }
+
     public PatternMatchReasons Reasons { get; private set; } = new();
     public CandidateGroupStatus Status { get; private set; } = CandidateGroupStatus.Open;
+
+    /// <summary>
+    /// Після підтвердження містить встановлену особу, якщо така була створена.
+    /// </summary>
+    public Guid? ResolvedParticipantId { get; private set; }
+
     public string? ResolvedBy { get; private set; }
     public DateTime? ResolvedAt { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -25,7 +48,9 @@ public class ParticipantCandidateGroup
         IReadOnlyList<ParticipantRef> refs,
         double confidenceScore,
         PatternMatchReasons reasons,
-        string? suggestedName = null)
+        string? suggestedName = null,
+        string? suggestedRole = null,
+        string? suggestedDivision = null)
     {
         ArgumentNullException.ThrowIfNull(refs);
         ArgumentNullException.ThrowIfNull(reasons);
@@ -42,11 +67,13 @@ public class ParticipantCandidateGroup
             ConfidenceScore = confidenceScore,
             Reasons = reasons,
             SuggestedName = NormalizeOptional(suggestedName),
+            SuggestedRole = NormalizeOptional(suggestedRole),
+            SuggestedDivision = NormalizeOptional(suggestedDivision),
             CreatedAt = DateTimeConverter.Now
         };
     }
 
-    public void Confirm(string resolvedName, string resolvedBy)
+    public void Confirm(string resolvedName, string resolvedBy, Guid? resolvedParticipantId = null)
     {
         EnsureOpen();
         if (string.IsNullOrWhiteSpace(resolvedName))
@@ -56,6 +83,7 @@ public class ParticipantCandidateGroup
 
         SuggestedName = resolvedName.Trim();
         Status = CandidateGroupStatus.Confirmed;
+        ResolvedParticipantId = resolvedParticipantId;
         ResolvedBy = resolvedBy.Trim();
         ResolvedAt = DateTimeConverter.Now;
     }
@@ -77,6 +105,18 @@ public class ParticipantCandidateGroup
         SuggestedName = NormalizeOptional(name);
     }
 
+    public void UpdateSuggestedRole(string? role)
+    {
+        EnsureOpen();
+        SuggestedRole = NormalizeOptional(role);
+    }
+
+    public void UpdateSuggestedDivision(string? division)
+    {
+        EnsureOpen();
+        SuggestedDivision = NormalizeOptional(division);
+    }
+
     /// <summary>
     /// Додає нове спостереження до групи (збагачення).
     /// Викликається під час RunAsync якщо новий НВ підходить до існуючої Open групи.
@@ -87,7 +127,7 @@ public class ParticipantCandidateGroup
         ArgumentNullException.ThrowIfNull(newRef);
 
         if (ParticipantRefs.Any(r => r.ParticipantId == newRef.ParticipantId))
-            return; // вже є — ігноруємо
+            return;
 
         ParticipantRefs.Add(newRef);
     }

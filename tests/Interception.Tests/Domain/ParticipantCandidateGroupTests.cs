@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+/*//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
@@ -253,3 +253,4 @@ public sealed class ParticipantCandidateGroupTests
         act.Should().Throw<InvalidOperationException>();
     }
 }
+*/

@@ -69,6 +69,8 @@ public sealed class ResolvedParticipantService(
 
         // Підтверджуємо групу і прив'язуємо
         group.Confirm(form.Name, operatorName, resolved.Id);
+        group.UpdateSuggestedRole(form.Role);
+        group.UpdateSuggestedDivision(form.Division);
 
         await db.SaveChangesAsync(ct);
 

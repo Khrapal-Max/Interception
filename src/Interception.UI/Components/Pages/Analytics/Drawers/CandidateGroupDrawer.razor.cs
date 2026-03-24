@@ -43,6 +43,33 @@ public partial class CandidateGroupDrawer : ComponentBase
             : $"Група · {Group.ConfidenceScore * 100:F0}% впевненість"
     };
 
+    /// <summary>
+    /// Показуємо не кожне сире спостереження окремим рядком, а унікальні
+    /// комбінації ознак (частота / вектор / р/м) з кількістю повторів.
+    /// Це прибирає шум у дравері коли група має багато однотипних спостережень.
+    /// </summary>
+    private IReadOnlyList<CandidateGroupFeatureRow> FeatureRows => Group?.Refs is null
+        ? []
+        : Group.Refs
+            .GroupBy(r => new
+            {
+                Frequency = NormalizeKey(r.Frequency),
+                VectorSignal = NormalizeKey(r.VectorSignal),
+                Division = NormalizeKey(r.Division)
+            })
+            .Select(g => new CandidateGroupFeatureRow
+            {
+                Frequency = FirstNonEmpty(g.Select(x => x.Frequency)),
+                VectorSignal = FirstNonEmpty(g.Select(x => x.VectorSignal)),
+                Division = FirstNonEmpty(g.Select(x => x.Division)),
+                Count = g.Count(),
+                FirstObservedDate = g.Min(x => x.ObservedDate),
+                LastObservedDate = g.Max(x => x.ObservedDate)
+            })
+            .OrderByDescending(x => x.Count)
+            .ThenBy(x => x.FirstObservedDate)
+            .ToList();
+
     protected override async Task OnParametersSetAsync()
     {
         if (!IsOpen) { _initialized = false; return; }
@@ -173,4 +200,22 @@ public partial class CandidateGroupDrawer : ComponentBase
         >= 0.50 => "bg-warning",
         _ => "bg-danger"
     };
+
+    private static string NormalizeKey(string? value)
+        => string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : value.Trim().ToUpperInvariant();
+
+    private static string? FirstNonEmpty(IEnumerable<string?> values)
+        => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))?.Trim();
+
+    private sealed class CandidateGroupFeatureRow
+    {
+        public string? Frequency { get; init; }
+        public string? VectorSignal { get; init; }
+        public string? Division { get; init; }
+        public int Count { get; init; }
+        public DateTime FirstObservedDate { get; init; }
+        public DateTime LastObservedDate { get; init; }
+    }
 }
