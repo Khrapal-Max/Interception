@@ -30,14 +30,6 @@ internal sealed class ParticipantCandidateGroupConfiguration
             .HasColumnName("suggested_name")
             .HasMaxLength(200);
 
-        builder.Property(x => x.SuggestedRole)
-            .HasColumnName("suggested_role")
-            .HasMaxLength(200);
-
-        builder.Property(x => x.SuggestedDivision)
-            .HasColumnName("suggested_division")
-            .HasMaxLength(300);
-
         builder.Property(x => x.Status)
             .HasColumnName("status")
             .HasConversion<string>()
@@ -54,16 +46,6 @@ internal sealed class ParticipantCandidateGroupConfiguration
         builder.Property(x => x.CreatedAt)
             .HasColumnName("created_at")
             .IsRequired();
-
-        // FK → ResolvedParticipant (nullable — null поки Open/Dismissed)
-        builder.Property(x => x.ResolvedParticipantId)
-            .HasColumnName("resolved_participant_id");
-
-        builder.HasOne<ResolvedParticipant>()
-            .WithMany()
-            .HasForeignKey(x => x.ResolvedParticipantId)
-            .IsRequired(false)
-            .OnDelete(DeleteBehavior.SetNull);
 
         // PatternMatchReasons — owned entity в тій самій таблиці
         builder.OwnsOne(x => x.Reasons, r =>
@@ -126,8 +108,5 @@ internal sealed class ParticipantCandidateGroupConfiguration
 
         builder.HasIndex(x => x.ConfidenceScore)
             .HasDatabaseName("ix_candidate_groups_confidence");
-
-        builder.HasIndex(x => x.ResolvedParticipantId)
-            .HasDatabaseName("ix_candidate_groups_resolved_participant");
     }
 }

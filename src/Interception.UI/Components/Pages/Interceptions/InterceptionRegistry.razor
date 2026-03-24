@@ -1,7 +1,4 @@
 @page "/observations"
-@using Interception.UI.Application.Interceptions.Dtos
-@using Interception.UI.Components.Pages.Interceptions.Drawers
-@namespace Interception.UI.Components.Pages.Interceptions
 
 <PageTitle>Реєстр спостережень</PageTitle>
 
@@ -26,7 +23,7 @@
             <button class="btn btn-outline-secondary btn-sm" @onclick="OpenImport">
                 <i class="bi bi-upload me-1"></i>Імпорт
             </button>
-        </div>        
+        </div>
     </div>
 
     <!-- Таблиця -->
@@ -52,59 +49,64 @@
         }
         else
         {
-            <table class="table table-success table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>Дата / Час</th>
-                        <th>Частота</th>
-                        <th>Р/М</th>
-                        <th>Вектор</th>
-                        <th>Учасники</th>
-                        <th>Дія</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in _pagedResult.Items)
-                    {
+            <div class="table-responsive" style="max-height: calc(100vh - 200px)">
+                <table class="table table-success table-hover align-middle">
+                    <thead>
                         <tr>
-                            <td class="text-nowrap">
-                                @item.ObservedDate.ToString("dd.MM.yy HH:mm")
-                            </td>
-                            <td>@(item.Frequency ?? "—")</td>
-                            <td>
-                                @(item.Division ?? "—")
-                            </td>
-                            <td>
-                                @(item.VectorSignal ?? "—")
-                            </td>
-                            <td>
-                                @foreach (var pt in item.Participants.OrderBy(x => x.Ordinal))
-                                {
-                                    <span class="badge @(pt.IsUnknown ? "bg-secondary" : "bg-primary") me-1">
-                                        @pt.DisplayName
-                                    </span>
-                                }
-                            </td>
-                            <td>
-                                @(item.ActionName ?? "—")
-                            </td>
-                            <td class="text-end p-2">
-                                <button class="btn btn-secondary"
-                                        title="Редагувати"
-                                        @onclick="() => OpenEdit(item.Id)">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button class="btn btn-danger"
-                                        title="Видалити"
-                                        @onclick="() => DeleteAsync(item.Id, item.ObservedDate)">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </td>
+                            <th>Дата / Час</th>
+                            <th>Частота</th>
+                            <th>Р/М</th>
+                            <th>Вектор</th>
+                            <th>Учасники</th>
+                            <th>Дія</th>
+                            <th></th>
                         </tr>
-                    }
-                </tbody>
-            </table>    
+                    </thead>
+                    <tbody>
+                        @foreach (var item in _pagedResult.Items)
+                        {
+                            <tr>
+                                <td class="text-nowrap">
+                                    @item.ObservedDate.ToString("dd.MM.yy HH:mm")
+                                </td>
+                                <td>@(item.Frequency ?? "—")</td>
+                                <td>
+                                    @(item.Division ?? "—")
+                                </td>
+                                <td>
+                                    <span class="text-truncate d-block" style="max-width:180px"
+                                          title="@item.VectorSignal">
+                                        @(item.VectorSignal ?? "—")
+                                    </span>
+                                </td>
+                                <td>
+                                    @foreach (var pt in item.Participants.OrderBy(x => x.Ordinal))
+                                    {
+                                        <span class="badge @(pt.IsUnknown ? "bg-secondary" : "bg-primary") me-1">
+                                            @pt.DisplayName
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    @(item.ActionName ?? "—")
+                                </td>
+                                <td class="text-end p-2">
+                                    <button class="btn btn-secondary"
+                                            title="Редагувати"
+                                            @onclick="() => OpenEdit(item.Id)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-danger"
+                                            title="Видалити"
+                                            @onclick="() => DeleteAsync(item.Id, item.ObservedDate)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
 
             <!-- Пагінація -->
             @if (_pagedResult?.TotalPages > 1)
@@ -113,19 +115,25 @@
                     <ul class="pagination pagination-sm mb-0">
                         <li class="page-item @(!_pagedResult.HasPreviousPage ? "disabled" : "")">
                             <button class="page-link"
-                                    @onclick="() => GoToPageAsync(_currentPage - 1)">‹</button>
+                                    @onclick="() => GoToPageAsync(_currentPage - 1)">
+                                ‹
+                            </button>
                         </li>
                         @for (var i = 1; i <= _pagedResult.TotalPages; i++)
                         {
                             var pageNum = i;
                             <li class="page-item @(pageNum == _currentPage ? "active" : "")">
                                 <button class="page-link"
-                                        @onclick="() => GoToPageAsync(pageNum)">@pageNum</button>
+                                        @onclick="() => GoToPageAsync(pageNum)">
+                                    @pageNum
+                                </button>
                             </li>
                         }
                         <li class="page-item @(!_pagedResult.HasNextPage ? "disabled" : "")">
                             <button class="page-link"
-                                    @onclick="() => GoToPageAsync(_currentPage + 1)">›</button>
+                                    @onclick="() => GoToPageAsync(_currentPage + 1)">
+                                ›
+                            </button>
                         </li>
                     </ul>
 
@@ -143,9 +151,9 @@
 </div>
 
 <!-- Дравери — IsOpen/IsOpenChanged binding -->
-<InterceptionFormDrawer   @bind-IsOpen="_formOpen"
-                          EditingId="_editingId"
-                          OnSaved="LoadPageAsync" />
+<InterceptionFormDrawer @bind-IsOpen="_formOpen"
+                        EditingId="_editingId"
+                        OnSaved="LoadPageAsync" />
 
 <InterceptionFilterDrawer @bind-IsOpen="_filterOpen"
                           Filter="_filter"
@@ -156,5 +164,5 @@
                           OnImported="LoadPageAsync" />
 
 <InterceptionTextBlockDrawer @bind-IsOpen="_textBlockOpen"
-                              Actions="_actions"
-                              OnSaved="LoadPageAsync" />
+                             Actions="_actions"
+                             OnSaved="LoadPageAsync" />

@@ -1,6 +1,5 @@
 @page "/catalogs/actions"
 @using Interception.UI.Domain
-@using Interception.UI.Components.Pages.Catalogs.Drawers
 @namespace Interception.UI.Components.Pages.Catalogs
 
 <PageTitle>Каталог дій</PageTitle>
@@ -42,40 +41,42 @@
         }
         else
         {
-            <table class="table table-sm table-hover align-middle mb-0">
-                <thead style="position:sticky;top:0;z-index:1;" class="table-dark">
-                    <tr>
-                        <th>Назва</th>
-                        <th>Опис</th>
-                        <th style="width:64px"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var action in _actions)
-                    {
-                        <tr class="registry-row">
-                            <td class="fw-medium">@action.Name</td>
-                            <td class="text-muted small">
-                                @if (string.IsNullOrWhiteSpace(action.Description))
-                                {
-                                    <span class="opacity-50">—</span>
-                                }
-                                else
-                                {
-                                    @action.Description
-                                }
-                            </td>
-                            <td class="text-end pe-2">
-                                <button class="btn btn-outline-secondary btn-sm py-0 px-1"
-                                        title="Редагувати"
-                                        @onclick="() => OpenEdit(action)">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                            </td>
+            <div class="table-responsive" style="max-height: calc(100vh - 120px)">
+                <table class="table table-success table-hover align-middle">
+                    <thead class="sticky-top">
+                        <tr>
+                            <th>Назва</th>
+                            <th>Опис</th>
+                            <th style="width:64px"></th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var action in _actions)
+                        {
+                            <tr>
+                                <td class="fw-medium">@action.Name</td>
+                                <td class="small">
+                                    @if (string.IsNullOrWhiteSpace(action.Description))
+                                    {
+                                        <span class="opacity-50">—</span>
+                                    }
+                                    else
+                                    {
+                                        @action.Description
+                                    }
+                                </td>
+                                <td class="text-end pe-2">
+                                    <button class="btn btn-outline-secondary btn-sm py-0 px-1"
+                                            title="Редагувати"
+                                            @onclick="() => OpenEdit(action)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
     </div>
 

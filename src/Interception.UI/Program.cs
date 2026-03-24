@@ -33,6 +33,9 @@ builder.Services.AddScoped<IInterceptionService, InterceptionService>();
 builder.Services.AddScoped<IInterceptionImportService, InterceptionImportService>();
 builder.Services.AddScoped<IInterceptionActionService, InterceptionActionService>();
 
+builder.Services.AddScoped<IPatternRecognitionService, PatternRecognitionService>();
+builder.Services.AddScoped<IResolvedParticipantService, ResolvedParticipantService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

@@ -47,7 +47,7 @@ public sealed class InterceptionService(
             })
             .ToListAsync(ct);
 
-        return triples
+        return [.. triples
             .GroupBy(p => p.Frequency!)
             .Select(g => new FrequencySuggestionDto
             {
@@ -61,8 +61,7 @@ public sealed class InterceptionService(
                 Count = g.Sum(p => p.Count)
             })
             .OrderByDescending(s => s.Count)
-            .Take(take)
-            .ToList();
+            .Take(take)];
     }
 
     /// <summary>
@@ -158,31 +157,81 @@ public sealed class InterceptionService(
 
         var total = await q.CountAsync(ct);
 
-        var items = await q
+        var rawItems = await q
             .OrderByDescending(m => m.ObservedDate)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(m => new InterceptionListItemDto
+            .Select(m => new
             {
-                Id = m.Id,
-                ObservedDate = m.ObservedDate,
-                Frequency = m.Frequency,
-                VectorSignal = m.VectorSignal,
-                Division = m.Division,
+                m.Id,
+                m.ObservedDate,
+                m.Frequency,
+                m.VectorSignal,
+                m.Division,
                 ActionName = m.InterceptionAction != null ? m.InterceptionAction.Name : null,
                 Participants = m.Participants
                     .OrderBy(p => p.Ordinal)
-                    .Select(p => new ParticipantBriefDto
-                    {
-                        Name = p.Name,
-                        Role = p.Role,
-                        IsUnknown = p.IsUnknown,
-                        Ordinal = p.Ordinal
-                    })
+                    .Select(p => new { p.Id, p.Name, p.Role, p.IsUnknown, p.Ordinal })
                     .ToList(),
                 Labels = m.Labels.Select(l => l.NameLabel).ToList()
             })
             .ToListAsync(ct);
+
+        // Overlay: підтягуємо ResolvedParticipant для НВ учасників
+        var unknownParticipantIds = rawItems
+            .SelectMany(m => m.Participants.Where(p => p.IsUnknown).Select(p => p.Id))
+            .ToHashSet();
+
+        var overlayMap = new Dictionary<Guid, (string Name, bool IsResolved)>();
+
+        if (unknownParticipantIds.Count > 0)
+        {
+            // Confirmed групи — overlay з ✓
+            var confirmed = await db.ParticipantCandidateGroups
+                .Where(g => g.Status == Domain.Enums.CandidateGroupStatus.Confirmed
+                         && g.SuggestedName != null)
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+            foreach (var g in confirmed)
+                foreach (var r in g.ParticipantRefs.Where(r => unknownParticipantIds.Contains(r.ParticipantId)))
+                    overlayMap.TryAdd(r.ParticipantId, (g.SuggestedName!, true));
+
+            // Open групи — overlay з ?
+            var open = await db.ParticipantCandidateGroups
+                .Where(g => g.Status == Domain.Enums.CandidateGroupStatus.Open
+                         && g.SuggestedName != null)
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+            foreach (var g in open)
+                foreach (var r in g.ParticipantRefs.Where(r => unknownParticipantIds.Contains(r.ParticipantId)))
+                    overlayMap.TryAdd(r.ParticipantId, (g.SuggestedName!, false));
+        }
+
+        var items = rawItems.Select(m => new InterceptionListItemDto
+        {
+            Id = m.Id,
+            ObservedDate = m.ObservedDate,
+            Frequency = m.Frequency,
+            VectorSignal = m.VectorSignal,
+            Division = m.Division,
+            ActionName = m.ActionName,
+            Participants = [.. m.Participants.Select(p =>
+            {
+                overlayMap.TryGetValue(p.Id, out var overlay);
+                return new ParticipantBriefDto
+                {
+                    Name = p.Name,
+                    Role = p.Role,
+                    IsUnknown = p.IsUnknown,
+                    Ordinal = p.Ordinal,
+                    ResolvedName = overlay.Name,
+                    IsResolved = overlay.IsResolved,
+                };
+            })],
+            Labels = m.Labels,
+        }).ToList();
 
         return new PagedResult<InterceptionListItemDto>(items, total, page, pageSize);
     }
