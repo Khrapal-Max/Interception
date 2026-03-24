@@ -46,4 +46,14 @@ public interface IPatternRecognitionService
         Guid groupId,
         int take = 3,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Для групи кандидатів повертає не конкретних осіб, а ймовірний контекст
+    /// належності: підрозділ / середовище, в якому ця НВ-група стабільно
+    /// з'являється. Допомагає тоді, коли до конкретної особи ще зарано.
+    /// </summary>
+    Task<IReadOnlyList<CandidateContextSuggestionDto>> GetContextSuggestionsAsync(
+        Guid groupId,
+        int take = 3,
+        CancellationToken ct = default);
 }

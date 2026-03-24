@@ -52,6 +52,16 @@ internal sealed record GroupProfile(
     string? DominantVector,
     string? DominantDivision);
 
+internal sealed record ContextProfile(
+    string Division,
+    HashSet<string> Frequencies,
+    HashSet<string> VectorSignals,
+    HashSet<string> Labels,
+    HashSet<string> RelatedKnownNames,
+    HashSet<string> RelatedResolvedNames,
+    int SeenCount,
+    int ConfirmedGroupCount);
+
 public sealed class PatternRecognitionService(
     IDbContextFactory<AppDbContext> dbFactory,
     IOptions<PatternRecognitionOptions> options) : IPatternRecognitionService
@@ -297,6 +307,27 @@ public sealed class PatternRecognitionService(
             return [];
 
         return await BuildKnownSuggestionsAsync(db, group.ParticipantRefs.Select(r => r.MessageId).ToList(), take, ct);
+    }
+
+    public async Task<IReadOnlyList<CandidateContextSuggestionDto>> GetContextSuggestionsAsync(
+        Guid groupId,
+        int take = 3,
+        CancellationToken ct = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+
+        var group = await db.ParticipantCandidateGroups
+            .AsNoTracking()
+            .FirstOrDefaultAsync(g => g.Id == groupId, ct);
+
+        if (group is null)
+            return [];
+
+        return await BuildContextSuggestionsAsync(
+            db,
+            group.ParticipantRefs.Select(r => r.MessageId).ToList(),
+            take,
+            ct);
     }
 
     // =========================================================================
@@ -623,6 +654,264 @@ public sealed class PatternRecognitionService(
             DominantFrequency: GetDominantValue(groupMessages.Select(x => x.Frequency)),
             DominantVector: GetDominantValue(groupMessages.Select(x => x.VectorSignal)),
             DominantDivision: GetDominantValue(groupMessages.Select(x => x.Division)));
+    }
+
+    private async Task<IReadOnlyList<CandidateContextSuggestionDto>> BuildContextSuggestionsAsync(
+        AppDbContext db,
+        IReadOnlyCollection<Guid> groupMessageIds,
+        int take,
+        CancellationToken ct)
+    {
+        if (groupMessageIds.Count == 0)
+            return [];
+
+        var groupMessageRows = await db.InterceptionMessages
+            .Where(m => groupMessageIds.Contains(m.Id))
+            .Select(m => new
+            {
+                m.Frequency,
+                m.VectorSignal,
+                m.Division,
+                m.ObservedDate,
+                Labels = m.Labels.Select(l => l.NameLabel).ToList()
+            })
+            .ToListAsync(ct);
+
+        if (groupMessageRows.Count == 0)
+            return [];
+
+        var groupMessages = groupMessageRows
+            .Select(m => new GroupMessageSnapshot(
+                m.Frequency,
+                m.VectorSignal,
+                m.Division,
+                m.ObservedDate,
+                m.Labels))
+            .ToList();
+
+        var profile = BuildGroupProfile(groupMessages);
+        var contextProfiles = await BuildContextProfilesAsync(db, ct);
+
+        var suggestions = contextProfiles
+            .Select(context =>
+            {
+                var frequencyMatch = Overlaps(profile.Frequencies, context.Frequencies);
+                var vectorMatch = Overlaps(profile.VectorSignals, context.VectorSignals);
+                var divisionMatch = profile.Divisions.Contains(NormalizeKey(context.Division) ?? string.Empty);
+
+                var commonLabels = context.Labels
+                    .Where(profile.Labels.Contains)
+                    .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                    .Take(5)
+                    .ToList();
+
+                var hasConfirmedContext = context.RelatedResolvedNames.Count > 0;
+                var labelMatch = commonLabels.Count > 0;
+
+                if (!frequencyMatch && !vectorMatch && !divisionMatch && !labelMatch && !hasConfirmedContext)
+                    return null;
+
+                // Контекст не повинен будуватись лише на тому, що раніше тут щось підтвердили.
+                // Потрібна хоча б одна фактична ознака поточної групи.
+                if (!frequencyMatch && !vectorMatch && !divisionMatch && !labelMatch)
+                    return null;
+
+                var score =
+                    (frequencyMatch ? _opts.FrequencyWeight : 0) +
+                    (vectorMatch ? _opts.VectorWeight : 0) +
+                    (divisionMatch ? _opts.DivisionWeight : 0) +
+                    (labelMatch ? _opts.SharedLabelsWeight : 0) +
+                    (hasConfirmedContext ? Math.Min(_opts.SharedPartnersWeight, 0.15) : 0);
+
+                return new CandidateContextSuggestionDto
+                {
+                    Division = context.Division,
+                    MatchScore = Math.Min(score, 1.0),
+                    SeenCount = context.SeenCount,
+                    ConfirmedGroupCount = context.ConfirmedGroupCount,
+                    CommonLabels = commonLabels,
+                    RelatedKnownNames = context.RelatedKnownNames
+                        .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                        .Take(5)
+                        .ToList(),
+                    RelatedResolvedNames = context.RelatedResolvedNames
+                        .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                        .Take(5)
+                        .ToList(),
+                    Reasons = new CandidateContextReasonsDto
+                    {
+                        SameFrequency = frequencyMatch,
+                        SameVector = vectorMatch,
+                        SameDivision = divisionMatch,
+                        SharedLabels = labelMatch,
+                        HasConfirmedContext = hasConfirmedContext
+                    }
+                };
+            })
+            .Where(x => x is not null)
+            .Select(x => x!)
+            .OrderByDescending(x => x.MatchScore)
+            .ThenByDescending(x => x.Reasons.MatchCount)
+            .ThenByDescending(x => x.ConfirmedGroupCount)
+            .ThenByDescending(x => x.SeenCount)
+            .ThenBy(x => x.Division, StringComparer.OrdinalIgnoreCase)
+            .Take(take)
+            .ToList();
+
+        return suggestions;
+    }
+
+    private async Task<IReadOnlyList<ContextProfile>> BuildContextProfilesAsync(
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var knownRows = await db.InterceptionMessageParticipants
+            .Where(p => !p.IsUnknown && p.Name != null && p.InterceptionMessage.Division != null)
+            .Select(p => new
+            {
+                Name = p.Name!,
+                Division = p.InterceptionMessage.Division!,
+                Frequency = p.InterceptionMessage.Frequency,
+                VectorSignal = p.InterceptionMessage.VectorSignal,
+                Labels = p.InterceptionMessage.Labels
+                    .Select(l => l.NameLabel)
+                    .ToList()
+            })
+            .ToListAsync(ct);
+
+        var confirmedGroups = await db.ParticipantCandidateGroups
+            .Where(g => g.Status == CandidateGroupStatus.Confirmed && g.SuggestedDivision != null)
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        var confirmedMessageIds = confirmedGroups
+            .SelectMany(g => g.ParticipantRefs.Select(r => r.MessageId))
+            .ToHashSet();
+
+        var confirmedMessages = confirmedMessageIds.Count == 0
+            ? new Dictionary<Guid, GroupMessageSnapshot>()
+            : await db.InterceptionMessages
+                .Where(m => confirmedMessageIds.Contains(m.Id))
+                .Select(m => new
+                {
+                    m.Id,
+                    m.Frequency,
+                    m.VectorSignal,
+                    m.Division,
+                    m.ObservedDate,
+                    Labels = m.Labels.Select(l => l.NameLabel).ToList()
+                })
+                .AsNoTracking()
+                .ToDictionaryAsync(
+                    m => m.Id,
+                    m => new GroupMessageSnapshot(
+                        m.Frequency,
+                        m.VectorSignal,
+                        m.Division,
+                        m.ObservedDate,
+                        m.Labels),
+                    ct);
+
+        var buckets = new Dictionary<string, ContextProfileBuilder>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var row in knownRows)
+        {
+            var key = NormalizeKey(row.Division);
+            if (key is null)
+                continue;
+
+            var builder = GetOrCreateContextProfileBuilder(buckets, key, row.Division.Trim());
+            builder.SeenCount++;
+            builder.RelatedKnownNames.Add(row.Name.Trim());
+            AddOptional(builder.Frequencies, row.Frequency);
+            AddOptional(builder.VectorSignals, row.VectorSignal);
+            AddOptionalRange(builder.Labels, row.Labels);
+        }
+
+        foreach (var group in confirmedGroups)
+        {
+            var key = NormalizeKey(group.SuggestedDivision);
+            if (key is null)
+                continue;
+
+            var builder = GetOrCreateContextProfileBuilder(buckets, key, group.SuggestedDivision!.Trim());
+            builder.ConfirmedGroupCount++;
+
+            if (!string.IsNullOrWhiteSpace(group.SuggestedName))
+                builder.RelatedResolvedNames.Add(group.SuggestedName!.Trim());
+
+            foreach (var messageId in group.ParticipantRefs.Select(r => r.MessageId).Distinct())
+            {
+                if (!confirmedMessages.TryGetValue(messageId, out var msg))
+                    continue;
+
+                builder.SeenCount++;
+                AddOptional(builder.Frequencies, msg.Frequency);
+                AddOptional(builder.VectorSignals, msg.VectorSignal);
+                AddOptionalRange(builder.Labels, msg.Labels);
+            }
+        }
+
+        return buckets.Values
+            .Where(x => x.SeenCount > 0)
+            .Select(x => x.Build())
+            .ToList();
+    }
+
+    private static ContextProfileBuilder GetOrCreateContextProfileBuilder(
+        IDictionary<string, ContextProfileBuilder> buckets,
+        string key,
+        string division)
+    {
+        if (buckets.TryGetValue(key, out var builder))
+            return builder;
+
+        builder = new ContextProfileBuilder(division);
+        buckets[key] = builder;
+        return builder;
+    }
+
+    private static bool Overlaps(HashSet<string> left, HashSet<string> right)
+        => left.Count > 0 && right.Count > 0 && left.Overlaps(right);
+
+    private static void AddOptional(HashSet<string> bucket, string? value)
+    {
+        var key = NormalizeKey(value);
+        if (key is not null)
+            bucket.Add(key);
+    }
+
+    private static void AddOptionalRange(HashSet<string> bucket, IEnumerable<string?> values)
+    {
+        foreach (var value in values)
+            AddOptional(bucket, value);
+    }
+
+    private sealed class ContextProfileBuilder
+    {
+        public ContextProfileBuilder(string division)
+        {
+            Division = division;
+        }
+
+        public string Division { get; }
+        public HashSet<string> Frequencies { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> VectorSignals { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> Labels { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> RelatedKnownNames { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> RelatedResolvedNames { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public int SeenCount { get; set; }
+        public int ConfirmedGroupCount { get; set; }
+
+        public ContextProfile Build() => new(
+            Division,
+            Frequencies,
+            VectorSignals,
+            Labels,
+            RelatedKnownNames,
+            RelatedResolvedNames,
+            SeenCount,
+            ConfirmedGroupCount);
     }
 
     // =========================================================================

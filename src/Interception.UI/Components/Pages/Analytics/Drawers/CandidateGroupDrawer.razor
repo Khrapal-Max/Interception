@@ -115,6 +115,72 @@
                     </div>
                 }
 
+                <!-- Ймовірна належність / контекст -->
+                @if (!_loadingSuggestions && _contextSuggestions.Count > 0)
+                {
+                    <div>
+                        <div class="form-label form-label-sm text-muted mb-1">
+                            Ймовірна належність / контекст
+                        </div>
+                        @foreach (var s in _contextSuggestions)
+                        {
+                            <div class="border border-secondary rounded p-2 mb-2"
+                                 style="cursor:pointer"
+                                 @onclick="() => ApplyContextSuggestion(s)">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="fw-medium">@s.Division</span>
+                                    <div class="ms-auto d-flex align-items-center gap-1">
+                                        <div class="progress" style="width:60px;height:5px">
+                                            <div class="progress-bar @ScoreClass(s.MatchScore)"
+                                                 style="@($"width:{s.MatchScore * 100:F0}%")">
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">
+                                            @($"{s.MatchScore * 100:F0}")%
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-3 small mb-1">
+                                    <span class="text-muted">частота @(s.Reasons.SameFrequency ? "✓" : "—")</span>
+                                    <span class="text-muted">вектор @(s.Reasons.SameVector ? "✓" : "—")</span>
+                                    <span class="text-muted">підрозділ @(s.Reasons.SameDivision ? "✓" : "—")</span>
+                                    @if (s.Reasons.HasConfirmedContext)
+                                    {
+                                        <span class="text-success">є підтверджені ✓</span>
+                                    }
+                                </div>
+
+                                @if (s.CommonLabels.Count > 0)
+                                {
+                                    <div class="d-flex flex-wrap gap-1 mb-1">
+                                        <span class="text-muted small">мітки:</span>
+                                        @foreach (var label in s.CommonLabels)
+                                        {
+                                            <span class="badge bg-info bg-opacity-25 text-info"
+                                                  style="font-size:.7rem">@label</span>
+                                        }
+                                    </div>
+                                }
+
+                                @if (s.RelatedResolvedNames.Count > 0)
+                                {
+                                    <small class="text-muted d-block">
+                                        підтверджені в цьому контексті: @string.Join(", ", s.RelatedResolvedNames)
+                                    </small>
+                                }
+
+                                @if (s.RelatedKnownNames.Count > 0)
+                                {
+                                    <small class="text-muted d-block">
+                                        пов'язані відомі: @string.Join(", ", s.RelatedKnownNames)
+                                    </small>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+
                 <!-- Узагальнені ознаки групи -->
                 <div>
                     <div class="d-flex justify-content-between align-items-center">

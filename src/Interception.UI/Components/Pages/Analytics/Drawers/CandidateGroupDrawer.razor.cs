@@ -31,6 +31,7 @@ public partial class CandidateGroupDrawer : ComponentBase
     private bool _initialized;
 
     private IReadOnlyList<KnownParticipantSuggestionDto> _suggestions = [];
+    private IReadOnlyList<CandidateContextSuggestionDto> _contextSuggestions = [];
     private bool _loadingSuggestions;
 
     private string DrawerTitle => Group?.Status switch
@@ -82,6 +83,7 @@ public partial class CandidateGroupDrawer : ComponentBase
         _nameError = false;
         _serverError = null;
         _suggestions = [];
+        _contextSuggestions = [];
 
         // Завантажуємо підказки асинхронно тільки для Open груп
         if (Group?.Status == CandidateGroupStatus.Open)
@@ -94,6 +96,7 @@ public partial class CandidateGroupDrawer : ComponentBase
         _serverError = null;
         _nameError = false;
         _suggestions = [];
+        _contextSuggestions = [];
     }
 
     private async Task LoadSuggestionsAsync()
@@ -105,10 +108,12 @@ public partial class CandidateGroupDrawer : ComponentBase
         try
         {
             _suggestions = await PatternService.GetKnownSuggestionsAsync(Group.Id);
+            _contextSuggestions = await PatternService.GetContextSuggestionsAsync(Group.Id);
         }
         catch
         {
             _suggestions = [];
+            _contextSuggestions = [];
         }
         finally
         {
@@ -122,7 +127,14 @@ public partial class CandidateGroupDrawer : ComponentBase
     {
         _confirmName = suggestion.Name;
         _confirmRole = suggestion.Role ?? string.Empty;
+        _confirmDivision = suggestion.Division ?? _confirmDivision ?? string.Empty;
         _nameError = false;
+    }
+
+    /// <summary>Клік на контекст — не підтверджує особу, а лише підставляє підрозділ.</summary>
+    private void ApplyContextSuggestion(CandidateContextSuggestionDto suggestion)
+    {
+        _confirmDivision = suggestion.Division;
     }
 
     private async Task ConfirmAsync()
