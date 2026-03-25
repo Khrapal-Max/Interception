@@ -9,6 +9,7 @@ using Interception.UI.Application.Toasts;
 using Interception.UI.Domain;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace Interception.UI.Components.Pages.Interceptions.Drawers;
 
@@ -30,6 +31,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
     private string? _parseError = null;
     private TextBlockParseResult? _parsed = null;
     private InterceptionFormDto? _form = null;
+    private string? _newLabel = null;
     private bool _saving;
 
     // -------------------------------------------------------------------------
@@ -55,6 +57,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
 
         _parsed = result;
         _form = BuildForm(result);
+        _newLabel = null;
     }
 
     private static InterceptionFormDto BuildForm(TextBlockParseResult r)
@@ -137,6 +140,50 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         _form.Participants.Add(new ParticipantFormDto { Ordinal = next, IsUnknown = true });
     }
 
+    private void AddLabel()
+    {
+        if (_form is null)
+            return;
+
+        var label = NormalizeLabel(_newLabel);
+        if (label is null)
+            return;
+
+        if (_form.Labels.Any(x => string.Equals(x, label, StringComparison.OrdinalIgnoreCase)))
+        {
+            _newLabel = null;
+            return;
+        }
+
+        _form.Labels.Add(label);
+        _newLabel = null;
+    }
+
+    private void RemoveLabel(string label)
+    {
+        if (_form is null)
+            return;
+
+        var existing = _form.Labels.FirstOrDefault(x => string.Equals(x, label, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
+            _form.Labels.Remove(existing);
+    }
+
+    private void OnLabelKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or "," or ";")
+            AddLabel();
+    }
+
+    private static string? NormalizeLabel(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var normalized = string.Join(' ', value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        return normalized.Length == 0 ? null : normalized;
+    }
+
     // -------------------------------------------------------------------------
     // Збереження
     // -------------------------------------------------------------------------
@@ -173,6 +220,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         _parseError = null;
         _parsed = null;
         _form = null;
+        _newLabel = null;
     }
 
     private async Task CloseAsync()
