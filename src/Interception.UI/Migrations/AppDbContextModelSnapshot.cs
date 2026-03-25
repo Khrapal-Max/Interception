@@ -459,14 +459,16 @@ namespace Interception.UI.Migrations
 
                     b.OwnsMany("Interception.UI.Domain.Records.ParticipantRef", "ParticipantRefs", b1 =>
                         {
+                            b1.Property<int>("id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer")
+                                .HasColumnName("id");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("id"));
+
                             b1.Property<Guid>("CandidateGroupId")
                                 .HasColumnType("uuid")
                                 .HasColumnName("candidate_group_id");
-
-                            b1.Property<Guid>("ParticipantId")
-                                .ValueGeneratedOnAdd()
-                                .HasColumnType("uuid")
-                                .HasColumnName("participant_id");
 
                             b1.Property<Guid>("MessageId")
                                 .HasColumnType("uuid")
@@ -476,7 +478,14 @@ namespace Interception.UI.Migrations
                                 .HasColumnType("integer")
                                 .HasColumnName("ordinal");
 
-                            b1.HasKey("CandidateGroupId", "ParticipantId");
+                            b1.Property<Guid>("ParticipantId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("participant_id");
+
+                            b1.HasKey("id");
+
+                            b1.HasIndex("CandidateGroupId", "ParticipantId")
+                                .IsUnique();
 
                             b1.ToTable("participant_candidate_group_refs", (string)null);
 

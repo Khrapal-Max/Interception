@@ -90,7 +90,9 @@ internal sealed class ParticipantCandidateGroupConfiguration
                 .IsRequired();
         });
 
-        // ParticipantRefs — owned collection → окрема таблиця
+        // ParticipantRefs — owned collection → окрема таблиця.
+        // Для EF InMemory та стабільного append/update краще використовувати технічний shadow key,
+        // а бізнес-унікальність пари (CandidateGroupId, ParticipantId) тримати через unique index.
         builder.OwnsMany(x => x.ParticipantRefs, pr =>
         {
             pr.ToTable("participant_candidate_group_refs");
@@ -98,6 +100,10 @@ internal sealed class ParticipantCandidateGroupConfiguration
             pr.WithOwner().HasForeignKey("CandidateGroupId");
             pr.Property<Guid>("CandidateGroupId")
                 .HasColumnName("candidate_group_id");
+
+            pr.Property<int>("id")
+                .HasColumnName("id")
+                .ValueGeneratedOnAdd();
 
             pr.Property(x => x.MessageId)
                 .HasColumnName("message_id")
@@ -111,7 +117,10 @@ internal sealed class ParticipantCandidateGroupConfiguration
                 .HasColumnName("ordinal")
                 .IsRequired();
 
-            pr.HasKey("CandidateGroupId", nameof(ParticipantRef.ParticipantId));
+            pr.HasKey("id");
+
+            pr.HasIndex("CandidateGroupId", nameof(ParticipantRef.ParticipantId))
+                .IsUnique();
         });
 
         builder.HasOne<ResolvedParticipant>()

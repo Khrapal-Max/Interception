@@ -30,8 +30,9 @@ public sealed class KnownParticipantSuggestionService(
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
         var group = await db.ParticipantCandidateGroups
-            .AsNoTracking()
-            .FirstOrDefaultAsync(g => g.Id == groupId, ct);
+          .AsNoTracking()
+          .Include(g => g.ParticipantRefs)
+          .FirstOrDefaultAsync(g => g.Id == groupId, ct);
 
         if (group is null)
             return [];
@@ -111,7 +112,7 @@ public sealed class KnownParticipantSuggestionService(
         if (knownRows.Count == 0)
             return [];
 
-        return knownRows
+        return [.. knownRows
             .Where(x =>
             {
                 var normalized = Extensions.SemanticValue.NormalizeMeaningfulOrNull(x.Name);
@@ -190,7 +191,6 @@ public sealed class KnownParticipantSuggestionService(
             .ThenByDescending(x => x.Reasons.MatchCount)
             .ThenByDescending(x => x.SeenCount)
             .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .Take(take)
-            .ToList();
+            .Take(take)];
     }
 }

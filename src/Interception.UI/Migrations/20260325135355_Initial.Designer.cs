@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Interception.UI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260321195357_Initial")]
+    [Migration("20260325135355_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace Interception.UI.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "10.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "btree_gist");
@@ -293,21 +293,38 @@ namespace Interception.UI.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("resolved_by");
 
+                    b.Property<Guid?>("ResolvedParticipantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resolved_participant_id");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("status");
 
+                    b.Property<string>("SuggestedDivision")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("suggested_division");
+
                     b.Property<string>("SuggestedName")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("suggested_name");
 
+                    b.Property<string>("SuggestedRole")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("suggested_role");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ConfidenceScore")
                         .HasDatabaseName("ix_candidate_groups_confidence");
+
+                    b.HasIndex("ResolvedParticipantId")
+                        .HasDatabaseName("ix_candidate_groups_resolved_participant");
 
                     b.HasIndex("Status")
                         .HasDatabaseName("ix_candidate_groups_status");
@@ -331,6 +348,47 @@ namespace Interception.UI.Migrations
                         .IsUnique();
 
                     b.ToTable("participant_matrices", (string)null);
+                });
+
+            modelBuilder.Entity("Interception.UI.Domain.ResolvedParticipant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("ConfirmedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("confirmed_at");
+
+                    b.Property<string>("ConfirmedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("confirmed_by");
+
+                    b.Property<string>("Division")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("division");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Role")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("role");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_resolved_participants_name");
+
+                    b.ToTable("resolved_participants", (string)null);
                 });
 
             modelBuilder.Entity("Interception.UI.Domain.InterceptionMessage", b =>
@@ -397,16 +455,23 @@ namespace Interception.UI.Migrations
 
             modelBuilder.Entity("Interception.UI.Domain.ParticipantCandidateGroup", b =>
                 {
+                    b.HasOne("Interception.UI.Domain.ResolvedParticipant", null)
+                        .WithMany()
+                        .HasForeignKey("ResolvedParticipantId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.OwnsMany("Interception.UI.Domain.Records.ParticipantRef", "ParticipantRefs", b1 =>
                         {
+                            b1.Property<int>("id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer")
+                                .HasColumnName("id");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("id"));
+
                             b1.Property<Guid>("CandidateGroupId")
                                 .HasColumnType("uuid")
                                 .HasColumnName("candidate_group_id");
-
-                            b1.Property<Guid>("ParticipantId")
-                                .ValueGeneratedOnAdd()
-                                .HasColumnType("uuid")
-                                .HasColumnName("participant_id");
 
                             b1.Property<Guid>("MessageId")
                                 .HasColumnType("uuid")
@@ -416,7 +481,14 @@ namespace Interception.UI.Migrations
                                 .HasColumnType("integer")
                                 .HasColumnName("ordinal");
 
-                            b1.HasKey("CandidateGroupId", "ParticipantId");
+                            b1.Property<Guid>("ParticipantId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("participant_id");
+
+                            b1.HasKey("id");
+
+                            b1.HasIndex("CandidateGroupId", "ParticipantId")
+                                .IsUnique();
 
                             b1.ToTable("participant_candidate_group_refs", (string)null);
 
@@ -448,6 +520,14 @@ namespace Interception.UI.Migrations
                             b1.Property<bool>("SameVector")
                                 .HasColumnType("boolean")
                                 .HasColumnName("reason_same_vector");
+
+                            b1.Property<bool>("SharedLabels")
+                                .HasColumnType("boolean")
+                                .HasColumnName("reason_shared_labels");
+
+                            b1.Property<bool>("SharedPartners")
+                                .HasColumnType("boolean")
+                                .HasColumnName("reason_shared_partners");
 
                             b1.HasKey("ParticipantCandidateGroupId");
 

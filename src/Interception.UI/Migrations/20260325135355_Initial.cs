@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -44,25 +45,19 @@ namespace Interception.UI.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "participant_candidate_groups",
+                name: "resolved_participants",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    confidence_score = table.Column<double>(type: "double precision", precision: 4, scale: 3, nullable: false),
-                    suggested_name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    reason_same_frequency = table.Column<bool>(type: "boolean", nullable: false),
-                    reason_same_vector = table.Column<bool>(type: "boolean", nullable: false),
-                    reason_same_point_signal = table.Column<bool>(type: "boolean", nullable: false),
-                    reason_same_division = table.Column<bool>(type: "boolean", nullable: false),
-                    reason_close_in_time = table.Column<bool>(type: "boolean", nullable: false),
-                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    resolved_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    resolved_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    role = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    division = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
+                    confirmed_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    confirmed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_participant_candidate_groups", x => x.id);
+                    table.PrimaryKey("PK_resolved_participants", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -133,23 +128,36 @@ namespace Interception.UI.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "participant_candidate_group_refs",
+                name: "participant_candidate_groups",
                 columns: table => new
                 {
-                    participant_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    candidate_group_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    message_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ordinal = table.Column<int>(type: "integer", nullable: false)
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    confidence_score = table.Column<double>(type: "double precision", precision: 4, scale: 3, nullable: false),
+                    suggested_name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    suggested_role = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    suggested_division = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
+                    reason_same_frequency = table.Column<bool>(type: "boolean", nullable: false),
+                    reason_same_vector = table.Column<bool>(type: "boolean", nullable: false),
+                    reason_same_point_signal = table.Column<bool>(type: "boolean", nullable: false),
+                    reason_same_division = table.Column<bool>(type: "boolean", nullable: false),
+                    reason_close_in_time = table.Column<bool>(type: "boolean", nullable: false),
+                    reason_shared_partners = table.Column<bool>(type: "boolean", nullable: false),
+                    reason_shared_labels = table.Column<bool>(type: "boolean", nullable: false),
+                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    resolved_participant_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    resolved_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    resolved_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_participant_candidate_group_refs", x => new { x.candidate_group_id, x.participant_id });
+                    table.PrimaryKey("PK_participant_candidate_groups", x => x.id);
                     table.ForeignKey(
-                        name: "FK_participant_candidate_group_refs_participant_candidate_grou~",
-                        column: x => x.candidate_group_id,
-                        principalTable: "participant_candidate_groups",
+                        name: "FK_participant_candidate_groups_resolved_participants_resolved~",
+                        column: x => x.resolved_participant_id,
+                        principalTable: "resolved_participants",
                         principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -231,6 +239,28 @@ namespace Interception.UI.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "participant_candidate_group_refs",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    message_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    participant_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ordinal = table.Column<int>(type: "integer", nullable: false),
+                    candidate_group_id = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_participant_candidate_group_refs", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_participant_candidate_group_refs_participant_candidate_grou~",
+                        column: x => x.candidate_group_id,
+                        principalTable: "participant_candidate_groups",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "ix_daily_reports_date_status",
                 table: "daily_reports",
@@ -296,9 +326,20 @@ namespace Interception.UI.Migrations
                 column: "daily_report_id");
 
             migrationBuilder.CreateIndex(
+                name: "IX_participant_candidate_group_refs_candidate_group_id_partici~",
+                table: "participant_candidate_group_refs",
+                columns: new[] { "candidate_group_id", "participant_id" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "ix_candidate_groups_confidence",
                 table: "participant_candidate_groups",
                 column: "confidence_score");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_candidate_groups_resolved_participant",
+                table: "participant_candidate_groups",
+                column: "resolved_participant_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_candidate_groups_status",
@@ -309,6 +350,12 @@ namespace Interception.UI.Migrations
                 name: "IX_participant_matrices_daily_report_id",
                 table: "participant_matrices",
                 column: "daily_report_id",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_resolved_participants_name",
+                table: "resolved_participants",
+                column: "name",
                 unique: true);
         }
 
@@ -347,6 +394,9 @@ namespace Interception.UI.Migrations
 
             migrationBuilder.DropTable(
                 name: "daily_reports");
+
+            migrationBuilder.DropTable(
+                name: "resolved_participants");
         }
     }
 }

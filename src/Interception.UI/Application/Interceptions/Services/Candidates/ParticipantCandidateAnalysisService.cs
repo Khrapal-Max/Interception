@@ -5,7 +5,9 @@
 using Interception.UI.Application.Interceptions.Abstractions.Candidates;
 using Interception.UI.Application.Interceptions.Models.PatternRecognition;
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Domain.Records;
+using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -75,12 +77,14 @@ public sealed class ParticipantCandidateAnalysisService(
             .ToList();
 
         var confirmedIds = await db.ParticipantCandidateGroups
-            .Where(g => g.Status == Domain.Enums.CandidateGroupStatus.Confirmed)
+            .Where(g => g.Status == CandidateGroupStatus.Confirmed)
             .SelectMany(g => g.ParticipantRefs.Select(r => r.ParticipantId))
             .ToHashSetAsync(ct);
 
         var openGroups = await db.ParticipantCandidateGroups
-            .Where(g => g.Status == Domain.Enums.CandidateGroupStatus.Open)
+            .AsNoTracking()
+            .Include(g => g.ParticipantRefs)
+            .Where(g => g.Status == CandidateGroupStatus.Open)
             .ToListAsync(ct);
 
         var openIds = openGroups.SelectMany(g => g.ParticipantRefs.Select(r => r.ParticipantId)).ToHashSet();
@@ -89,7 +93,7 @@ public sealed class ParticipantCandidateAnalysisService(
 
         var assigned = new HashSet<Guid>();
         var changed = 0;
-        var changedOpenGroups = new List<Interception.UI.Domain.ParticipantCandidateGroup>();
+        var openGroupUpdates = new List<OpenGroupUpdate>();
 
         if (openGroups.Count > 0)
         {
@@ -128,6 +132,7 @@ public sealed class ParticipantCandidateAnalysisService(
                     continue;
 
                 var groupChanged = false;
+                var refsToAdd = new List<ParticipantRef>();
 
                 foreach (var newCandidate in unassigned)
                 {
@@ -137,11 +142,11 @@ public sealed class ParticipantCandidateAnalysisService(
                     if (PatternRecognitionMath.HasSameObservationMember(newCandidate, groupContexts))
                         continue;
 
-                    var fit = PatternRecognitionMath.ComputeGroupFit(newCandidate, groupContexts, _options);
-                    if (fit.Score < _options.MinConfidenceScore)
+                    var (Score, Reasons) = PatternRecognitionMath.ComputeGroupFit(newCandidate, groupContexts, _options);
+                    if (Score < _options.MinConfidenceScore)
                         continue;
 
-                    openGroup.AddRef(new ParticipantRef(newCandidate.MessageId, newCandidate.ParticipantId, newCandidate.Ordinal));
+                    refsToAdd.Add(new ParticipantRef(newCandidate.MessageId, newCandidate.ParticipantId, newCandidate.Ordinal));
                     assigned.Add(newCandidate.ParticipantId);
                     groupContexts.Add(newCandidate);
                     groupChanged = true;
@@ -149,23 +154,23 @@ public sealed class ParticipantCandidateAnalysisService(
 
                 if (groupChanged)
                 {
-                    var recalculated = PatternRecognitionMath.RecalculateGroupScore(groupContexts, _options);
-                    openGroup.UpdateScore(recalculated.Score, recalculated.Reasons);
-                    openGroup.UpdateSuggestedDivision(PatternRecognitionMath.GetDominantValue(groupContexts.Select(x => x.Division)));
-                    openGroup.UpdateSuggestedRole(PatternRecognitionMath.GetDominantValue(groupContexts.Select(x => x.Role)));
-                    changedOpenGroups.Add(openGroup);
+                    var (Score, Reasons) = PatternRecognitionMath.RecalculateGroupScore(groupContexts, _options);
+                    openGroupUpdates.Add(new OpenGroupUpdate(
+                        openGroup.Id,
+                        refsToAdd,
+                        Score,
+                        Reasons,
+                        PatternRecognitionMath.GetDominantValue(groupContexts.Select(x => x.Role)),
+                        PatternRecognitionMath.GetDominantValue(groupContexts.Select(x => x.Division))));
                 }
             }
 
-            if (changedOpenGroups.Count > 0)
+            if (openGroupUpdates.Count > 0)
             {
-                await db.SaveChangesAsync(ct);
+                foreach (var update in openGroupUpdates)
+                    await ApplyOpenGroupUpdateAsync(update, ct);
 
-                foreach (var group in changedOpenGroups)
-                    await RefreshOpenGroupSuggestionAsync(group, ct);
-
-                await db.SaveChangesAsync(ct);
-                changed += changedOpenGroups.Count;
+                changed += openGroupUpdates.Count;
             }
         }
 
@@ -202,8 +207,8 @@ public sealed class ParticipantCandidateAnalysisService(
             if (group.Count < 2)
                 continue;
 
-            var calculated = PatternRecognitionMath.RecalculateGroupScore(group, _options);
-            if (calculated.Score < _options.MinConfidenceScore)
+            var (Score, Reasons) = PatternRecognitionMath.RecalculateGroupScore(group, _options);
+            if (Score < _options.MinConfidenceScore)
                 continue;
 
             newAssigned.Add(remainingCandidates[i].ParticipantId);
@@ -214,8 +219,8 @@ public sealed class ParticipantCandidateAnalysisService(
 
             newGroups.Add(ParticipantCandidateGroup.Create(
                 refs,
-                calculated.Score,
-                calculated.Reasons,
+                Score,
+                Reasons,
                 suggestedRole: PatternRecognitionMath.GetDominantValue(group.Select(p => p.Role)),
                 suggestedDivision: PatternRecognitionMath.GetDominantValue(group.Select(p => p.Division))));
         }
@@ -225,10 +230,9 @@ public sealed class ParticipantCandidateAnalysisService(
             db.ParticipantCandidateGroups.AddRange(newGroups);
             await db.SaveChangesAsync(ct);
 
-            foreach (var group in newGroups)
-                await RefreshOpenGroupSuggestionAsync(group, ct);
+            foreach (var groupId in newGroups.Select(g => (Guid)g.Id))
+                await RefreshOpenGroupSuggestionAsync(groupId, ct);
 
-            await db.SaveChangesAsync(ct);
             changed += newGroups.Count;
         }
 
@@ -236,18 +240,98 @@ public sealed class ParticipantCandidateAnalysisService(
     }
 
     /// <summary>
+    /// Застосовує збагачення до open-групи в окремому DbContext, щоб уникнути конфліктів
+    /// трекінгу та owned-колекції ParticipantRefs під час аналізу.
+    /// </summary>
+    private async Task ApplyOpenGroupUpdateAsync(OpenGroupUpdate update, CancellationToken ct)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+
+        var group = await db.ParticipantCandidateGroups
+            .Include(g => g.ParticipantRefs)
+            .FirstOrDefaultAsync(
+                g => g.Id == update.GroupId && g.Status == CandidateGroupStatus.Open,
+                ct);
+
+        if (group is null)
+            return;
+
+        foreach (var newRef in update.NewRefs)
+        {
+            if (group.ParticipantRefs.Any(x => x.ParticipantId == newRef.ParticipantId))
+                continue;
+
+            group.AddRef(newRef);
+        }
+
+        group.UpdateScore(update.Score, update.Reasons);
+
+        var suggestedRole = SemanticValue.NormalizeMeaningfulOrNull(update.SuggestedRole);
+        if (!string.IsNullOrWhiteSpace(suggestedRole) && group.SuggestedRole != suggestedRole)
+            group.UpdateSuggestedRole(suggestedRole);
+
+        var suggestedDivision = SemanticValue.NormalizeMeaningfulOrNull(update.SuggestedDivision);
+        if (!string.IsNullOrWhiteSpace(suggestedDivision) && group.SuggestedDivision != suggestedDivision)
+            group.UpdateSuggestedDivision(suggestedDivision);
+
+        await db.SaveChangesAsync(ct);
+        await RefreshOpenGroupSuggestionAsync(update.GroupId, ct);
+    }
+
+    /// <summary>
     /// Синхронізує top known suggestion назад в open-group для overlay у реєстрі.
     /// </summary>
-    private async Task RefreshOpenGroupSuggestionAsync(Interception.UI.Domain.ParticipantCandidateGroup group, CancellationToken ct)
+    private async Task RefreshOpenGroupSuggestionAsync(Guid groupId, CancellationToken ct)
     {
-        var best = (await knownParticipantSuggestionService.GetKnownSuggestionsAsync((Guid)group.Id, 1, ct)).FirstOrDefault();
+        var best = (await knownParticipantSuggestionService.GetKnownSuggestionsAsync(groupId, 1, ct))
+            .FirstOrDefault();
 
-        group.UpdateSuggestedName(best?.Name);
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
 
-        if (!string.IsNullOrWhiteSpace(best?.Role))
-            group.UpdateSuggestedRole(best.Role);
+        var group = await db.ParticipantCandidateGroups
+            .FirstOrDefaultAsync(
+                g => g.Id == groupId && g.Status == CandidateGroupStatus.Open,
+                ct);
 
-        if (!string.IsNullOrWhiteSpace(best?.Division))
-            group.UpdateSuggestedDivision(best.Division);
+        if (group is null)
+            return;
+
+        var changed = false;
+
+        var suggestedName = SemanticValue.NormalizeMeaningfulOrNull(best?.Name);
+        if (group.SuggestedName != suggestedName)
+        {
+            group.UpdateSuggestedName(suggestedName);
+            changed = true;
+        }
+
+        var suggestedRole = SemanticValue.NormalizeMeaningfulOrNull(best?.Role);
+        if (!string.IsNullOrWhiteSpace(suggestedRole) && group.SuggestedRole != suggestedRole)
+        {
+            group.UpdateSuggestedRole(suggestedRole);
+            changed = true;
+        }
+
+        var suggestedDivision = SemanticValue.NormalizeMeaningfulOrNull(best?.Division);
+        if (!string.IsNullOrWhiteSpace(suggestedDivision) && group.SuggestedDivision != suggestedDivision)
+        {
+            group.UpdateSuggestedDivision(suggestedDivision);
+            changed = true;
+        }
+
+        if (changed)
+            await db.SaveChangesAsync(ct);
     }
+
+
+    /// <summary>
+    /// Описує набір змін, які треба застосувати до open-групи після аналізу.
+    /// </summary>
+    private sealed record OpenGroupUpdate(
+        Guid GroupId,
+        IReadOnlyList<ParticipantRef> NewRefs,
+        double Score,
+        PatternMatchReasons Reasons,
+        string? SuggestedRole,
+        string? SuggestedDivision);
 }
