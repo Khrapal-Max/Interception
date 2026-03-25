@@ -7,6 +7,7 @@ using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
 using Interception.UI.Domain.Records;
+using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -22,6 +23,7 @@ internal sealed record UnknownContext(
     string? VectorSignal,
     string? PointSignal,
     string? Division,
+    string? Role,
     DateTime ObservedDate,
     HashSet<string> KnownPartnerNames,
     HashSet<string> Labels);
@@ -34,29 +36,34 @@ internal sealed record MessageSnapshot(
     string? VectorSignal,
     string? Division);
 
-internal sealed record GroupMessageSnapshot(
+internal sealed record GroupObservationSnapshot(
     string? Frequency,
     string? VectorSignal,
     string? Division,
+    string? Role,
     DateTime ObservedDate,
     List<string> Labels);
 
 internal sealed record GroupProfile(
-    HashSet<string> Frequencies,
-    HashSet<string> VectorSignals,
-    HashSet<string> Divisions,
-    HashSet<string> Labels,
+    IReadOnlyDictionary<string, int> Frequencies,
+    IReadOnlyDictionary<string, int> VectorSignals,
+    IReadOnlyDictionary<string, int> Divisions,
+    IReadOnlyDictionary<string, int> Roles,
+    IReadOnlyDictionary<string, int> Labels,
+    IReadOnlyDictionary<string, int> FrequencyDivisionPairs,
+    IReadOnlyDictionary<string, int> VectorDivisionPairs,
+    IReadOnlyDictionary<string, int> RoleDivisionPairs,
+    IReadOnlyDictionary<string, int> LabelDivisionPairs,
     DateTime WindowStart,
     DateTime WindowEnd,
     string? DominantFrequency,
     string? DominantVector,
-    string? DominantDivision);
+    string? DominantDivision,
+    string? DominantRole);
 
 internal sealed record ContextProfile(
     string Division,
-    HashSet<string> Frequencies,
-    HashSet<string> VectorSignals,
-    HashSet<string> Labels,
+    GroupProfile Pivot,
     HashSet<string> RelatedKnownNames,
     HashSet<string> RelatedResolvedNames,
     int SeenCount,
@@ -78,7 +85,7 @@ public sealed class PatternRecognitionService(
 
         var unknownRefs = await db.InterceptionMessageParticipants
             .Where(p => p.IsUnknown)
-            .Select(p => new { p.Id, p.InterceptionMessageId, p.Ordinal })
+            .Select(p => new { p.Id, p.InterceptionMessageId, p.Ordinal, p.Role })
             .ToListAsync(ct);
 
         if (unknownRefs.Count < 2)
@@ -115,10 +122,11 @@ public sealed class PatternRecognitionService(
                     ParticipantId: p.Id,
                     Ordinal: p.Ordinal,
                     MessageId: p.InterceptionMessageId,
-                    Frequency: m.Frequency,
-                    VectorSignal: m.VectorSignal,
-                    PointSignal: m.PointSignal,
-                    Division: m.Division,
+                    Frequency: SemanticValue.NormalizeMeaningfulOrNull(m.Frequency),
+                    VectorSignal: SemanticValue.NormalizeMeaningfulOrNull(m.VectorSignal),
+                    PointSignal: SemanticValue.NormalizeMeaningfulOrNull(m.PointSignal),
+                    Division: SemanticValue.NormalizeMeaningfulOrNull(m.Division),
+                    Role: SemanticValue.NormalizeMeaningfulOrNull(p.Role),
                     ObservedDate: m.ObservedDate,
                     KnownPartnerNames: ToNormalizedSet(m.KnownPartners),
                     Labels: ToNormalizedSet(m.Labels));
@@ -152,7 +160,7 @@ public sealed class PatternRecognitionService(
         // ------------------------------------------------------------------
         // Крок A — ЗБАГАЧЕННЯ існуючих Open груп
         // ------------------------------------------------------------------
-        if (openGroups.Count > 0 && unassigned.Count > 0)
+        if (openGroups.Count > 0)
         {
             var openParticipantIds = openGroups
                 .SelectMany(g => g.ParticipantRefs.Select(r => r.ParticipantId))
@@ -173,10 +181,11 @@ public sealed class PatternRecognitionService(
                             ParticipantId: p.Id,
                             Ordinal: p.Ordinal,
                             MessageId: p.InterceptionMessageId,
-                            Frequency: m.Frequency,
-                            VectorSignal: m.VectorSignal,
-                            PointSignal: m.PointSignal,
-                            Division: m.Division,
+                            Frequency: SemanticValue.NormalizeMeaningfulOrNull(m.Frequency),
+                            VectorSignal: SemanticValue.NormalizeMeaningfulOrNull(m.VectorSignal),
+                            PointSignal: SemanticValue.NormalizeMeaningfulOrNull(m.PointSignal),
+                            Division: SemanticValue.NormalizeMeaningfulOrNull(m.Division),
+                            Role: SemanticValue.NormalizeMeaningfulOrNull(p.Role),
                             ObservedDate: m.ObservedDate,
                             KnownPartnerNames: ToNormalizedSet(m.KnownPartners),
                             Labels: ToNormalizedSet(m.Labels));
@@ -192,15 +201,15 @@ public sealed class PatternRecognitionService(
                 if (groupContexts.Count == 0)
                     continue;
 
-                var enriched = false;
+                var groupChanged = false;
 
                 foreach (var newCandidate in unassigned)
                 {
                     if (assigned.Contains(newCandidate.ParticipantId))
                         continue;
 
-                    var fit = ComputeGroupFit(newCandidate, groupContexts);
-                    if (fit.Score < _opts.MinConfidenceScore)
+                    var (Score, Reasons) = ComputeGroupFit(newCandidate, groupContexts);
+                    if (Score < _opts.MinConfidenceScore)
                         continue;
 
                     openGroup.AddRef(new ParticipantRef(
@@ -210,16 +219,20 @@ public sealed class PatternRecognitionService(
 
                     assigned.Add(newCandidate.ParticipantId);
                     groupContexts.Add(newCandidate);
-                    enriched = true;
+                    groupChanged = true;
                 }
 
-                if (enriched)
+                if (groupChanged)
                 {
                     var (newScore, newReasons) = RecalculateGroupScore(groupContexts);
                     openGroup.UpdateScore(newScore, newReasons);
                     openGroup.UpdateSuggestedDivision(GetDominantValue(groupContexts.Select(x => x.Division)));
-                    changed++;
+                    openGroup.UpdateSuggestedRole(GetDominantValue(groupContexts.Select(x => x.Role)));
                 }
+
+                var suggestionChanged = await RefreshOpenGroupSuggestionAsync(db, openGroup, ct);
+                if (groupChanged || suggestionChanged)
+                    changed++;
             }
 
             await db.SaveChangesAsync(ct);
@@ -250,8 +263,8 @@ public sealed class PatternRecognitionService(
                 if (newAssigned.Contains(remainingCandidates[j].ParticipantId))
                     continue;
 
-                var fit = ComputeGroupFit(remainingCandidates[j], group);
-                if (fit.Score < _opts.MinConfidenceScore)
+                var (Score, Reasons) = ComputeGroupFit(remainingCandidates[j], group);
+                if (Score < _opts.MinConfidenceScore)
                     continue;
 
                 group.Add(remainingCandidates[j]);
@@ -275,17 +288,45 @@ public sealed class PatternRecognitionService(
                 refs,
                 groupScore,
                 groupReasons,
+                suggestedRole: GetDominantValue(group.Select(p => p.Role)),
                 suggestedDivision: GetDominantValue(group.Select(p => p.Division))));
         }
 
         if (newGroups.Count > 0)
         {
+            foreach (var newGroup in newGroups)
+                await RefreshOpenGroupSuggestionAsync(db, newGroup, ct);
+
             db.ParticipantCandidateGroups.AddRange(newGroups);
             await db.SaveChangesAsync(ct);
             changed += newGroups.Count;
         }
 
         return changed;
+    }
+
+    private async Task<bool> RefreshOpenGroupSuggestionAsync(
+        AppDbContext db,
+        ParticipantCandidateGroup group,
+        CancellationToken ct)
+    {
+        var beforeName = group.SuggestedName;
+        var beforeRole = group.SuggestedRole;
+        var beforeDivision = group.SuggestedDivision;
+
+        var best = (await BuildKnownSuggestionsAsync(db, group, 1, ct)).FirstOrDefault();
+
+        group.UpdateSuggestedName(best?.Name);
+
+        if (!string.IsNullOrWhiteSpace(best?.Role))
+            group.UpdateSuggestedRole(best.Role);
+
+        if (!string.IsNullOrWhiteSpace(best?.Division))
+            group.UpdateSuggestedDivision(best.Division);
+
+        return !string.Equals(beforeName, group.SuggestedName, StringComparison.Ordinal)
+            || !string.Equals(beforeRole, group.SuggestedRole, StringComparison.Ordinal)
+            || !string.Equals(beforeDivision, group.SuggestedDivision, StringComparison.Ordinal);
     }
 
     // =========================================================================
@@ -306,7 +347,7 @@ public sealed class PatternRecognitionService(
         if (group is null)
             return [];
 
-        return await BuildKnownSuggestionsAsync(db, group.ParticipantRefs.Select(r => r.MessageId).ToList(), take, ct);
+        return await BuildKnownSuggestionsAsync(db, group, take, ct);
     }
 
     public async Task<IReadOnlyList<CandidateContextSuggestionDto>> GetContextSuggestionsAsync(
@@ -323,11 +364,7 @@ public sealed class PatternRecognitionService(
         if (group is null)
             return [];
 
-        return await BuildContextSuggestionsAsync(
-            db,
-            group.ParticipantRefs.Select(r => r.MessageId).ToList(),
-            take,
-            ct);
+        return await BuildContextSuggestionsAsync(db, group, take, ct);
     }
 
     // =========================================================================
@@ -384,6 +421,7 @@ public sealed class PatternRecognitionService(
         var sameVector = EqualsNormalized(a.VectorSignal, b.VectorSignal);
         var samePoint = EqualsNormalized(a.PointSignal, b.PointSignal);
         var sameDivision = EqualsNormalized(a.Division, b.Division);
+        var sameRole = EqualsNormalized(a.Role, b.Role);
 
         var closeInTime = Math.Abs((a.ObservedDate - b.ObservedDate).TotalMinutes)
             <= _opts.TimeWindowMinutes;
@@ -395,14 +433,22 @@ public sealed class PatternRecognitionService(
             && b.Labels.Count > 0
             && a.Labels.Overlaps(b.Labels);
 
-        var score =
+        var roleWeight = Math.Min(_opts.SharedLabelsWeight + (_opts.TimeWeight / 2.0), 0.06);
+        var totalWeight = _opts.FrequencyWeight + _opts.VectorWeight + _opts.SharedPartnersWeight
+                        + _opts.PointSignalWeight + _opts.DivisionWeight + _opts.TimeWeight
+                        + _opts.SharedLabelsWeight + roleWeight;
+
+        var rawScore =
             (sameFrequency ? _opts.FrequencyWeight : 0) +
             (sameVector ? _opts.VectorWeight : 0) +
             (sharedPartners ? _opts.SharedPartnersWeight : 0) +
             (samePoint ? _opts.PointSignalWeight : 0) +
             (sameDivision ? _opts.DivisionWeight : 0) +
             (closeInTime ? _opts.TimeWeight : 0) +
-            (sharedLabels ? _opts.SharedLabelsWeight : 0);
+            (sharedLabels ? _opts.SharedLabelsWeight : 0) +
+            (sameRole ? roleWeight : 0);
+
+        var score = totalWeight <= 0 ? 0 : rawScore / totalWeight;
 
         return (score, new PatternMatchReasons
         {
@@ -423,7 +469,7 @@ public sealed class PatternRecognitionService(
     /// </summary>
     private (double Score, PatternMatchReasons Reasons) ComputeGroupFit(
         UnknownContext candidate,
-        IReadOnlyList<UnknownContext> members)
+        List<UnknownContext> members)
     {
         if (members.Count == 0)
             return (0.0, new PatternMatchReasons());
@@ -445,7 +491,7 @@ public sealed class PatternRecognitionService(
 
         return (
             strongMatches.Average(x => x.Score),
-            AggregateReasons(strongMatches.Select(x => x.Reasons).ToList()));
+            AggregateReasons([.. strongMatches.Select(x => x.Reasons)]));
     }
 
     /// <summary>
@@ -468,7 +514,7 @@ public sealed class PatternRecognitionService(
 
         return (
             pairResults.Average(x => x.Score),
-            AggregateReasons(pairResults.Select(x => x.Reasons).ToList()));
+            AggregateReasons([.. pairResults.Select(x => x.Reasons)]));
     }
 
     private static PatternMatchReasons AggregateReasons(
@@ -492,8 +538,8 @@ public sealed class PatternRecognitionService(
     }
 
     private static int CountSharedPartners(
-        IReadOnlyCollection<string> partnersA,
-        IReadOnlyCollection<string> partnersB)
+        HashSet<string> partnersA,
+        HashSet<string> partnersB)
     {
         if (partnersA.Count == 0 || partnersB.Count == 0)
             return 0;
@@ -508,38 +554,58 @@ public sealed class PatternRecognitionService(
 
     private async Task<IReadOnlyList<KnownParticipantSuggestionDto>> BuildKnownSuggestionsAsync(
         AppDbContext db,
-        IReadOnlyCollection<Guid> groupMessageIds,
+        ParticipantCandidateGroup group,
         int take,
         CancellationToken ct)
     {
-        if (groupMessageIds.Count == 0)
+        var groupParticipantIds = group.ParticipantRefs
+            .Select(r => r.ParticipantId)
+            .ToHashSet();
+
+        if (groupParticipantIds.Count == 0)
             return [];
 
-        var groupMessageRows = await db.InterceptionMessages
-            .Where(m => groupMessageIds.Contains(m.Id))
-            .Select(m => new
+        var groupRows = await db.InterceptionMessageParticipants
+            .Where(p => groupParticipantIds.Contains(p.Id))
+            .Select(p => new
             {
-                m.Frequency,
-                m.VectorSignal,
-                m.Division,
-                m.ObservedDate,
-                Labels = m.Labels.Select(l => l.NameLabel).ToList()
+                p.Role,
+                p.InterceptionMessage.Frequency,
+                p.InterceptionMessage.VectorSignal,
+                p.InterceptionMessage.Division,
+                p.InterceptionMessage.ObservedDate,
+                Labels = p.InterceptionMessage.Labels
+                    .Select(l => l.NameLabel)
+                    .ToList(),
+                KnownParticipants = p.InterceptionMessage.Participants
+                    .Where(x => !x.IsUnknown && x.Name != null)
+                    .Select(x => x.Name!)
+                    .ToList()
             })
+            .AsNoTracking()
             .ToListAsync(ct);
 
-        if (groupMessageRows.Count == 0)
+        if (groupRows.Count == 0)
             return [];
 
-        var groupMessages = groupMessageRows
-            .Select(m => new GroupMessageSnapshot(
-                m.Frequency,
-                m.VectorSignal,
-                m.Division,
-                m.ObservedDate,
-                m.Labels))
+        var groupObservations = groupRows
+            .Select(x => new GroupObservationSnapshot(
+                x.Frequency,
+                x.VectorSignal,
+                x.Division,
+                x.Role,
+                x.ObservedDate,
+                x.Labels))
             .ToList();
 
-        var profile = BuildGroupProfile(groupMessages);
+        var groupProfile = BuildGroupProfile(groupObservations);
+
+        var blockedKnownNames = groupRows
+            .SelectMany(x => x.KnownParticipants)
+            .Select(SemanticValue.NormalizeMeaningfulOrNull)
+            .Where(x => x is not null)
+            .Cast<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var knownRows = await db.InterceptionMessageParticipants
             .Where(p => !p.IsUnknown && p.Name != null)
@@ -547,78 +613,92 @@ public sealed class PatternRecognitionService(
             {
                 Name = p.Name!,
                 p.Role,
-                Frequency = p.InterceptionMessage.Frequency,
-                VectorSignal = p.InterceptionMessage.VectorSignal,
-                Division = p.InterceptionMessage.Division,
-                ObservedDate = p.InterceptionMessage.ObservedDate,
+                p.InterceptionMessage.Frequency,
+                p.InterceptionMessage.VectorSignal,
+                p.InterceptionMessage.Division,
+                p.InterceptionMessage.ObservedDate,
                 Labels = p.InterceptionMessage.Labels
                     .Select(l => l.NameLabel)
                     .ToList()
             })
+            .AsNoTracking()
             .ToListAsync(ct);
 
         if (knownRows.Count == 0)
             return [];
 
         var suggestions = knownRows
+            .Where(x =>
+            {
+                var normalized = SemanticValue.NormalizeMeaningfulOrNull(x.Name);
+                return normalized is not null && !blockedKnownNames.Contains(normalized);
+            })
             .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
             .Select(g =>
             {
-                var appearances = g.ToList();
+                var observations = g.Select(x => new GroupObservationSnapshot(
+                    x.Frequency,
+                    x.VectorSignal,
+                    x.Division,
+                    x.Role,
+                    x.ObservedDate,
+                    x.Labels)).ToList();
 
-                var freqMatch = HasOverlap(appearances.Select(x => x.Frequency), profile.Frequencies);
-                var vecMatch = HasOverlap(appearances.Select(x => x.VectorSignal), profile.VectorSignals);
-                var divMatch = HasOverlap(appearances.Select(x => x.Division), profile.Divisions);
-                var timeMatch = appearances.Any(x =>
-                    x.ObservedDate >= profile.WindowStart &&
-                    x.ObservedDate <= profile.WindowEnd);
+                var candidateProfile = BuildGroupProfile(observations);
 
-                var commonLabels = appearances
-                    .SelectMany(x => x.Labels)
-                    .Select(label => new
-                    {
-                        Original = label.Trim(),
-                        Key = NormalizeKey(label)
-                    })
-                    .Where(x => x.Key is not null && profile.Labels.Contains(x.Key))
-                    .Select(x => x.Original)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(label => label, StringComparer.OrdinalIgnoreCase)
-                    .Take(5)
-                    .ToList();
+                var frequencyScore = ComputeOverlapScore(groupProfile.Frequencies, candidateProfile.Frequencies);
+                var vectorScore = ComputeOverlapScore(groupProfile.VectorSignals, candidateProfile.VectorSignals);
+                var divisionScore = ComputeOverlapScore(groupProfile.Divisions, candidateProfile.Divisions);
+                var roleScore = ComputeOverlapScore(groupProfile.Roles, candidateProfile.Roles);
+                var labelScore = ComputeOverlapScore(groupProfile.Labels, candidateProfile.Labels);
+                var pivotScore = ComputeAverageNonZero(
+                    ComputeOverlapScore(groupProfile.FrequencyDivisionPairs, candidateProfile.FrequencyDivisionPairs),
+                    ComputeOverlapScore(groupProfile.VectorDivisionPairs, candidateProfile.VectorDivisionPairs),
+                    ComputeOverlapScore(groupProfile.RoleDivisionPairs, candidateProfile.RoleDivisionPairs),
+                    ComputeOverlapScore(groupProfile.LabelDivisionPairs, candidateProfile.LabelDivisionPairs));
 
-                var labelMatch = commonLabels.Count > 0;
+                var timeScore = observations.Count == 0
+                    ? 0.0
+                    : (double)observations.Count(x =>
+                        x.ObservedDate >= groupProfile.WindowStart &&
+                        x.ObservedDate <= groupProfile.WindowEnd) / observations.Count;
 
-                // Не показуємо кандидата лише тому що він був близько в часі.
-                if (!freqMatch && !vecMatch && !divMatch && !labelMatch)
+                if (frequencyScore <= 0 && vectorScore <= 0 && divisionScore <= 0 && roleScore <= 0 && labelScore <= 0 && pivotScore <= 0)
                     return null;
 
-                var score =
-                    (freqMatch ? _opts.FrequencyWeight : 0) +
-                    (vecMatch ? _opts.VectorWeight : 0) +
-                    (divMatch ? _opts.DivisionWeight : 0) +
-                    (timeMatch ? _opts.TimeWeight : 0) +
-                    (labelMatch ? _opts.SharedLabelsWeight : 0);
+                var roleWeight = Math.Min(_opts.DivisionWeight + _opts.SharedLabelsWeight, 0.10);
+                var pivotWeight = Math.Min(_opts.SharedPartnersWeight, 0.18);
+                var totalWeight = _opts.FrequencyWeight + _opts.VectorWeight + _opts.DivisionWeight
+                                + roleWeight + _opts.SharedLabelsWeight + _opts.TimeWeight + pivotWeight;
 
-                var lastAppearance = appearances
-                    .OrderByDescending(x => x.ObservedDate)
-                    .First();
+                var rawScore =
+                    (frequencyScore * _opts.FrequencyWeight) +
+                    (vectorScore * _opts.VectorWeight) +
+                    (divisionScore * _opts.DivisionWeight) +
+                    (roleScore * roleWeight) +
+                    (labelScore * _opts.SharedLabelsWeight) +
+                    (timeScore * _opts.TimeWeight) +
+                    (pivotScore * pivotWeight);
+
+                var score = totalWeight <= 0 ? 0.0 : Math.Min(rawScore / totalWeight, 1.0);
 
                 return new KnownParticipantSuggestionDto
                 {
                     Name = g.Key,
-                    Role = lastAppearance.Role,
-                    Division = GetDominantValue(appearances.Select(x => x.Division)),
-                    MatchScore = Math.Min(score, 1.0),
-                    SeenCount = appearances.Count,
-                    CommonLabels = commonLabels,
+                    Role = candidateProfile.DominantRole,
+                    Division = candidateProfile.DominantDivision,
+                    MatchScore = score,
+                    SeenCount = observations.Count,
+                    CommonLabels = GetCommonValues(groupProfile.Labels, observations.SelectMany(x => x.Labels), 5),
                     Reasons = new KnownSuggestionReasonsDto
                     {
-                        SameFrequency = freqMatch,
-                        SameVector = vecMatch,
-                        SameDivision = divMatch,
-                        CloseInTime = timeMatch,
-                        SharedLabels = labelMatch,
+                        SameFrequency = frequencyScore > 0,
+                        SameVector = vectorScore > 0,
+                        SameDivision = divisionScore > 0,
+                        SameRole = roleScore > 0,
+                        CloseInTime = timeScore > 0,
+                        SharedLabels = labelScore > 0,
+                        PivotIntersection = pivotScore > 0,
                     }
                 };
             })
@@ -634,117 +714,152 @@ public sealed class PatternRecognitionService(
         return suggestions;
     }
 
-    private GroupProfile BuildGroupProfile(IReadOnlyList<GroupMessageSnapshot> groupMessages)
+    private GroupProfile BuildGroupProfile(List<GroupObservationSnapshot> observations)
     {
-        var frequencies = ToNormalizedSet(groupMessages.Select(x => x.Frequency));
-        var vectors = ToNormalizedSet(groupMessages.Select(x => x.VectorSignal));
-        var divisions = ToNormalizedSet(groupMessages.Select(x => x.Division));
-        var labels = ToNormalizedSet(groupMessages.SelectMany(x => x.Labels));
+        if (observations.Count == 0)
+        {
+            return new GroupProfile(
+                new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+                new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+                new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+                new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+                new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+                new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+                new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+                new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+                new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+                DateTime.MinValue,
+                DateTime.MinValue,
+                null,
+                null,
+                null,
+                null);
+        }
 
-        var minDate = groupMessages.Min(x => x.ObservedDate);
-        var maxDate = groupMessages.Max(x => x.ObservedDate);
+        var minDate = observations.Min(x => x.ObservedDate);
+        var maxDate = observations.Max(x => x.ObservedDate);
 
         return new GroupProfile(
-            Frequencies: frequencies,
-            VectorSignals: vectors,
-            Divisions: divisions,
-            Labels: labels,
+            Frequencies: BuildCountMap(observations.Select(x => x.Frequency)),
+            VectorSignals: BuildCountMap(observations.Select(x => x.VectorSignal)),
+            Divisions: BuildCountMap(observations.Select(x => x.Division)),
+            Roles: BuildCountMap(observations.Select(x => x.Role)),
+            Labels: BuildCountMap(observations.SelectMany(x => x.Labels)),
+            FrequencyDivisionPairs: BuildPairCountMap(observations.Select(x => (x.Frequency, x.Division))),
+            VectorDivisionPairs: BuildPairCountMap(observations.Select(x => (x.VectorSignal, x.Division))),
+            RoleDivisionPairs: BuildPairCountMap(observations.Select(x => (x.Role, x.Division))),
+            LabelDivisionPairs: BuildLabelDivisionPairCountMap(observations),
             WindowStart: minDate.AddMinutes(-_opts.TimeWindowMinutes),
             WindowEnd: maxDate.AddMinutes(_opts.TimeWindowMinutes),
-            DominantFrequency: GetDominantValue(groupMessages.Select(x => x.Frequency)),
-            DominantVector: GetDominantValue(groupMessages.Select(x => x.VectorSignal)),
-            DominantDivision: GetDominantValue(groupMessages.Select(x => x.Division)));
+            DominantFrequency: GetDominantValue(observations.Select(x => x.Frequency)),
+            DominantVector: GetDominantValue(observations.Select(x => x.VectorSignal)),
+            DominantDivision: GetDominantValue(observations.Select(x => x.Division)),
+            DominantRole: GetDominantValue(observations.Select(x => x.Role)));
     }
 
     private async Task<IReadOnlyList<CandidateContextSuggestionDto>> BuildContextSuggestionsAsync(
         AppDbContext db,
-        IReadOnlyCollection<Guid> groupMessageIds,
+        ParticipantCandidateGroup group,
         int take,
         CancellationToken ct)
     {
-        if (groupMessageIds.Count == 0)
+        var groupParticipantIds = group.ParticipantRefs
+            .Select(r => r.ParticipantId)
+            .ToHashSet();
+
+        if (groupParticipantIds.Count == 0)
             return [];
 
-        var groupMessageRows = await db.InterceptionMessages
-            .Where(m => groupMessageIds.Contains(m.Id))
-            .Select(m => new
+        var groupRows = await db.InterceptionMessageParticipants
+            .Where(p => groupParticipantIds.Contains(p.Id))
+            .Select(p => new
             {
-                m.Frequency,
-                m.VectorSignal,
-                m.Division,
-                m.ObservedDate,
-                Labels = m.Labels.Select(l => l.NameLabel).ToList()
+                p.Role,
+                p.InterceptionMessage.Frequency,
+                p.InterceptionMessage.VectorSignal,
+                p.InterceptionMessage.Division,
+                p.InterceptionMessage.ObservedDate,
+                Labels = p.InterceptionMessage.Labels.Select(l => l.NameLabel).ToList()
             })
+            .AsNoTracking()
             .ToListAsync(ct);
 
-        if (groupMessageRows.Count == 0)
+        if (groupRows.Count == 0)
             return [];
 
-        var groupMessages = groupMessageRows
-            .Select(m => new GroupMessageSnapshot(
-                m.Frequency,
-                m.VectorSignal,
-                m.Division,
-                m.ObservedDate,
-                m.Labels))
-            .ToList();
+        var groupProfile = BuildGroupProfile([.. groupRows
+            .Select(x => new GroupObservationSnapshot(
+                x.Frequency,
+                x.VectorSignal,
+                x.Division,
+                x.Role,
+                x.ObservedDate,
+                x.Labels))]);
 
-        var profile = BuildGroupProfile(groupMessages);
         var contextProfiles = await BuildContextProfilesAsync(db, ct);
 
         var suggestions = contextProfiles
             .Select(context =>
             {
-                var frequencyMatch = Overlaps(profile.Frequencies, context.Frequencies);
-                var vectorMatch = Overlaps(profile.VectorSignals, context.VectorSignals);
-                var divisionMatch = profile.Divisions.Contains(NormalizeKey(context.Division) ?? string.Empty);
-
-                var commonLabels = context.Labels
-                    .Where(profile.Labels.Contains)
-                    .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-                    .Take(5)
-                    .ToList();
+                var frequencyScore = ComputeOverlapScore(groupProfile.Frequencies, context.Pivot.Frequencies);
+                var vectorScore = ComputeOverlapScore(groupProfile.VectorSignals, context.Pivot.VectorSignals);
+                var divisionScore = ComputeOverlapScore(groupProfile.Divisions, context.Pivot.Divisions);
+                var roleScore = ComputeOverlapScore(groupProfile.Roles, context.Pivot.Roles);
+                var labelScore = ComputeOverlapScore(groupProfile.Labels, context.Pivot.Labels);
+                var pivotScore = ComputeAverageNonZero(
+                    ComputeOverlapScore(groupProfile.FrequencyDivisionPairs, context.Pivot.FrequencyDivisionPairs),
+                    ComputeOverlapScore(groupProfile.VectorDivisionPairs, context.Pivot.VectorDivisionPairs),
+                    ComputeOverlapScore(groupProfile.RoleDivisionPairs, context.Pivot.RoleDivisionPairs),
+                    ComputeOverlapScore(groupProfile.LabelDivisionPairs, context.Pivot.LabelDivisionPairs));
 
                 var hasConfirmedContext = context.RelatedResolvedNames.Count > 0;
-                var labelMatch = commonLabels.Count > 0;
+                var confirmedScore = !hasConfirmedContext
+                    ? 0.0
+                    : Math.Min(1.0, (double)context.ConfirmedGroupCount / Math.Max(1, context.SeenCount));
 
-                if (!frequencyMatch && !vectorMatch && !divisionMatch && !labelMatch && !hasConfirmedContext)
+                if (frequencyScore <= 0 && vectorScore <= 0 && divisionScore <= 0 && roleScore <= 0 && labelScore <= 0 && pivotScore <= 0)
                     return null;
 
-                // Контекст не повинен будуватись лише на тому, що раніше тут щось підтвердили.
-                // Потрібна хоча б одна фактична ознака поточної групи.
-                if (!frequencyMatch && !vectorMatch && !divisionMatch && !labelMatch)
-                    return null;
+                var roleWeight = Math.Min(_opts.DivisionWeight + _opts.SharedLabelsWeight, 0.10);
+                var pivotWeight = Math.Min(_opts.SharedPartnersWeight, 0.18);
+                var confirmedWeight = Math.Min(_opts.SharedPartnersWeight / 2.0, 0.10);
+                var totalWeight = _opts.FrequencyWeight + _opts.VectorWeight + _opts.DivisionWeight
+                                + roleWeight + _opts.SharedLabelsWeight + pivotWeight + confirmedWeight;
 
-                var score =
-                    (frequencyMatch ? _opts.FrequencyWeight : 0) +
-                    (vectorMatch ? _opts.VectorWeight : 0) +
-                    (divisionMatch ? _opts.DivisionWeight : 0) +
-                    (labelMatch ? _opts.SharedLabelsWeight : 0) +
-                    (hasConfirmedContext ? Math.Min(_opts.SharedPartnersWeight, 0.15) : 0);
+                var rawScore =
+                    (frequencyScore * _opts.FrequencyWeight) +
+                    (vectorScore * _opts.VectorWeight) +
+                    (divisionScore * _opts.DivisionWeight) +
+                    (roleScore * roleWeight) +
+                    (labelScore * _opts.SharedLabelsWeight) +
+                    (pivotScore * pivotWeight) +
+                    (confirmedScore * confirmedWeight);
+
+                var score = totalWeight <= 0 ? 0.0 : Math.Min(rawScore / totalWeight, 1.0);
 
                 return new CandidateContextSuggestionDto
                 {
                     Division = context.Division,
-                    MatchScore = Math.Min(score, 1.0),
+                    SuggestedRole = context.Pivot.DominantRole,
+                    MatchScore = score,
                     SeenCount = context.SeenCount,
                     ConfirmedGroupCount = context.ConfirmedGroupCount,
-                    CommonLabels = commonLabels,
-                    RelatedKnownNames = context.RelatedKnownNames
+                    CommonLabels = GetCommonValues(groupProfile.Labels, context.Pivot.Labels.Keys, 5),
+                    RelatedKnownNames = [.. context.RelatedKnownNames
                         .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-                        .Take(5)
-                        .ToList(),
-                    RelatedResolvedNames = context.RelatedResolvedNames
+                        .Take(5)],
+                    RelatedResolvedNames = [.. context.RelatedResolvedNames
                         .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-                        .Take(5)
-                        .ToList(),
+                        .Take(5)],
                     Reasons = new CandidateContextReasonsDto
                     {
-                        SameFrequency = frequencyMatch,
-                        SameVector = vectorMatch,
-                        SameDivision = divisionMatch,
-                        SharedLabels = labelMatch,
-                        HasConfirmedContext = hasConfirmedContext
+                        SameFrequency = frequencyScore > 0,
+                        SameVector = vectorScore > 0,
+                        SameDivision = divisionScore > 0,
+                        SameRole = roleScore > 0,
+                        SharedLabels = labelScore > 0,
+                        HasConfirmedContext = hasConfirmedContext,
+                        PivotIntersection = pivotScore > 0
                     }
                 };
             })
@@ -770,13 +885,16 @@ public sealed class PatternRecognitionService(
             .Select(p => new
             {
                 Name = p.Name!,
+                p.Role,
                 Division = p.InterceptionMessage.Division!,
-                Frequency = p.InterceptionMessage.Frequency,
-                VectorSignal = p.InterceptionMessage.VectorSignal,
+                p.InterceptionMessage.Frequency,
+                p.InterceptionMessage.VectorSignal,
+                p.InterceptionMessage.ObservedDate,
                 Labels = p.InterceptionMessage.Labels
                     .Select(l => l.NameLabel)
                     .ToList()
             })
+            .AsNoTracking()
             .ToListAsync(ct);
 
         var confirmedGroups = await db.ParticipantCandidateGroups
@@ -789,7 +907,7 @@ public sealed class PatternRecognitionService(
             .ToHashSet();
 
         var confirmedMessages = confirmedMessageIds.Count == 0
-            ? new Dictionary<Guid, GroupMessageSnapshot>()
+            ? []
             : await db.InterceptionMessages
                 .Where(m => confirmedMessageIds.Contains(m.Id))
                 .Select(m => new
@@ -804,10 +922,11 @@ public sealed class PatternRecognitionService(
                 .AsNoTracking()
                 .ToDictionaryAsync(
                     m => m.Id,
-                    m => new GroupMessageSnapshot(
+                    m => new GroupObservationSnapshot(
                         m.Frequency,
                         m.VectorSignal,
                         m.Division,
+                        null,
                         m.ObservedDate,
                         m.Labels),
                     ct);
@@ -816,25 +935,30 @@ public sealed class PatternRecognitionService(
 
         foreach (var row in knownRows)
         {
-            var key = NormalizeKey(row.Division);
-            if (key is null)
+            var normalizedDivision = SemanticValue.NormalizeMeaningfulOrNull(row.Division);
+            var key = SemanticValue.NormalizeKeyOrNull(row.Division);
+            if (key is null || normalizedDivision is null)
                 continue;
 
-            var builder = GetOrCreateContextProfileBuilder(buckets, key, row.Division.Trim());
-            builder.SeenCount++;
+            var builder = GetOrCreateContextProfileBuilder(buckets, key, normalizedDivision);
+            builder.Observations.Add(new GroupObservationSnapshot(
+                row.Frequency,
+                row.VectorSignal,
+                row.Division,
+                row.Role,
+                row.ObservedDate,
+                row.Labels));
             builder.RelatedKnownNames.Add(row.Name.Trim());
-            AddOptional(builder.Frequencies, row.Frequency);
-            AddOptional(builder.VectorSignals, row.VectorSignal);
-            AddOptionalRange(builder.Labels, row.Labels);
         }
 
         foreach (var group in confirmedGroups)
         {
-            var key = NormalizeKey(group.SuggestedDivision);
-            if (key is null)
+            var normalizedDivision = SemanticValue.NormalizeMeaningfulOrNull(group.SuggestedDivision);
+            var key = SemanticValue.NormalizeKeyOrNull(group.SuggestedDivision);
+            if (key is null || normalizedDivision is null)
                 continue;
 
-            var builder = GetOrCreateContextProfileBuilder(buckets, key, group.SuggestedDivision!.Trim());
+            var builder = GetOrCreateContextProfileBuilder(buckets, key, normalizedDivision);
             builder.ConfirmedGroupCount++;
 
             if (!string.IsNullOrWhiteSpace(group.SuggestedName))
@@ -845,17 +969,13 @@ public sealed class PatternRecognitionService(
                 if (!confirmedMessages.TryGetValue(messageId, out var msg))
                     continue;
 
-                builder.SeenCount++;
-                AddOptional(builder.Frequencies, msg.Frequency);
-                AddOptional(builder.VectorSignals, msg.VectorSignal);
-                AddOptionalRange(builder.Labels, msg.Labels);
+                builder.Observations.Add(msg with { Role = group.SuggestedRole });
             }
         }
 
-        return buckets.Values
-            .Where(x => x.SeenCount > 0)
-            .Select(x => x.Build())
-            .ToList();
+        return [.. buckets.Values
+            .Where(x => x.Observations.Count > 0)
+            .Select(x => x.Build(BuildGroupProfile(x.Observations)))];
     }
 
     private static ContextProfileBuilder GetOrCreateContextProfileBuilder(
@@ -871,46 +991,20 @@ public sealed class PatternRecognitionService(
         return builder;
     }
 
-    private static bool Overlaps(HashSet<string> left, HashSet<string> right)
-        => left.Count > 0 && right.Count > 0 && left.Overlaps(right);
-
-    private static void AddOptional(HashSet<string> bucket, string? value)
+    private sealed class ContextProfileBuilder(string division)
     {
-        var key = NormalizeKey(value);
-        if (key is not null)
-            bucket.Add(key);
-    }
-
-    private static void AddOptionalRange(HashSet<string> bucket, IEnumerable<string?> values)
-    {
-        foreach (var value in values)
-            AddOptional(bucket, value);
-    }
-
-    private sealed class ContextProfileBuilder
-    {
-        public ContextProfileBuilder(string division)
-        {
-            Division = division;
-        }
-
-        public string Division { get; }
-        public HashSet<string> Frequencies { get; } = new(StringComparer.OrdinalIgnoreCase);
-        public HashSet<string> VectorSignals { get; } = new(StringComparer.OrdinalIgnoreCase);
-        public HashSet<string> Labels { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public string Division { get; } = division;
+        public List<GroupObservationSnapshot> Observations { get; } = [];
         public HashSet<string> RelatedKnownNames { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> RelatedResolvedNames { get; } = new(StringComparer.OrdinalIgnoreCase);
-        public int SeenCount { get; set; }
         public int ConfirmedGroupCount { get; set; }
 
-        public ContextProfile Build() => new(
+        public ContextProfile Build(GroupProfile pivot) => new(
             Division,
-            Frequencies,
-            VectorSignals,
-            Labels,
+            pivot,
             RelatedKnownNames,
             RelatedResolvedNames,
-            SeenCount,
+            Observations.Count,
             ConfirmedGroupCount);
     }
 
@@ -957,9 +1051,9 @@ public sealed class PatternRecognitionService(
                 ParticipantId = r.ParticipantId,
                 Ordinal = r.Ordinal,
                 ObservedDate = msg?.ObservedDate ?? default,
-                Frequency = msg?.Frequency,
-                VectorSignal = msg?.VectorSignal,
-                Division = msg?.Division,
+                Frequency = SemanticValue.NormalizeMeaningfulOrNull(msg?.Frequency),
+                VectorSignal = SemanticValue.NormalizeMeaningfulOrNull(msg?.VectorSignal),
+                Division = SemanticValue.NormalizeMeaningfulOrNull(msg?.Division),
             };
         }).ToList();
 
@@ -990,23 +1084,130 @@ public sealed class PatternRecognitionService(
     }
 
     // =========================================================================
-    // Common helpers
+    // Pivot helpers
     // =========================================================================
 
-    private static bool HasOverlap(IEnumerable<string?> values, HashSet<string> normalizedSet)
+    private static Dictionary<string, int> BuildCountMap(IEnumerable<string?> values)
     {
-        if (normalizedSet.Count == 0)
-            return false;
+        var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var value in values)
         {
-            var key = NormalizeKey(value);
-            if (key is not null && normalizedSet.Contains(key))
-                return true;
+            var key = SemanticValue.NormalizeKeyOrNull(value);
+            if (key is null)
+                continue;
+
+            map[key] = map.TryGetValue(key, out var current)
+                ? current + 1
+                : 1;
         }
 
-        return false;
+        return map;
     }
+
+    private static Dictionary<string, int> BuildPairCountMap(IEnumerable<(string? Left, string? Right)> pairs)
+    {
+        var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (left, right) in pairs)
+        {
+            var key = BuildPairKey(left, right);
+            if (key is null)
+                continue;
+
+            map[key] = map.TryGetValue(key, out var current)
+                ? current + 1
+                : 1;
+        }
+
+        return map;
+    }
+
+    private static Dictionary<string, int> BuildLabelDivisionPairCountMap(IEnumerable<GroupObservationSnapshot> observations)
+    {
+        var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var observation in observations)
+        {
+            var division = SemanticValue.NormalizeKeyOrNull(observation.Division);
+            if (division is null)
+                continue;
+
+            foreach (var label in observation.Labels)
+            {
+                var labelKey = SemanticValue.NormalizeKeyOrNull(label);
+                if (labelKey is null)
+                    continue;
+
+                var pairKey = $"{labelKey}|{division}";
+                map[pairKey] = map.TryGetValue(pairKey, out var current)
+                    ? current + 1
+                    : 1;
+            }
+        }
+
+        return map;
+    }
+
+    private static string? BuildPairKey(string? left, string? right)
+    {
+        var leftKey = SemanticValue.NormalizeKeyOrNull(left);
+        var rightKey = SemanticValue.NormalizeKeyOrNull(right);
+
+        return leftKey is null || rightKey is null
+            ? null
+            : $"{leftKey}|{rightKey}";
+    }
+
+    private static double ComputeOverlapScore(
+        IReadOnlyDictionary<string, int> left,
+        IReadOnlyDictionary<string, int> right)
+    {
+        if (left.Count == 0 || right.Count == 0)
+            return 0.0;
+
+        var keys = new HashSet<string>(left.Keys, StringComparer.OrdinalIgnoreCase);
+        keys.UnionWith(right.Keys);
+
+        var numerator = 0;
+        var denominator = 0;
+
+        foreach (var key in keys)
+        {
+            var leftCount = left.TryGetValue(key, out var l) ? l : 0;
+            var rightCount = right.TryGetValue(key, out var r) ? r : 0;
+            numerator += Math.Min(leftCount, rightCount);
+            denominator += Math.Max(leftCount, rightCount);
+        }
+
+        return denominator == 0 ? 0.0 : (double)numerator / denominator;
+    }
+
+    private static double ComputeAverageNonZero(params double[] values)
+    {
+        var nonZero = values.Where(v => v > 0).ToList();
+        return nonZero.Count == 0 ? 0.0 : nonZero.Average();
+    }
+
+    private static IReadOnlyList<string> GetCommonValues(
+        IReadOnlyDictionary<string, int> pivotLeft,
+        IEnumerable<string?> originalValues,
+        int take)
+    {
+        return [.. originalValues
+            .Select(x => SemanticValue.NormalizeMeaningfulOrNull(x))
+            .Where(x => x is not null)
+            .Select(x => new { Original = x!, Key = SemanticValue.NormalizeKeyOrNull(x) })
+            .Where(x => x.Key is not null && pivotLeft.ContainsKey(x.Key))
+            .Select(x => x.Original)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .Take(take)];
+    }
+
+    // =========================================================================
+    // Common helpers
+    // =========================================================================
 
     private static HashSet<string> ToNormalizedSet(IEnumerable<string?> values)
     {
@@ -1014,7 +1215,7 @@ public sealed class PatternRecognitionService(
 
         foreach (var value in values)
         {
-            var key = NormalizeKey(value);
+            var key = SemanticValue.NormalizeKeyOrNull(value);
             if (key is not null)
                 set.Add(key);
         }
@@ -1024,24 +1225,20 @@ public sealed class PatternRecognitionService(
 
     private static bool EqualsNormalized(string? left, string? right)
     {
-        var leftKey = NormalizeKey(left);
-        var rightKey = NormalizeKey(right);
+        var leftKey = SemanticValue.NormalizeKeyOrNull(left);
+        var rightKey = SemanticValue.NormalizeKeyOrNull(right);
 
         return leftKey is not null &&
                rightKey is not null &&
                string.Equals(leftKey, rightKey, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string? NormalizeKey(string? value)
-        => string.IsNullOrWhiteSpace(value)
-            ? null
-            : value.Trim().ToUpperInvariant();
-
     private static string? GetDominantValue(IEnumerable<string?> values)
     {
         var groups = values
-            .Where(v => !string.IsNullOrWhiteSpace(v))
-            .Select(v => v!.Trim())
+            .Select(SemanticValue.NormalizeMeaningfulOrNull)
+            .Where(v => v is not null)
+            .Select(v => v!)
             .GroupBy(v => v, StringComparer.OrdinalIgnoreCase)
             .OrderByDescending(g => g.Count())
             .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)

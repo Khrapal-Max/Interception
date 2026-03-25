@@ -156,5 +156,5 @@ public class ParticipantCandidateGroup
     }
 
     private static string? NormalizeOptional(string? value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        => SemanticValue.NormalizeMeaningfulOrNull(value);
 }

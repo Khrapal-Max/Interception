@@ -6,6 +6,7 @@ using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Domain.Enums;
+using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.UI.Components.Pages.Analytics.Drawers;
@@ -77,9 +78,9 @@ public partial class CandidateGroupDrawer : ComponentBase
         if (_initialized) return;
         _initialized = true;
 
-        _confirmName = Group?.SuggestedName ?? string.Empty;
-        _confirmRole = Group?.SuggestedRole ?? string.Empty;
-        _confirmDivision = Group?.SuggestedDivision ?? string.Empty;
+        _confirmName = SemanticValue.NormalizeMeaningfulOrNull(Group?.SuggestedName) ?? string.Empty;
+        _confirmRole = SemanticValue.NormalizeMeaningfulOrNull(Group?.SuggestedRole) ?? string.Empty;
+        _confirmDivision = SemanticValue.NormalizeMeaningfulOrNull(Group?.SuggestedDivision) ?? string.Empty;
         _nameError = false;
         _serverError = null;
         _suggestions = [];
@@ -125,16 +126,16 @@ public partial class CandidateGroupDrawer : ComponentBase
     /// <summary>Клік на підказку — заповнює форму підтвердження.</summary>
     private void ApplySuggestion(KnownParticipantSuggestionDto suggestion)
     {
-        _confirmName = suggestion.Name;
-        _confirmRole = suggestion.Role ?? string.Empty;
-        _confirmDivision = suggestion.Division ?? _confirmDivision ?? string.Empty;
+        _confirmName = SemanticValue.NormalizeMeaningfulOrNull(suggestion.Name) ?? string.Empty;
+        _confirmRole = SemanticValue.NormalizeMeaningfulOrNull(suggestion.Role) ?? string.Empty;
+        _confirmDivision = SemanticValue.NormalizeMeaningfulOrNull(suggestion.Division) ?? _confirmDivision ?? string.Empty;
         _nameError = false;
     }
 
     /// <summary>Клік на контекст — не підтверджує особу, а лише підставляє підрозділ.</summary>
     private void ApplyContextSuggestion(CandidateContextSuggestionDto suggestion)
     {
-        _confirmDivision = suggestion.Division;
+        _confirmDivision = SemanticValue.NormalizeMeaningfulOrNull(suggestion.Division) ?? string.Empty;
     }
 
     private async Task ConfirmAsync()
@@ -214,12 +215,12 @@ public partial class CandidateGroupDrawer : ComponentBase
     };
 
     private static string NormalizeKey(string? value)
-        => string.IsNullOrWhiteSpace(value)
-            ? string.Empty
-            : value.Trim().ToUpperInvariant();
+        => SemanticValue.NormalizeKeyOrNull(value) ?? string.Empty;
 
     private static string? FirstNonEmpty(IEnumerable<string?> values)
-        => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))?.Trim();
+        => values
+            .Select(SemanticValue.NormalizeMeaningfulOrNull)
+            .FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
 
     private sealed class CandidateGroupFeatureRow
     {

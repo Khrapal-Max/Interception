@@ -97,13 +97,26 @@
                                         </small>
                                     </div>
                                 </div>
-                                <div class="d-flex flex-wrap gap-1">
-                                    @foreach (var label in s.CommonLabels)
+                                <div class="d-flex flex-wrap gap-3 small mb-1">
+                                    <span class="text-muted">частота @(s.Reasons.SameFrequency ? "✓" : "—")</span>
+                                    <span class="text-muted">вектор @(s.Reasons.SameVector ? "✓" : "—")</span>
+                                    <span class="text-muted">підрозділ @(s.Reasons.SameDivision ? "✓" : "—")</span>
+                                    <span class="text-muted">роль @(s.Reasons.SameRole ? "✓" : "—")</span>
+                                    @if (s.Reasons.PivotIntersection)
                                     {
-                                        <span class="badge bg-info bg-opacity-25 text-info"
-                                              style="font-size:.7rem">@label</span>
+                                        <span class="text-success">перехрестя ✓</span>
                                     }
                                 </div>
+                                @if (s.CommonLabels.Count > 0)
+                                {
+                                    <div class="d-flex flex-wrap gap-1 mb-1">
+                                        @foreach (var label in s.CommonLabels)
+                                        {
+                                            <span class="badge bg-info bg-opacity-25 text-info"
+                                                  style="font-size:.7rem">@label</span>
+                                        }
+                                    </div>
+                                }
                                 @if (s.SeenCount > 1)
                                 {
                                     <small class="text-muted d-block">
@@ -141,10 +154,19 @@
                                     </div>
                                 </div>
 
+                                @if (!string.IsNullOrWhiteSpace(s.SuggestedRole))
+                                {
+                                    <small class="text-muted d-block mb-1">роль контексту: @s.SuggestedRole</small>
+                                }
                                 <div class="d-flex flex-wrap gap-3 small mb-1">
                                     <span class="text-muted">частота @(s.Reasons.SameFrequency ? "✓" : "—")</span>
                                     <span class="text-muted">вектор @(s.Reasons.SameVector ? "✓" : "—")</span>
                                     <span class="text-muted">підрозділ @(s.Reasons.SameDivision ? "✓" : "—")</span>
+                                    <span class="text-muted">роль @(s.Reasons.SameRole ? "✓" : "—")</span>
+                                    @if (s.Reasons.PivotIntersection)
+                                    {
+                                        <span class="text-success">перехрестя ✓</span>
+                                    }
                                     @if (s.Reasons.HasConfirmedContext)
                                     {
                                         <span class="text-success">є підтверджені ✓</span>

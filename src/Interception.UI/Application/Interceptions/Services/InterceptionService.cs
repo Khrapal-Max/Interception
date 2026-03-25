@@ -186,26 +186,49 @@ public sealed class InterceptionService(
 
         if (unknownParticipantIds.Count > 0)
         {
-            // Confirmed групи — overlay з ✓
-            var confirmed = await db.ParticipantCandidateGroups
+            // Confirmed — overlay з ✓
+            // Беремо Name з ResolvedParticipant (не SuggestedName з групи):
+            // після підтвердження редагування ResolvedParticipant одразу
+            // відображається в реєстрі без повторного аналізу.
+            var confirmedGroups = await db.ParticipantCandidateGroups
                 .Where(g => g.Status == Domain.Enums.CandidateGroupStatus.Confirmed
-                         && g.SuggestedName != null)
+                         && g.ResolvedParticipantId != null)
+                .OrderByDescending(g => g.ConfidenceScore)
                 .AsNoTracking()
                 .ToListAsync(ct);
 
-            foreach (var g in confirmed)
-                foreach (var r in g.ParticipantRefs.Where(r => unknownParticipantIds.Contains(r.ParticipantId)))
-                    overlayMap.TryAdd(r.ParticipantId, (g.SuggestedName!, true));
+            if (confirmedGroups.Count > 0)
+            {
+                var resolvedIds = confirmedGroups
+                    .Select(g => g.ResolvedParticipantId!.Value)
+                    .ToHashSet();
 
-            // Open групи — overlay з ?
-            var open = await db.ParticipantCandidateGroups
+                var resolvedNames = await db.ResolvedParticipants
+                    .Where(r => resolvedIds.Contains(r.Id))
+                    .AsNoTracking()
+                    .ToDictionaryAsync(r => r.Id, r => r.Name, ct);
+
+                foreach (var g in confirmedGroups)
+                {
+                    if (!resolvedNames.TryGetValue(g.ResolvedParticipantId!.Value, out var name))
+                        continue;
+                    foreach (var r in g.ParticipantRefs
+                        .Where(r => unknownParticipantIds.Contains(r.ParticipantId)))
+                        overlayMap.TryAdd(r.ParticipantId, (name, true));
+                }
+            }
+
+            // Open групи — overlay з ? (найвпевненіша якщо раптом кілька)
+            var openGroups = await db.ParticipantCandidateGroups
                 .Where(g => g.Status == Domain.Enums.CandidateGroupStatus.Open
                          && g.SuggestedName != null)
+                .OrderByDescending(g => g.ConfidenceScore)
                 .AsNoTracking()
                 .ToListAsync(ct);
 
-            foreach (var g in open)
-                foreach (var r in g.ParticipantRefs.Where(r => unknownParticipantIds.Contains(r.ParticipantId)))
+            foreach (var g in openGroups)
+                foreach (var r in g.ParticipantRefs
+                    .Where(r => unknownParticipantIds.Contains(r.ParticipantId)))
                     overlayMap.TryAdd(r.ParticipantId, (g.SuggestedName!, false));
         }
 

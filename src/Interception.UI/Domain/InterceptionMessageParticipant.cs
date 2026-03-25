@@ -2,6 +2,8 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
+using Interception.UI.Extensions;
+
 namespace Interception.UI.Domain;
 
 public class InterceptionMessageParticipant
@@ -76,5 +78,5 @@ public class InterceptionMessageParticipant
     }
 
     private static string? NormalizeOptional(string? value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        => SemanticValue.NormalizeMeaningfulOrNull(value);
 }

@@ -6,6 +6,7 @@ using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
+using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,13 +36,17 @@ public sealed class ResolvedParticipantService(
             throw new InvalidOperationException(
                 $"Неможливо підтвердити групу зі статусом '{group.Status}'.");
 
+        var normalizedName = form.Name.Trim();
+        var normalizedRole = SemanticValue.NormalizeMeaningfulOrNull(form.Role);
+        var normalizedDivision = SemanticValue.NormalizeMeaningfulOrNull(form.Division);
+
         // Перевіряємо чи ім'я вже зайняте
         var nameExists = await db.ResolvedParticipants
-            .AnyAsync(r => r.Name == form.Name.Trim(), ct);
+            .AnyAsync(r => r.Name == normalizedName, ct);
 
         if (nameExists)
             throw new InvalidOperationException(
-                $"Встановлена особа з ім'ям '{form.Name.Trim()}' вже існує.");
+                $"Встановлена особа з ім'ям '{normalizedName}' вже існує.");
 
         // Автоматично відхиляємо всі інші Open групи що містять тих самих НВ.
         // Після підтвердження вони не мають сенсу — НВ вже ідентифіковані.
@@ -60,17 +65,18 @@ public sealed class ResolvedParticipantService(
 
         // Створюємо ResolvedParticipant
         var resolved = ResolvedParticipant.Create(
-            name: form.Name,
+            name: normalizedName,
             confirmedBy: operatorName,
-            role: form.Role,
-            division: form.Division);
+            role: normalizedRole,
+            division: normalizedDivision);
 
         db.ResolvedParticipants.Add(resolved);
 
-        // Підтверджуємо групу і прив'язуємо
-        group.Confirm(form.Name, operatorName, resolved.Id);
-        group.UpdateSuggestedRole(form.Role);
-        group.UpdateSuggestedDivision(form.Division);
+        // Спочатку оновлюємо suggestion-поля поки група ще Open,
+        // потім переводимо її у Confirmed і прив'язуємо встановлену особу.
+        group.UpdateSuggestedRole(normalizedRole);
+        group.UpdateSuggestedDivision(normalizedDivision);
+        group.Confirm(normalizedName, operatorName, resolved.Id);
 
         await db.SaveChangesAsync(ct);
 
@@ -129,15 +135,19 @@ public sealed class ResolvedParticipantService(
             ?? throw new InvalidOperationException(
                 $"Встановлену особу '{id}' не знайдено.");
 
+        var normalizedName = form.Name.Trim();
+        var normalizedRole = SemanticValue.NormalizeMeaningfulOrNull(form.Role);
+        var normalizedDivision = SemanticValue.NormalizeMeaningfulOrNull(form.Division);
+
         // Перевіряємо конфлікт імені з іншими
         var nameConflict = await db.ResolvedParticipants
-            .AnyAsync(r => r.Name == form.Name.Trim() && r.Id != id, ct);
+            .AnyAsync(r => r.Name == normalizedName && r.Id != id, ct);
 
         if (nameConflict)
             throw new InvalidOperationException(
-                $"Встановлена особа з ім'ям '{form.Name.Trim()}' вже існує.");
+                $"Встановлена особа з ім'ям '{normalizedName}' вже існує.");
 
-        resolved.Update(form.Name, form.Role, form.Division);
+        resolved.Update(normalizedName, normalizedRole, normalizedDivision);
         await db.SaveChangesAsync(ct);
 
         return MapToDto(resolved);

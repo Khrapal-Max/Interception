@@ -13,7 +13,7 @@ public sealed class KnownParticipantSuggestionDto
     /// <summary>Позивний відомого учасника.</summary>
     public string Name { get; init; } = default!;
 
-    /// <summary>Остання відома роль.</summary>
+    /// <summary>Домінуюча / найчастіша роль кандидата.</summary>
     public string? Role { get; init; }
 
     /// <summary>Домінуючий підрозділ кандидата.</summary>
@@ -28,7 +28,7 @@ public sealed class KnownParticipantSuggestionDto
     /// <summary>Спільні мітки — ключові слова що зустрічались разом.</summary>
     public IReadOnlyList<string> CommonLabels { get; init; } = [];
 
-    /// <summary>Скільки разів зустрічався в повідомленнях з тими самими ознаками.</summary>
+    /// <summary>Скільки разів учасник зустрічався в історії.</summary>
     public int SeenCount { get; init; }
 }
 
@@ -38,16 +38,20 @@ public sealed class KnownSuggestionReasonsDto
     public bool SameFrequency { get; init; }
     public bool SameVector { get; init; }
     public bool SameDivision { get; init; }
+    public bool SameRole { get; init; }
     public bool CloseInTime { get; init; }
     public bool SharedLabels { get; init; }
+    public bool PivotIntersection { get; init; }
 
     /// <summary>Кількість активних причин — корисно для secondary sort.</summary>
     public int MatchCount =>
         (SameFrequency ? 1 : 0) +
         (SameVector ? 1 : 0) +
         (SameDivision ? 1 : 0) +
+        (SameRole ? 1 : 0) +
         (CloseInTime ? 1 : 0) +
-        (SharedLabels ? 1 : 0);
+        (SharedLabels ? 1 : 0) +
+        (PivotIntersection ? 1 : 0);
 
     public IReadOnlyList<string> ActiveReasons
     {
@@ -57,8 +61,10 @@ public sealed class KnownSuggestionReasonsDto
             if (SameFrequency) list.Add("однакова частота");
             if (SameVector) list.Add("однаковий вектор");
             if (SameDivision) list.Add("однаковий підрозділ");
+            if (SameRole) list.Add("схожа роль");
             if (CloseInTime) list.Add("близько в часі");
             if (SharedLabels) list.Add("спільні мітки");
+            if (PivotIntersection) list.Add("сталі перехрестя ознак");
             return list;
         }
     }
