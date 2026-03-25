@@ -208,6 +208,9 @@ public sealed class PatternRecognitionService(
                     if (assigned.Contains(newCandidate.ParticipantId))
                         continue;
 
+                    if (HasSameObservationMember(newCandidate, groupContexts))
+                        continue;
+
                     var (Score, Reasons) = ComputeGroupFit(newCandidate, groupContexts);
                     if (Score < _opts.MinConfidenceScore)
                         continue;
@@ -261,6 +264,9 @@ public sealed class PatternRecognitionService(
             for (var j = i + 1; j < remainingCandidates.Count; j++)
             {
                 if (newAssigned.Contains(remainingCandidates[j].ParticipantId))
+                    continue;
+
+                if (HasSameObservationMember(remainingCandidates[j], group))
                     continue;
 
                 var (Score, Reasons) = ComputeGroupFit(remainingCandidates[j], group);
@@ -462,6 +468,11 @@ public sealed class PatternRecognitionService(
         });
     }
 
+    private static bool HasSameObservationMember(
+        UnknownContext candidate,
+        IEnumerable<UnknownContext> members) =>
+        members.Any(x => x.MessageId == candidate.MessageId);
+
     /// <summary>
     /// Перевіряє, наскільки кандидат підходить до вже зібраної групи.
     /// Кандидат має співпадати хоча б з половиною членів групи
@@ -472,6 +483,9 @@ public sealed class PatternRecognitionService(
         List<UnknownContext> members)
     {
         if (members.Count == 0)
+            return (0.0, new PatternMatchReasons());
+
+        if (HasSameObservationMember(candidate, members))
             return (0.0, new PatternMatchReasons());
 
         var results = members
@@ -509,8 +523,16 @@ public sealed class PatternRecognitionService(
         for (var i = 0; i < members.Count; i++)
         {
             for (var j = i + 1; j < members.Count; j++)
+            {
+                if (members[i].MessageId == members[j].MessageId)
+                    continue;
+
                 pairResults.Add(ComputeScore(members[i], members[j]));
+            }
         }
+
+        if (pairResults.Count == 0)
+            return (0.0, new PatternMatchReasons());
 
         return (
             pairResults.Average(x => x.Score),

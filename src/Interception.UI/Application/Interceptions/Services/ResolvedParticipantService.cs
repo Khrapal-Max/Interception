@@ -36,6 +36,17 @@ public sealed class ResolvedParticipantService(
             throw new InvalidOperationException(
                 $"Неможливо підтвердити групу зі статусом '{group.Status}'.");
 
+        var duplicateObservationIds = group.ParticipantRefs
+            .GroupBy(r => r.MessageId)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicateObservationIds.Count > 0)
+            throw new InvalidOperationException(
+                "Неможливо підтвердити групу: вона містить кілька НВ з одного спостереження. " +
+                "Спершу перерахуйте групи після оновлення логіки або розділіть цей кейс вручну.");
+
         var normalizedName = form.Name.Trim();
         var normalizedRole = SemanticValue.NormalizeMeaningfulOrNull(form.Role);
         var normalizedDivision = SemanticValue.NormalizeMeaningfulOrNull(form.Division);
