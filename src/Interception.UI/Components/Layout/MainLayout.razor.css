@@ -1,15 +1,13 @@
 .page {
-    /* Narrow sidebar for icon-only buttons:
-       width = button (44px) + left/right padding (0.5rem + 0.5rem) */
-    --sidebar-width: 64px;
-    --top-row-height: 3rem;
+    --sidebar-width: 70px;
+    --top-row-height: 3.25rem;
     position: relative;
     display: flex;
     flex-direction: row;
     min-height: 100vh;
     height: 100vh;
     overflow: hidden;
-    background-image: linear-gradient(180deg, #f3f4f6 0%, #e6e8ee 100%);
+    background: #20252b;
 }
 
 main {
@@ -28,7 +26,8 @@ main {
     height: 100vh;
     position: sticky;
     top: 0;
-    background-image: linear-gradient(180deg, #2b2f33 0%, #1f2226 100%);
+    background: #171b20;
+    border-right: 1px solid #343c46;
     display: flex;
     flex-direction: column;
 }
@@ -38,11 +37,12 @@ main {
     flex: 0 0 var(--top-row-height);
     display: flex;
     align-items: center;
-    background-image: linear-gradient(180deg, #f7f7f9 0%, #eceef2 100%);
-    border-bottom: 1px solid rgba(0,0,0,0.08);
+    background: #1d2227;
+    border-bottom: 1px solid #343c46;
     position: sticky;
     top: 0;
     z-index: 1;
+    color: #f1f4f7;
 }
 
 .content {
@@ -50,47 +50,63 @@ main {
     min-height: 0;
     min-width: 0;
     overflow: hidden;
-    padding-top: .5rem;
-    padding-bottom: .5rem;
+    padding-top: .75rem;
+    padding-bottom: .75rem;
 }
 
-    .content > * {
-        flex: 1 1 auto;
-        min-height: 0;
-        min-width: 0;
-    }
+.content > * {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+}
 
 .top-title {
     font-weight: 700;
-    letter-spacing: 0.02em;
-    color: rgba(0,0,0,0.78);
+    letter-spacing: .04em;
+    color: #edf1f4;
 }
 
-/* Error UI - acceptable on light background */
+.brand-mark {
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: .45rem;
+    background: #2b3239;
+    border: 1px solid #434c57;
+    color: #dfe5ea;
+}
+
+.brand-raven {
+    width: 1.35rem;
+    height: 1.35rem;
+    display: block;
+}
+
 #blazor-error-ui {
-    color-scheme: light only;
-    background: #fff3cd;
+    color-scheme: dark only;
+    background: #7b2d2d;
     bottom: 0;
-    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.35);
     box-sizing: border-box;
     display: none;
     left: 0;
-    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    padding: .6rem 1.25rem .7rem 1.25rem;
     position: fixed;
     width: 100%;
     z-index: 1000;
 }
 
-    #blazor-error-ui .dismiss {
-        cursor: pointer;
-        position: absolute;
-        right: 0.75rem;
-        top: 0.5rem;
-    }
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: .75rem;
+    top: .5rem;
+}
 
-/* Slightly wider on very small screens if you want more comfortable tapping */
 @media (max-width: 420px) {
     .page {
-        --sidebar-width: 72px;
+        --sidebar-width: 74px;
     }
 }

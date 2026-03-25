@@ -4,9 +4,8 @@
 
 <PageTitle>Каталог дій</PageTitle>
 
-<div class="d-flex flex-column h-100">
+<div class="page-shell">
 
-    <!-- Toolbar -->
     <div class="registry-toolbar flex-shrink-0">
         <div class="d-flex align-items-center gap-2">
             <button class="btn btn-primary btn-sm" @onclick="OpenCreate">
@@ -21,33 +20,34 @@
         </div>
     </div>
 
-    <!-- Список -->
-    <div class="flex-grow-1 overflow-auto">
+    <div class="page-panel">
         @if (_loading)
         {
-            <div class="text-center py-5 text-muted">
-                <div class="spinner-border spinner-border-sm me-2"></div>Завантаження...
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-sm me-2"></div>Завантаження...
+                </div>
             </div>
         }
         else if (_actions is null || _actions.Count == 0)
         {
-            <div class="text-center py-5 text-muted">
-                <i class="bi bi-collection fs-1 d-block mb-2 opacity-25"></i>
-                <div>Дій ще немає</div>
-                <button class="btn btn-link btn-sm mt-1" @onclick="OpenCreate">
-                    Додати першу дію
-                </button>
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <i class="bi bi-collection fs-1 d-block mb-2 opacity-25"></i>
+                    <div>Дій ще немає</div>
+                    <button class="btn btn-link btn-sm mt-2" @onclick="OpenCreate">Додати першу дію</button>
+                </div>
             </div>
         }
         else
         {
-            <div class="table-responsive" style="max-height: calc(100vh - 120px)">
-                <table class="table table-success table-hover align-middle">
-                    <thead class="sticky-top">
+            <div class="table-wrap">
+                <table class="table table-sm align-middle data-table">
+                    <thead>
                         <tr>
                             <th>Назва</th>
                             <th>Опис</th>
-                            <th style="width:64px"></th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -65,8 +65,8 @@
                                         @action.Description
                                     }
                                 </td>
-                                <td class="text-end pe-2">
-                                    <button class="btn btn-outline-secondary btn-sm py-0 px-1"
+                                <td class="text-end pe-2 text-nowrap">
+                                    <button class="btn btn-secondary btn-sm"
                                             title="Редагувати"
                                             @onclick="() => OpenEdit(action)">
                                         <i class="bi bi-pencil"></i>

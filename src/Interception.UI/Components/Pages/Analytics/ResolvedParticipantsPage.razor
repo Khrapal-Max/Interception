@@ -1,14 +1,12 @@
 @page "/analytics/resolved"
-@using Interception.UI.Application.Interceptions.Abstractions
 @using Interception.UI.Application.Interceptions.Dtos
 @using Interception.UI.Components.Pages.Analytics.Drawers
 @namespace Interception.UI.Components.Pages.Analytics
 
 <PageTitle>Встановлені особи</PageTitle>
 
-<div class="d-flex flex-column h-100">
+<div class="page-shell">
 
-    <!-- Toolbar -->
     <div class="registry-toolbar flex-shrink-0">
         <div class="registry-toolbar-meta">
             @if (_participants is not null)
@@ -16,77 +14,70 @@
                 <span>Всього: <strong>@_participants.Count</strong></span>
             }
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <a href="/analytics/candidates" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-person-question-mark me-1"></i>Кандидати
-            </a>
-        </div>
     </div>
 
-    <!-- Список -->
-    <div class="flex-grow-1 overflow-auto">
+    <div class="page-panel">
         @if (_loading)
         {
-            <div class="text-center py-5 text-muted">
-                <div class="spinner-border spinner-border-sm me-2"></div>Завантаження...
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-sm me-2"></div>Завантаження...
+                </div>
             </div>
         }
         else if (_participants is null || _participants.Count == 0)
         {
-            <div class="text-center py-5 text-muted">
-                <i class="bi bi-person-check fs-1 d-block mb-2 opacity-25"></i>
-                <div>Встановлених осіб ще немає</div>
-                <div class="small mt-1">
-                    Підтвердіть групи кандидатів на сторінці
-                    <a href="/analytics/candidates">аналітики</a>
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <i class="bi bi-person-check fs-1 d-block mb-2 opacity-25"></i>
+                    <div>Підтверджених осіб ще немає</div>
+                    <div class="small mt-1">Підтвердження виконуються на сторінці <a href="/analytics/candidates">аналітики</a></div>
                 </div>
             </div>
         }
         else
         {
-            <table class="table table-dark table-hover table-sm align-middle mb-0">
-                <thead>
-                    <tr class="border-bottom border-secondary">
-                        <th class="fw-normal text-secondary small text-uppercase py-2">Позивний</th>
-                        <th class="fw-normal text-secondary small text-uppercase py-2">Роль</th>
-                        <th class="fw-normal text-secondary small text-uppercase py-2">Підрозділ</th>
-                        <th class="fw-normal text-secondary small text-uppercase py-2">Підтверджено</th>
-                        <th style="width:64px"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var p in _participants)
-                    {
-                        var participant = p;
-                        <tr class="border-bottom border-secondary border-opacity-25">
-                            <td class="fw-medium">@participant.Name</td>
-                            <td class="small text-muted">@(participant.Role ?? "—")</td>
-                            <td class="small text-muted">
-                                <span class="text-truncate d-block" style="max-width:200px"
-                                      title="@participant.Division">
-                                    @(participant.Division ?? "—")
-                                </span>
-                            </td>
-                            <td class="small text-muted text-nowrap">
-                                @participant.ConfirmedBy · @participant.ConfirmedAt.ToString("dd.MM.yy")
-                            </td>
-                            <td class="text-end pe-2">
-                                <button class="btn btn-sm btn-outline-light py-0 px-2"
-                                        title="Редагувати"
-                                        @onclick="() => OpenEdit(participant)">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                            </td>
+            <div class="table-wrap">
+                <table class="table table-sm align-middle data-table">
+                    <thead>
+                        <tr>
+                            <th>Позивний</th>
+                            <th>Роль</th>
+                            <th>Підрозділ</th>
+                            <th>Підтверджено</th>
+                            <th></th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in _participants)
+                        {
+                            var participant = p;
+                            <tr>
+                                <td class="fw-medium">@participant.Name</td>
+                                <td class="small text-muted">@(participant.Role ?? "—")</td>
+                                <td class="small text-muted">
+                                    <span class="text-truncate d-block" style="max-width: 200px" title="@participant.Division">
+                                        @(participant.Division ?? "—")
+                                    </span>
+                                </td>
+                                <td class="small text-muted text-nowrap">@participant.ConfirmedBy · @participant.ConfirmedAt.ToString("dd.MM.yy")</td>
+                                <td class="text-end pe-2 text-nowrap">
+                                    <button class="btn btn-secondary btn-sm"
+                                            title="Редагувати"
+                                            @onclick="() => OpenEdit(participant)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
     </div>
 
 </div>
 
-<!-- Дравер редагування -->
 <ResolvedParticipantDrawer @bind-IsOpen="_drawerOpen"
-                            Participant="_editingParticipant"
-                            OnSaved="LoadAsync" />
+                           Participant="_editingParticipant"
+                           OnSaved="LoadAsync" />

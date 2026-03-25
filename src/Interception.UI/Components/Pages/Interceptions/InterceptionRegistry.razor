@@ -2,55 +2,63 @@
 
 <PageTitle>Реєстр спостережень</PageTitle>
 
-<div class="d-flex flex-column h-100">
+<div class="page-shell">
 
-    <!-- Toolbar -->
     <div class="registry-toolbar flex-shrink-0">
-        <div class="d-flex ms-auto align-items-center gap-2">
-            <button class="btn btn-warning btn-sm" @onclick="OpenTextBlock">
+        <div class="registry-toolbar-meta d-flex align-items-center gap-2 flex-wrap">
+            @if (_pagedResult is not null)
+            {
+                <span>Записів: <strong>@_pagedResult.TotalCount</strong></span>
+            }
+            @if (HasActiveFilter)
+            {
+                <span class="badge text-bg-warning">Фільтр активний</span>
+            }
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+            <button class="btn btn-secondary btn-sm" @onclick="OpenTextBlock">
                 <i class="bi bi-text-paragraph me-1"></i>З тексту
             </button>
             <button class="btn btn-primary btn-sm" @onclick="OpenCreate">
                 <i class="bi bi-plus-lg me-1"></i>Додати
             </button>
-            <button class="btn btn-outline-secondary btn-sm" @onclick="OpenFilter">
+            <button class="btn btn-light btn-sm" @onclick="OpenFilter">
                 <i class="bi bi-funnel me-1"></i>Фільтр
-                @if (HasActiveFilter)
-                {
-                    <span class="badge bg-warning text-dark ms-1">●</span>
-                }
             </button>
-            <button class="btn btn-outline-secondary btn-sm" @onclick="OpenImport">
+            <button class="btn btn-light btn-sm" @onclick="OpenImport">
                 <i class="bi bi-upload me-1"></i>Імпорт
             </button>
         </div>
     </div>
 
-    <!-- Таблиця -->
-    <div class="flex-grow-1 overflow-auto">
+    <div class="page-panel">
         @if (_loading)
         {
-            <div class="text-center py-5 text-muted">
-                <div class="spinner-border spinner-border-sm me-2"></div>Завантаження...
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-sm me-2"></div>Завантаження...
+                </div>
             </div>
         }
         else if (_pagedResult is null || _pagedResult.TotalCount == 0)
         {
-            <div class="text-center py-5 text-muted">
-                <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
-                <div>Записів не знайдено</div>
-                @if (HasActiveFilter)
-                {
-                    <button class="btn btn-link btn-sm mt-1" @onclick="ResetFilter">
-                        Скинути фільтр
-                    </button>
-                }
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
+                    <div>Записів не знайдено</div>
+                    @if (HasActiveFilter)
+                    {
+                        <button class="btn btn-link btn-sm mt-2" @onclick="ResetFilter">
+                            Скинути фільтр
+                        </button>
+                    }
+                </div>
             </div>
         }
         else
         {
-            <div class="table-responsive" style="max-height: calc(100vh - 200px)">
-                <table class="table table-success table-hover align-middle">
+            <div class="table-wrap">
+                <table class="table table-sm align-middle data-table">
                     <thead>
                         <tr>
                             <th>Дата / Час</th>
@@ -66,37 +74,32 @@
                         @foreach (var item in _pagedResult.Items)
                         {
                             <tr>
-                                <td class="text-nowrap">
-                                    @item.ObservedDate.ToString("dd.MM.yy HH:mm")
-                                </td>
+                                <td class="text-nowrap">@item.ObservedDate.ToString("dd.MM.yy HH:mm")</td>
                                 <td>@(item.Frequency ?? "—")</td>
+                                <td>@(item.Division ?? "—")</td>
                                 <td>
-                                    @(item.Division ?? "—")
-                                </td>
-                                <td>
-                                    <span class="text-truncate d-block" style="max-width:180px"
-                                          title="@item.VectorSignal">
+                                    <span class="text-truncate d-block" style="max-width: 16rem" title="@item.VectorSignal">
                                         @(item.VectorSignal ?? "—")
                                     </span>
                                 </td>
                                 <td>
-                                    @foreach (var pt in item.Participants.OrderBy(x => x.Ordinal))
-                                    {
-                                        <span class="badge @(pt.IsUnknown ? "bg-secondary" : "bg-primary") me-1">
-                                            @pt.DisplayName
-                                        </span>
-                                    }
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach (var pt in item.Participants.OrderBy(x => x.Ordinal))
+                                        {
+                                            <span class="badge @(pt.IsUnknown ? "bg-secondary" : "bg-primary")">
+                                                @pt.DisplayName
+                                            </span>
+                                        }
+                                    </div>
                                 </td>
-                                <td>
-                                    @(item.ActionName ?? "—")
-                                </td>
-                                <td class="text-end p-2">
-                                    <button class="btn btn-secondary"
+                                <td>@(item.ActionName ?? "—")</td>
+                                <td class="text-end p-2 text-nowrap">
+                                    <button class="btn btn-secondary btn-sm me-1"
                                             title="Редагувати"
                                             @onclick="() => OpenEdit(item.Id)">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-danger"
+                                    <button class="btn btn-danger btn-sm"
                                             title="Видалити"
                                             @onclick="() => DeleteAsync(item.Id, item.ObservedDate)">
                                         <i class="bi bi-trash"></i>
@@ -108,41 +111,34 @@
                 </table>
             </div>
 
-            <!-- Пагінація -->
-            @if (_pagedResult?.TotalPages > 1)
+            @if (_pagedResult.TotalPages > 1)
             {
-                <nav class="d-flex justify-content-center py-2">
+                <nav class="pagination-strip">
+                    <div class="pagination-summary">
+                        Сторінка <strong>@_currentPage</strong> з <strong>@_pagedResult.TotalPages</strong>
+                    </div>
                     <ul class="pagination pagination-sm mb-0">
                         <li class="page-item @(!_pagedResult.HasPreviousPage ? "disabled" : "")">
-                            <button class="page-link"
-                                    @onclick="() => GoToPageAsync(_currentPage - 1)">
-                                ‹
-                            </button>
+                            <button class="page-link" @onclick="() => GoToPageAsync(_currentPage - 1)">‹</button>
                         </li>
-                        @for (var i = 1; i <= _pagedResult.TotalPages; i++)
+                        @foreach (var page in GetVisiblePages())
                         {
-                            var pageNum = i;
-                            <li class="page-item @(pageNum == _currentPage ? "active" : "")">
-                                <button class="page-link"
-                                        @onclick="() => GoToPageAsync(pageNum)">
-                                    @pageNum
-                                </button>
-                            </li>
+                            if (page.HasValue)
+                            {
+                                var pageNum = page.Value;
+                                <li class="page-item @(pageNum == _currentPage ? "active" : "")">
+                                    <button class="page-link" @onclick="() => GoToPageAsync(pageNum)">@pageNum</button>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="page-item disabled"><span class="page-link">…</span></li>
+                            }
                         }
                         <li class="page-item @(!_pagedResult.HasNextPage ? "disabled" : "")">
-                            <button class="page-link"
-                                    @onclick="() => GoToPageAsync(_currentPage + 1)">
-                                ›
-                            </button>
+                            <button class="page-link" @onclick="() => GoToPageAsync(_currentPage + 1)">›</button>
                         </li>
                     </ul>
-
-                    <div class="registry-toolbar-meta">
-                        @if (_pagedResult is not null)
-                        {
-                            <span>Записів: <strong>@_pagedResult.TotalCount</strong></span>
-                        }
-                    </div>
                 </nav>
             }
         }
@@ -150,7 +146,6 @@
 
 </div>
 
-<!-- Дравери — IsOpen/IsOpenChanged binding -->
 <InterceptionFormDrawer @bind-IsOpen="_formOpen"
                         EditingId="_editingId"
                         OnSaved="LoadPageAsync" />

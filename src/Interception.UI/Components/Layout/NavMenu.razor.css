@@ -1,9 +1,8 @@
 .nav-buttons {
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
-    /* Sidebar width is narrow: keep equal side padding */
-    padding: 0.75rem 0.5rem;
+    gap: .5rem;
+    padding: .75rem .5rem;
 }
 
 .nav-btn {
@@ -14,42 +13,42 @@
     justify-content: center;
     text-decoration: none;
     user-select: none;
-    border-radius: 8px; /* slightly angular */
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.92);
+    border-radius: .45rem;
+    border: 1px solid #343c46;
+    background: #20252b;
+    color: #cfd6dd;
 }
 
 .nav-icon {
     width: 32px;
     height: 32px;
-    border-radius: 8px;
+    border-radius: .4rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.18);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.92);
+    background: #2a3036;
+    border: 1px solid #3d4650;
+    color: #dfe5ea;
 }
 
 .nav-btn:hover {
-    background: rgba(255, 255, 255, 0.10);
-    border-color: rgba(255, 255, 255, 0.14);
-    color: #ffffff;
+    background: #2a3036;
+    border-color: #48535f;
+    color: #f2f5f8;
 }
 
 .nav-btn:focus-visible {
-    outline: 2px solid rgba(255, 255, 255, 0.55);
+    outline: 2px solid rgba(109, 125, 77, .55);
     outline-offset: 2px;
 }
 
 .nav-btn.active {
-    background: rgba(255, 255, 255, 0.16);
-    border-color: rgba(255, 255, 255, 0.28);
-    color: #ffffff;
+    background: #2b3228;
+    border-color: #6d7d4d;
+    color: #f2f5f8;
 }
 
-    .nav-btn.active .nav-icon {
-        background: rgba(255, 255, 255, 0.10);
-        border-color: rgba(255, 255, 255, 0.18);
-    }
+.nav-btn.active .nav-icon {
+    background: #36402d;
+    border-color: #6d7d4d;
+}

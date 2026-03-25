@@ -73,8 +73,44 @@ public partial class CandidatesPage : ComponentBase
 
     private async Task GoToPageAsync(int page)
     {
-        _currentPage = page;
+        if (_pagedResult is null)
+            return;
+
+        _currentPage = Math.Clamp(page, 1, Math.Max(1, _pagedResult.TotalPages));
         await LoadPageAsync();
+    }
+
+    private IEnumerable<int?> GetVisiblePages()
+    {
+        if (_pagedResult is null || _pagedResult.TotalPages <= 1)
+            yield break;
+
+        var total = _pagedResult.TotalPages;
+        var current = _currentPage;
+
+        if (total <= 7)
+        {
+            for (var i = 1; i <= total; i++)
+                yield return i;
+
+            yield break;
+        }
+
+        yield return 1;
+
+        var start = Math.Max(2, current - 1);
+        var end = Math.Min(total - 1, current + 1);
+
+        if (start > 2)
+            yield return null;
+
+        for (var i = start; i <= end; i++)
+            yield return i;
+
+        if (end < total - 1)
+            yield return null;
+
+        yield return total;
     }
 
     private async Task SwitchTabAsync(CandidateGroupStatus status)
