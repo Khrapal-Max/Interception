@@ -207,9 +207,12 @@ h1:focus { outline: none; }
     min-height: 0;
     flex: 1 1 auto;
     overflow: auto;
+    border-radius: .5rem;
+    padding: .0rem .75rem;
 }
 .table-wrap .table {
     margin-bottom: 0;
+    min-width: 100%;
 }
 .data-table {
     --bs-table-bg: #2a3036;
@@ -232,14 +235,27 @@ h1:focus { outline: none; }
     text-transform: uppercase;
     border-bottom: 1px solid #454f5a;
     white-space: nowrap;
+    padding: .9rem .95rem;
+    vertical-align: middle;
 }
 .data-table tbody td {
     border-color: #3b444d;
+    padding: .8rem .95rem;
+    vertical-align: middle;
+}
+.data-table thead th:first-child,
+.data-table tbody td:first-child {
+    padding-left: 1rem;
+}
+.data-table thead th:last-child,
+.data-table tbody td:last-child {
+    padding-right: 1rem;
 }
 
 .pagination-strip {
     flex: 0 0 auto;
-    border-top: 1px solid #3d4650;
+    border: 1px solid #3d4650;
+    border-radius: .5rem;
     background: #22282e;
     display: flex;
     justify-content: space-between;
@@ -247,6 +263,7 @@ h1:focus { outline: none; }
     gap: .75rem;
     padding: .625rem .75rem;
     flex-wrap: wrap;
+    margin: 0 .75rem .75rem;
 }
 .pagination-summary {
     color: #9ea7b1;
