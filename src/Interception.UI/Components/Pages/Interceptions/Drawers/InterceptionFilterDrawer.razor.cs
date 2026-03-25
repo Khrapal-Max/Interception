@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Interceptions.Abstractions.Registry;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
@@ -11,7 +11,7 @@ namespace Interception.UI.Components.Pages.Interceptions.Drawers;
 
 public partial class InterceptionFilterDrawer : ComponentBase
 {
-    [Inject] private IInterceptionService InterceptionService { get; set; } = default!;
+    [Inject] private IInterceptionSuggestionService InterceptionSuggestionService { get; set; } = default!;
 
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
@@ -39,7 +39,7 @@ public partial class InterceptionFilterDrawer : ComponentBase
         _frequencySuggestions = await GetFrequencyStringsAsync();
 
         // Якщо фільтр вже має частоту — підвантажуємо вектори для неї
-        _vectorSuggestions = await InterceptionService
+        _vectorSuggestions = await InterceptionSuggestionService
             .GetVectorSignalSuggestionsAsync(frequency: _model.Frequency);
     }
 
@@ -72,7 +72,7 @@ public partial class InterceptionFilterDrawer : ComponentBase
         _freqOpen = false;
 
         // Оновлюємо вектори контекстно для вибраної частоти
-        _vectorSuggestions = await InterceptionService
+        _vectorSuggestions = await InterceptionSuggestionService
             .GetVectorSignalSuggestionsAsync(frequency: freq);
     }
 
@@ -84,7 +84,7 @@ public partial class InterceptionFilterDrawer : ComponentBase
     {
         _model.VectorSignal = e.Value?.ToString();
         _vecOpen = true;
-        _vectorSuggestions = await InterceptionService
+        _vectorSuggestions = await InterceptionSuggestionService
             .GetVectorSignalSuggestionsAsync(
                 query: _model.VectorSignal,
                 frequency: _model.Frequency);
@@ -134,7 +134,7 @@ public partial class InterceptionFilterDrawer : ComponentBase
 
     private async Task<IReadOnlyList<string>> GetFrequencyStringsAsync(string? query = null)
     {
-        var suggestions = await InterceptionService.GetFrequencyWithDivisionAsync(query);
+        var suggestions = await InterceptionSuggestionService.GetFrequencyWithDivisionAsync(query);
         return [.. suggestions.Select(s => s.Frequency)];
     }
 

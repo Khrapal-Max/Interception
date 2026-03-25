@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Interceptions.Abstractions.Registry;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Interceptions.TextBlock;
 using Interception.UI.Application.Toasts;
@@ -14,7 +14,7 @@ namespace Interception.UI.Components.Pages.Interceptions.Drawers;
 
 public partial class InterceptionTextBlockDrawer : ComponentBase
 {
-    [Inject] private IInterceptionService InterceptionService { get; set; } = default!;
+    [Inject] private IInterceptionCommandService InterceptionCommandService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
     [Parameter] public bool IsOpen { get; set; }
@@ -60,15 +60,15 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
     private static InterceptionFormDto BuildForm(TextBlockParseResult r)
     {
         var ordinal = 1;
-        var participants = new List<ParticipantFormDto>();
-
-        // Ініціатор
-        participants.Add(new ParticipantFormDto
+        var participants = new List<ParticipantFormDto>
         {
-            Ordinal = ordinal++,
-            Name = r.Initiator,
-            IsUnknown = r.Initiator is null
-        });
+            // Ініціатор
+            new() {
+                Ordinal = ordinal++,
+                Name = r.Initiator,
+                IsUnknown = r.Initiator is null
+            }
+        };
 
         // Відповідачі
         foreach (var name in r.Responders)
@@ -122,7 +122,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
             _form.InterceptionActionId = id;
     }
 
-    private void OnUnknownToggle(ParticipantFormDto p, bool isUnknown)
+    private static void OnUnknownToggle(ParticipantFormDto p, bool isUnknown)
     {
         p.IsUnknown = isUnknown;
         if (isUnknown) p.Name = null;
@@ -148,7 +148,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         _saving = true;
         try
         {
-            await InterceptionService.CreateAsync(_form, "operator");
+            await InterceptionCommandService.CreateAsync(_form, "operator");
             Toasts.Success("Збережено", $"Запис від {_form.ObservedDate:dd.MM HH:mm} створено.");
 
             // Явно скидаємо стан — готуємо дравер до наступного запису

@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Interceptions.Abstractions.Registry;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Domain;
@@ -12,8 +13,9 @@ namespace Interception.UI.Components.Pages.Interceptions;
 
 public partial class InterceptionRegistry : ComponentBase
 {
-    [Inject] private IInterceptionService InterceptionService { get; set; } = default!;
-    [Inject] private IInterceptionActionService ActionService { get; set; } = default!;
+    [Inject] private IInterceptionCommandService InterceptionCommandService { get; set; } = default!;
+    [Inject] private IInterceptionQueryService InterceptionQueryService { get; set; } = default!;
+    [Inject] private IInterceptionActionService InterceptionActionService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
     // -------------------------------------------------------------------------
@@ -54,7 +56,7 @@ public partial class InterceptionRegistry : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        _actions = await ActionService.GetAllAsync();
+        _actions = await InterceptionActionService.GetAllAsync();
         await LoadPageAsync();
     }
 
@@ -68,7 +70,7 @@ public partial class InterceptionRegistry : ComponentBase
         StateHasChanged();
         try
         {
-            _pagedResult = await InterceptionService.GetPagedAsync(
+            _pagedResult = await InterceptionQueryService.GetPagedAsync(
                 _filter, _currentPage, PageSize);
         }
         catch (Exception ex)
@@ -142,7 +144,7 @@ public partial class InterceptionRegistry : ComponentBase
         // TODO: замінити на модальний діалог підтвердження
         try
         {
-            await InterceptionService.DeleteAsync(id);
+            await InterceptionCommandService.DeleteAsync(id);
             Toasts.Success("Видалено", $"Запис від {observedDate:dd.MM HH:mm} видалено.");
             await LoadPageAsync();
         }

@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Interceptions.Abstractions.Registry;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Domain;
@@ -13,7 +14,9 @@ namespace Interception.UI.Components.Pages.Interceptions.Drawers;
 
 public partial class InterceptionFormDrawer : ComponentBase
 {
-    [Inject] private IInterceptionService InterceptionService { get; set; } = default!;
+    [Inject] private IInterceptionSuggestionService InterceptionSuggestionService { get; set; } = default!;
+    [Inject] private IInterceptionQueryService InterceptionQueryService { get; set; } = default!;
+    [Inject] private IInterceptionCommandService InterceptionCommandService { get; set; } = default!;
     [Inject] private IInterceptionActionService ActionService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
@@ -55,12 +58,12 @@ public partial class InterceptionFormDrawer : ComponentBase
 
     private async Task InitCreateAsync()
     {
-        _frequencySuggestions = await InterceptionService.GetFrequencyWithDivisionAsync();
+        _frequencySuggestions = await InterceptionSuggestionService.GetFrequencyWithDivisionAsync();
 
         var topFreq = _frequencySuggestions.Count > 0 ? _frequencySuggestions[0] : null;
 
         // FIX: frequency — другий параметр, не перший
-        _vectorSuggestions = await InterceptionService
+        _vectorSuggestions = await InterceptionSuggestionService
             .GetVectorSignalSuggestionsAsync(query: null, frequency: topFreq?.Frequency);
 
         _form = new InterceptionFormDto
@@ -80,7 +83,7 @@ public partial class InterceptionFormDrawer : ComponentBase
 
     private async Task InitEditAsync(Guid id)
     {
-        var message = await InterceptionService.GetByIdAsync(id);
+        var message = await InterceptionQueryService.GetByIdAsync(id);
         if (message is null)
         {
             Toasts.Warning("Не знайдено", "Запис вже видалено або недоступний.");
@@ -88,11 +91,11 @@ public partial class InterceptionFormDrawer : ComponentBase
             return;
         }
 
-        _frequencySuggestions = await InterceptionService
+        _frequencySuggestions = await InterceptionSuggestionService
             .GetFrequencyWithDivisionAsync(message.Frequency);
 
         // FIX: frequency — другий параметр
-        _vectorSuggestions = await InterceptionService
+        _vectorSuggestions = await InterceptionSuggestionService
             .GetVectorSignalSuggestionsAsync(query: null, frequency: message.Frequency);
 
         _form = new InterceptionFormDto
@@ -113,7 +116,7 @@ public partial class InterceptionFormDrawer : ComponentBase
                     Role      = pt.Role,
                     IsUnknown = pt.IsUnknown
                 })],
-            Labels = message.Labels.Select(l => l.NameLabel).ToList()
+            Labels = [.. message.Labels.Select(l => l.NameLabel)]
         };
     }
 
@@ -123,7 +126,7 @@ public partial class InterceptionFormDrawer : ComponentBase
 
     internal async Task SearchFrequencyAsync(string? query)
     {
-        _frequencySuggestions = await InterceptionService
+        _frequencySuggestions = await InterceptionSuggestionService
             .GetFrequencyWithDivisionAsync(query);
         await InvokeAsync(StateHasChanged);
     }
@@ -135,7 +138,7 @@ public partial class InterceptionFormDrawer : ComponentBase
     internal async Task ApplyFrequencySuggestion(FrequencySuggestionDto s)
     {
         // FIX: frequency — другий параметр
-        _vectorSuggestions = await InterceptionService
+        _vectorSuggestions = await InterceptionSuggestionService
             .GetVectorSignalSuggestionsAsync(query: null, frequency: s.Frequency);
         await InvokeAsync(StateHasChanged);
     }
@@ -147,13 +150,13 @@ public partial class InterceptionFormDrawer : ComponentBase
     internal async Task SearchVectorAsync(string? query)
     {
         // FIX: передаємо поточну частоту як контекст
-        _vectorSuggestions = await InterceptionService
+        _vectorSuggestions = await InterceptionSuggestionService
             .GetVectorSignalSuggestionsAsync(query: query, frequency: _form?.Frequency);
         await InvokeAsync(StateHasChanged);
     }
 
     internal Task<IReadOnlyList<ParticipantSuggestionDto>> SearchParticipantsAsync(string? query)
-        => InterceptionService.GetParticipantSuggestionsAsync(query);
+        => InterceptionSuggestionService.GetParticipantSuggestionsAsync(query);
 
     // -------------------------------------------------------------------------
     // Save / Close
@@ -168,12 +171,12 @@ public partial class InterceptionFormDrawer : ComponentBase
         {
             if (EditingId.HasValue)
             {
-                await InterceptionService.UpdateAsync(EditingId.Value, _form);
+                await InterceptionCommandService.UpdateAsync(EditingId.Value, _form);
                 Toasts.Success("Оновлено", $"Запис від {_form.ObservedDate:dd.MM HH:mm} оновлено.");
             }
             else
             {
-                await InterceptionService.CreateAsync(_form, "operator");
+                await InterceptionCommandService.CreateAsync(_form, "operator");
                 Toasts.Success("Збережено", $"Запис від {_form.ObservedDate:dd.MM HH:mm} створено.");
             }
 

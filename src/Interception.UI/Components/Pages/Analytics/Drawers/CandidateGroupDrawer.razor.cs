@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Interceptions.Abstractions.Candidates;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Domain.Enums;
@@ -14,7 +15,8 @@ namespace Interception.UI.Components.Pages.Analytics.Drawers;
 public partial class CandidateGroupDrawer : ComponentBase
 {
     [Inject] private IResolvedParticipantService ResolvedService { get; set; } = default!;
-    [Inject] private IPatternRecognitionService PatternService { get; set; } = default!;
+    [Inject] private IContextSuggestionService ContextSuggestionService { get; set; } = default!;
+    [Inject] private IKnownParticipantSuggestionService KnownParticipantSuggestionService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
     [Parameter] public bool IsOpen { get; set; }
@@ -108,8 +110,8 @@ public partial class CandidateGroupDrawer : ComponentBase
         StateHasChanged();
         try
         {
-            _suggestions = await PatternService.GetKnownSuggestionsAsync(Group.Id);
-            _contextSuggestions = await PatternService.GetContextSuggestionsAsync(Group.Id);
+            _suggestions = await KnownParticipantSuggestionService.GetKnownSuggestionsAsync(Group.Id);
+            _contextSuggestions = await ContextSuggestionService.GetContextSuggestionsAsync(Group.Id);
         }
         catch
         {

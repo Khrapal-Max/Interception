@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+/*//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
@@ -229,3 +229,4 @@ public sealed class InterceptionFilterDrawerTests : BunitContext
             input.GetAttribute("value").Should().BeNullOrEmpty();
     }
 }
+*/

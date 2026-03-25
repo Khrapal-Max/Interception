@@ -1,0 +1,253 @@
+//-----------------------------------------------------------------------------
+// All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
+//-----------------------------------------------------------------------------
+
+using Interception.UI.Application.Interceptions.Abstractions.Candidates;
+using Interception.UI.Application.Interceptions.Models.PatternRecognition;
+using Interception.UI.Domain;
+using Interception.UI.Domain.Records;
+using Interception.UI.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+
+namespace Interception.UI.Application.Interceptions.Services.Candidates;
+
+/// <summary>
+/// Основний сервіс аналізу невідомих учасників і побудови / збагачення open-груп.
+/// </summary>
+public sealed class ParticipantCandidateAnalysisService(
+    IDbContextFactory<AppDbContext> dbFactory,
+    IKnownParticipantSuggestionService knownParticipantSuggestionService,
+    IOptions<PatternRecognitionOptions> options) : IParticipantCandidateAnalysisService
+{
+    private readonly PatternRecognitionOptions _options = options.Value;
+
+    /// <inheritdoc />
+    public async Task<int> RunAsync(CancellationToken ct = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+
+        var unknownRefs = await db.InterceptionMessageParticipants
+            .Where(p => p.IsUnknown)
+            .Select(p => new { p.Id, p.InterceptionMessageId, p.Ordinal, p.Role })
+            .ToListAsync(ct);
+
+        if (unknownRefs.Count < 2)
+            return 0;
+
+        var msgIds = unknownRefs.Select(p => p.InterceptionMessageId).ToHashSet();
+
+        var messages = await db.InterceptionMessages
+            .Where(m => msgIds.Contains(m.Id))
+            .Select(m => new
+            {
+                m.Id,
+                m.Frequency,
+                m.VectorSignal,
+                m.PointSignal,
+                m.Division,
+                m.ObservedDate,
+                Labels = m.Labels.Select(l => l.NameLabel).ToList(),
+                KnownPartners = m.Participants.Where(p => !p.IsUnknown && p.Name != null).Select(p => p.Name!).ToList()
+            })
+            .ToListAsync(ct);
+
+        var messageMap = messages.ToDictionary(m => m.Id);
+
+        var allCandidates = unknownRefs
+            .Where(p => messageMap.ContainsKey(p.InterceptionMessageId))
+            .Select(p =>
+            {
+                var m = messageMap[p.InterceptionMessageId];
+                return new UnknownContext(
+                    ParticipantId: p.Id,
+                    Ordinal: p.Ordinal,
+                    MessageId: p.InterceptionMessageId,
+                    Frequency: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.Frequency),
+                    VectorSignal: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.VectorSignal),
+                    PointSignal: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.PointSignal),
+                    Division: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.Division),
+                    Role: Extensions.SemanticValue.NormalizeMeaningfulOrNull(p.Role),
+                    ObservedDate: m.ObservedDate,
+                    KnownPartnerNames: PatternRecognitionMath.ToNormalizedSet(m.KnownPartners),
+                    Labels: PatternRecognitionMath.ToNormalizedSet(m.Labels));
+            })
+            .ToList();
+
+        var confirmedIds = await db.ParticipantCandidateGroups
+            .Where(g => g.Status == Domain.Enums.CandidateGroupStatus.Confirmed)
+            .SelectMany(g => g.ParticipantRefs.Select(r => r.ParticipantId))
+            .ToHashSetAsync(ct);
+
+        var openGroups = await db.ParticipantCandidateGroups
+            .Where(g => g.Status == Domain.Enums.CandidateGroupStatus.Open)
+            .ToListAsync(ct);
+
+        var openIds = openGroups.SelectMany(g => g.ParticipantRefs.Select(r => r.ParticipantId)).ToHashSet();
+        var freeCandidates = allCandidates.Where(p => !confirmedIds.Contains(p.ParticipantId)).ToList();
+        var unassigned = freeCandidates.Where(p => !openIds.Contains(p.ParticipantId)).ToList();
+
+        var assigned = new HashSet<Guid>();
+        var changed = 0;
+        var changedOpenGroups = new List<Interception.UI.Domain.ParticipantCandidateGroup>();
+
+        if (openGroups.Count > 0)
+        {
+            var openParticipantIds = openGroups.SelectMany(g => g.ParticipantRefs.Select(r => r.ParticipantId)).ToHashSet();
+            var existingUnknownRefs = unknownRefs.Where(p => openParticipantIds.Contains(p.Id)).ToList();
+
+            var existingContextMap = existingUnknownRefs
+                .Where(p => messageMap.ContainsKey(p.InterceptionMessageId))
+                .ToDictionary(
+                    p => p.Id,
+                    p =>
+                    {
+                        var m = messageMap[p.InterceptionMessageId];
+                        return new UnknownContext(
+                            ParticipantId: p.Id,
+                            Ordinal: p.Ordinal,
+                            MessageId: p.InterceptionMessageId,
+                            Frequency: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.Frequency),
+                            VectorSignal: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.VectorSignal),
+                            PointSignal: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.PointSignal),
+                            Division: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.Division),
+                            Role: Extensions.SemanticValue.NormalizeMeaningfulOrNull(p.Role),
+                            ObservedDate: m.ObservedDate,
+                            KnownPartnerNames: PatternRecognitionMath.ToNormalizedSet(m.KnownPartners),
+                            Labels: PatternRecognitionMath.ToNormalizedSet(m.Labels));
+                    });
+
+            foreach (var openGroup in openGroups)
+            {
+                var groupContexts = openGroup.ParticipantRefs
+                    .Where(r => existingContextMap.ContainsKey(r.ParticipantId))
+                    .Select(r => existingContextMap[r.ParticipantId])
+                    .ToList();
+
+                if (groupContexts.Count == 0)
+                    continue;
+
+                var groupChanged = false;
+
+                foreach (var newCandidate in unassigned)
+                {
+                    if (assigned.Contains(newCandidate.ParticipantId))
+                        continue;
+
+                    if (PatternRecognitionMath.HasSameObservationMember(newCandidate, groupContexts))
+                        continue;
+
+                    var fit = PatternRecognitionMath.ComputeGroupFit(newCandidate, groupContexts, _options);
+                    if (fit.Score < _options.MinConfidenceScore)
+                        continue;
+
+                    openGroup.AddRef(new ParticipantRef(newCandidate.MessageId, newCandidate.ParticipantId, newCandidate.Ordinal));
+                    assigned.Add(newCandidate.ParticipantId);
+                    groupContexts.Add(newCandidate);
+                    groupChanged = true;
+                }
+
+                if (groupChanged)
+                {
+                    var recalculated = PatternRecognitionMath.RecalculateGroupScore(groupContexts, _options);
+                    openGroup.UpdateScore(recalculated.Score, recalculated.Reasons);
+                    openGroup.UpdateSuggestedDivision(PatternRecognitionMath.GetDominantValue(groupContexts.Select(x => x.Division)));
+                    openGroup.UpdateSuggestedRole(PatternRecognitionMath.GetDominantValue(groupContexts.Select(x => x.Role)));
+                    changedOpenGroups.Add(openGroup);
+                }
+            }
+
+            if (changedOpenGroups.Count > 0)
+            {
+                await db.SaveChangesAsync(ct);
+
+                foreach (var group in changedOpenGroups)
+                    await RefreshOpenGroupSuggestionAsync(group, ct);
+
+                await db.SaveChangesAsync(ct);
+                changed += changedOpenGroups.Count;
+            }
+        }
+
+        var remainingCandidates = unassigned.Where(p => !assigned.Contains(p.ParticipantId)).ToList();
+        if (remainingCandidates.Count < 2)
+            return changed;
+
+        var newGroups = new List<Interception.UI.Domain.ParticipantCandidateGroup>();
+        var newAssigned = new HashSet<Guid>();
+
+        for (var i = 0; i < remainingCandidates.Count; i++)
+        {
+            if (newAssigned.Contains(remainingCandidates[i].ParticipantId))
+                continue;
+
+            var group = new List<UnknownContext> { remainingCandidates[i] };
+
+            for (var j = i + 1; j < remainingCandidates.Count; j++)
+            {
+                if (newAssigned.Contains(remainingCandidates[j].ParticipantId))
+                    continue;
+
+                if (PatternRecognitionMath.HasSameObservationMember(remainingCandidates[j], group))
+                    continue;
+
+                var fit = PatternRecognitionMath.ComputeGroupFit(remainingCandidates[j], group, _options);
+                if (fit.Score < _options.MinConfidenceScore)
+                    continue;
+
+                group.Add(remainingCandidates[j]);
+                newAssigned.Add(remainingCandidates[j].ParticipantId);
+            }
+
+            if (group.Count < 2)
+                continue;
+
+            var calculated = PatternRecognitionMath.RecalculateGroupScore(group, _options);
+            if (calculated.Score < _options.MinConfidenceScore)
+                continue;
+
+            newAssigned.Add(remainingCandidates[i].ParticipantId);
+
+            var refs = group
+                .Select(p => new ParticipantRef(p.MessageId, p.ParticipantId, p.Ordinal))
+                .ToList();
+
+            newGroups.Add(ParticipantCandidateGroup.Create(
+                refs,
+                calculated.Score,
+                calculated.Reasons,
+                suggestedRole: PatternRecognitionMath.GetDominantValue(group.Select(p => p.Role)),
+                suggestedDivision: PatternRecognitionMath.GetDominantValue(group.Select(p => p.Division))));
+        }
+
+        if (newGroups.Count > 0)
+        {
+            db.ParticipantCandidateGroups.AddRange(newGroups);
+            await db.SaveChangesAsync(ct);
+
+            foreach (var group in newGroups)
+                await RefreshOpenGroupSuggestionAsync(group, ct);
+
+            await db.SaveChangesAsync(ct);
+            changed += newGroups.Count;
+        }
+
+        return changed;
+    }
+
+    /// <summary>
+    /// Синхронізує top known suggestion назад в open-group для overlay у реєстрі.
+    /// </summary>
+    private async Task RefreshOpenGroupSuggestionAsync(Interception.UI.Domain.ParticipantCandidateGroup group, CancellationToken ct)
+    {
+        var best = (await knownParticipantSuggestionService.GetKnownSuggestionsAsync((Guid)group.Id, 1, ct)).FirstOrDefault();
+
+        group.UpdateSuggestedName(best?.Name);
+
+        if (!string.IsNullOrWhiteSpace(best?.Role))
+            group.UpdateSuggestedRole(best.Role);
+
+        if (!string.IsNullOrWhiteSpace(best?.Division))
+            group.UpdateSuggestedDivision(best.Division);
+    }
+}

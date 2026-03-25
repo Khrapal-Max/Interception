@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+/*//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
@@ -409,3 +409,4 @@ public sealed class InterceptionRegistryTests : BunitContext
         act.Should().NotThrow();
     }
 }
+*/

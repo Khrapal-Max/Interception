@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Interceptions.Abstractions.Candidates;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Domain.Enums;
@@ -12,7 +12,8 @@ namespace Interception.UI.Components.Pages.Analytics;
 
 public partial class CandidatesPage : ComponentBase
 {
-    [Inject] private IPatternRecognitionService PatternService { get; set; } = default!;
+    [Inject] private IParticipantCandidateGroupQueryService ParticipantCandidateGroupQueryService { get; set; } = default!;
+    [Inject] private IParticipantCandidateAnalysisService ParticipantCandidateAnalysisService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
     private PagedResult<CandidateGroupDto>? _pagedResult;
@@ -45,7 +46,7 @@ public partial class CandidatesPage : ComponentBase
         StateHasChanged();
         try
         {
-            _pagedResult = await PatternService.GetGroupsByStatusAsync(
+            _pagedResult = await ParticipantCandidateGroupQueryService.GetGroupsByStatusAsync(
                 _activeTab, _currentPage, PageSize);
         }
         catch (Exception ex)
@@ -63,7 +64,7 @@ public partial class CandidatesPage : ComponentBase
     {
         try
         {
-            var open = await PatternService.GetGroupsByStatusAsync(
+            var open = await ParticipantCandidateGroupQueryService.GetGroupsByStatusAsync(
                 CandidateGroupStatus.Open, 1, 1);
             _openCount = open.TotalCount;
         }
@@ -92,7 +93,7 @@ public partial class CandidatesPage : ComponentBase
         _running = true;
         try
         {
-            var created = await PatternService.RunAsync();
+            var created = await ParticipantCandidateAnalysisService.RunAsync();
             Toasts.Success("Аналіз завершено",
                 created > 0
                     ? $"Знайдено {created} нових груп кандидатів."
