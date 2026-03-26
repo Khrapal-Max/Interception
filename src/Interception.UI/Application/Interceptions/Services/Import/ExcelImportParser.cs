@@ -4,8 +4,9 @@
 
 using ClosedXML.Excel;
 using Interception.UI.Application.Interceptions.Dtos;
+using Interception.UI.Application.Interceptions.Models.Import;
 
-namespace Interception.UI.Application.Interceptions.Import;
+namespace Interception.UI.Application.Interceptions.Services.Import;
 
 /// <summary>
 /// Парсить Excel-файл у список <see cref="ImportRowDto"/>.

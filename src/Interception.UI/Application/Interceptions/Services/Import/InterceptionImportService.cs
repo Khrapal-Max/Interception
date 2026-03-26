@@ -2,15 +2,15 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Interceptions.Abstractions.Import;
 using Interception.UI.Application.Interceptions.Dtos;
-using Interception.UI.Application.Interceptions.Import;
+using Interception.UI.Application.Interceptions.Models.Import;
 using Interception.UI.Domain;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace Interception.UI.Application.Interceptions.Services;
+namespace Interception.UI.Application.Interceptions.Services.Import;
 
 public sealed class InterceptionImportService(
     IDbContextFactory<AppDbContext> dbFactory) : IInterceptionImportService

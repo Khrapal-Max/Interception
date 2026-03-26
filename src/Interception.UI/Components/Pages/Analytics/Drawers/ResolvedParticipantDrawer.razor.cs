@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Interceptions.Abstractions.Candidates;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;

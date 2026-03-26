@@ -4,7 +4,7 @@
 
 using Interception.UI.Application.Interceptions.Dtos;
 
-namespace Interception.UI.Application.Interceptions.Abstractions;
+namespace Interception.UI.Application.Interceptions.Abstractions.Candidates;
 
 /// <summary>
 /// Сервіс управління встановленими особами (ResolvedParticipant).

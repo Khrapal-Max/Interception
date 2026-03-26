@@ -4,7 +4,7 @@
 
 using Bunit;
 using FluentAssertions;
-using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Interceptions.Abstractions.Registry;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Components.Pages.Catalogs.Drawers;
 using Interception.UI.Domain;

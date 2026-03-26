@@ -2,9 +2,9 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Import;
+using Interception.UI.Application.Interceptions.Models.Import;
 
-namespace Interception.UI.Application.Interceptions.Abstractions;
+namespace Interception.UI.Application.Interceptions.Abstractions.Import;
 
 /// <summary>Контракт сервісу імпорту з Excel.</summary>
 public interface IInterceptionImportService

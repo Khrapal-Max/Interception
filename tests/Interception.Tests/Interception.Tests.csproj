@@ -33,4 +33,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Application\Interceptions\Services\Reports\" />
+  </ItemGroup>
+
 </Project>

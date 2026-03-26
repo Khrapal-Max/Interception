@@ -3,10 +3,10 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Application.Interceptions.Import;
+using Interception.UI.Application.Interceptions.Services.Import;
 using Interception.UI.Domain;
 
-namespace Interception.Tests.Application.Interceptions.Services;
+namespace Interception.Tests.Application.Interceptions.Services.Import;
 
 public sealed class ImportContextCacheTests
 {

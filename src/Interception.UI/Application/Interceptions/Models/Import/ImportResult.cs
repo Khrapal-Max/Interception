@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Interceptions.Import;
+namespace Interception.UI.Application.Interceptions.Models.Import;
 
 /// <summary>
 /// Підсумок операції імпорту — повертається в UI для відображення результату.

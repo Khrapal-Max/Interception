@@ -4,7 +4,7 @@
 // MigrationExtension
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Interceptions.Abstractions.Registry;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;

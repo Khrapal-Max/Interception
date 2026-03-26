@@ -4,6 +4,7 @@
 
 using Interception.UI.Application.Interceptions.Abstractions.Registry;
 using Interception.UI.Application.Interceptions.Dtos;
+using Interception.UI.Application.Interceptions.Services.TextBlock;
 using Interception.UI.Application.Interceptions.TextBlock;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Domain;

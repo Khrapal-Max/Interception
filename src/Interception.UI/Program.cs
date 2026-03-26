@@ -2,12 +2,14 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Abstractions.Candidates;
+using Interception.UI.Application.Interceptions.Abstractions.Import;
 using Interception.UI.Application.Interceptions.Abstractions.Registry;
-using Interception.UI.Application.Interceptions.Services;
+using Interception.UI.Application.Interceptions.Abstractions.Reports;
 using Interception.UI.Application.Interceptions.Services.Candidates;
+using Interception.UI.Application.Interceptions.Services.Import;
 using Interception.UI.Application.Interceptions.Services.Registry;
+using Interception.UI.Application.Interceptions.Services.Reports;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Components;
 using Interception.UI.Extensions;
@@ -38,16 +40,19 @@ builder.Services.AddScoped<IInterceptionImportService, InterceptionImportService
 builder.Services.AddScoped<IInterceptionActionService, InterceptionActionService>();
 builder.Services.AddScoped<IResolvedParticipantService, ResolvedParticipantService>();
 
-// Нові registry-сервіси після фізичного розділення InterceptionService.
+// Нові registry-сервіси 
 builder.Services.AddScoped<IInterceptionQueryService, InterceptionQueryService>();
 builder.Services.AddScoped<IInterceptionCommandService, InterceptionCommandService>();
 builder.Services.AddScoped<IInterceptionSuggestionService, InterceptionSuggestionService>();
 
-// Нові candidate-сервіси після фізичного розділення PatternRecognitionService.
+// Нові candidate-сервіси 
 builder.Services.AddScoped<IContextSuggestionService, ContextSuggestionService>();
 builder.Services.AddScoped<IKnownParticipantSuggestionService, KnownParticipantSuggestionService>();
 builder.Services.AddScoped<IParticipantCandidateAnalysisService, ParticipantCandidateAnalysisService>();
 builder.Services.AddScoped<IParticipantCandidateGroupQueryService, ParticipantCandidateGroupQueryService>();
+
+// Нові reports-сервіси 
+builder.Services.AddScoped<IDivisionReportService, DivisionReportService>();
 
 var app = builder.Build();
 

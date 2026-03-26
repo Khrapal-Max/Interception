@@ -5,7 +5,7 @@
 using Bunit;
 using Bunit.TestDoubles;
 using FluentAssertions;
-using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Interceptions.Abstractions.Registry;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Components.Pages.Catalogs;
 using Interception.UI.Components.Pages.Catalogs.Drawers;
@@ -136,7 +136,7 @@ public sealed class ActionCatalogTests : BunitContext
 
         var cut = Render<ActionCatalog>();
 
-        cut.Find("button.btn-outline-secondary").Click();
+        cut.Find("button.btn-secondary").Click();
 
         var drawer = cut.FindComponent<Stub<ActionFormDrawer>>();
         drawer.Instance.Parameters.Get(d => d.IsOpen).Should().BeTrue();

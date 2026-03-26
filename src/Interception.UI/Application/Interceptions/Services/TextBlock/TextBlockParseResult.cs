@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Interceptions.TextBlock;
+namespace Interception.UI.Application.Interceptions.Services.TextBlock;
 
 /// <summary>
 /// Результат парсингу текстового блоку перехоплення.

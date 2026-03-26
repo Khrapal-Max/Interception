@@ -3,11 +3,11 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Application.Interceptions.Services;
+using Interception.UI.Application.Interceptions.Services.Registry;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace Interception.Tests.Application.Interceptions.Services;
+namespace Interception.Tests.Application.Interceptions.Services.Registry;
 
 public sealed class InterceptionActionServiceTests
 {

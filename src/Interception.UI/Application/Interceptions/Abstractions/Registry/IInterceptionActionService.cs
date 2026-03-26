@@ -4,7 +4,7 @@
 
 using Interception.UI.Domain;
 
-namespace Interception.UI.Application.Interceptions.Abstractions;
+namespace Interception.UI.Application.Interceptions.Abstractions.Registry;
 
 /// <summary>
 /// Контракт сервісу довідника дій.

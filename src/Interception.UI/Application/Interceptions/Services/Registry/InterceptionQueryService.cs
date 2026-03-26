@@ -42,7 +42,35 @@ public sealed class InterceptionQueryService(IDbContextFactory<AppDbContext> dbF
         if (!string.IsNullOrWhiteSpace(filter.VectorSignal))
             q = q.Where(m => m.VectorSignal != null && m.VectorSignal.Contains(filter.VectorSignal));
         if (!string.IsNullOrWhiteSpace(filter.ParticipantName))
-            q = q.Where(m => m.Participants.Any(p => p.Name != null && p.Name.Contains(filter.ParticipantName)));
+        {
+            // Шукаємо по відомих учасниках (Name Contains)
+            // АБО по НВ що підтверджені як ця особа через ResolvedParticipant.
+            // Без цього фільтр ігнорує записи де НВ [= ШАПКА ✓].
+            var resolvedParticipantIds = await db.ResolvedParticipants
+                .Where(r => r.Name.Contains(filter.ParticipantName))
+                .Select(r => r.Id)
+                .ToListAsync(ct);
+
+            // ParticipantId НВ що належать підтвердженим особам
+            HashSet<Guid> resolvedUnknownParticipantIds = [];
+
+            if (resolvedParticipantIds.Count > 0)
+            {
+                resolvedUnknownParticipantIds = await db.ParticipantCandidateGroups
+                    .Where(g => g.Status == CandidateGroupStatus.Confirmed
+                             && g.ResolvedParticipantId != null
+                             && resolvedParticipantIds.Contains(g.ResolvedParticipantId!.Value))
+                    .SelectMany(g => g.ParticipantRefs.Select(r => r.ParticipantId))
+                    .ToHashSetAsync(ct);
+            }
+
+            q = resolvedUnknownParticipantIds.Count > 0
+                ? q.Where(m =>
+                    m.Participants.Any(p => p.Name != null && p.Name.Contains(filter.ParticipantName)) ||
+                    m.Participants.Any(p => p.IsUnknown && resolvedUnknownParticipantIds.Contains(p.Id)))
+                : q.Where(m =>
+                    m.Participants.Any(p => p.Name != null && p.Name.Contains(filter.ParticipantName)));
+        }
         if (!string.IsNullOrWhiteSpace(filter.LabelName))
             q = q.Where(m => m.Labels.Any(l => l.NameLabel == filter.LabelName));
 

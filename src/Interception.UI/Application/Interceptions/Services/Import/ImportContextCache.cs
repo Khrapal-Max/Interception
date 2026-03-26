@@ -4,7 +4,7 @@
 
 using Interception.UI.Domain;
 
-namespace Interception.UI.Application.Interceptions.Import;
+namespace Interception.UI.Application.Interceptions.Services.Import;
 
 /// <summary>
 /// Короткочасний кеш, що живе тільки під час одного сеансу імпорту.
