@@ -41,7 +41,7 @@ public class InterceptionMessage
 
         return new InterceptionMessage
         {
-            ObservedDate = DateTimeConverter.ToUtc(observedDate),
+            ObservedDate = ConverterDateTimeExtensions.ToUtc(observedDate),
             Frequency = NormalizeOptional(frequency),
             Division = NormalizeOptional(division),
             VectorSignal = NormalizeOptional(vectorSignal),
@@ -49,7 +49,7 @@ public class InterceptionMessage
             InterceptionActionId = interceptionAction.Id,
             Note = NormalizeOptional(note),
             CreatedBy = NormalizeOptional(createdBy),
-            CreatedAt = DateTimeConverter.Now,
+            CreatedAt = ConverterDateTimeExtensions.Now,
             PointSignal = NormalizeOptional(pointSignal)
         };
     }
@@ -65,14 +65,14 @@ public class InterceptionMessage
     {
         ArgumentNullException.ThrowIfNull(interceptionAction);
 
-        ObservedDate = DateTimeConverter.ToUtc(observedDate);
+        ObservedDate = ConverterDateTimeExtensions.ToUtc(observedDate);
         Frequency = NormalizeOptional(frequency);
         Division = NormalizeOptional(division);
         VectorSignal = NormalizeOptional(vectorSignal);
         InterceptionAction = interceptionAction;
         InterceptionActionId = interceptionAction.Id;
         Note = NormalizeOptional(note);
-        UpdatedAt = DateTimeConverter.Now;
+        UpdatedAt = ConverterDateTimeExtensions.Now;
         PointSignal = NormalizeOptional(pointSignal);
     }
 

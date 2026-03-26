@@ -80,7 +80,7 @@ public sealed class InterceptionImportService(
                 $"Дію '{row.ActionName}' не знайдено в довіднику. Рядок пропущено."));
 
         var rawDate = row.Date.ToDateTime(row.Time, DateTimeKind.Local);
-        var observedDate = DateTimeConverter.ToUtc(rawDate);
+        var observedDate = ConverterDateTimeExtensions.ToUtc(rawDate);
 
         InterceptionMessage message;
         try

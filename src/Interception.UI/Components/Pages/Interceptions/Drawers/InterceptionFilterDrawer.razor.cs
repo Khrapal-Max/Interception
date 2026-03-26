@@ -106,10 +106,10 @@ public partial class InterceptionFilterDrawer : ComponentBase
     // -------------------------------------------------------------------------
 
     private void OnDateFromChange(string? value)
-        => _model.DateFrom = DateTimeConverter.Parse(value);
+        => _model.DateFrom = ConverterDateTimeExtensions.Parse(value);
 
     private void OnDateToChange(string? value)
-        => _model.DateTo = DateTimeConverter.Parse(value);
+        => _model.DateTo = ConverterDateTimeExtensions.Parse(value);
 
     // -------------------------------------------------------------------------
     // Apply / Reset

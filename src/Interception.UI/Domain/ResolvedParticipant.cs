@@ -50,7 +50,7 @@ public sealed class ResolvedParticipant
             Role = NormalizeOptional(role),
             Division = NormalizeOptional(division),
             ConfirmedBy = confirmedBy.Trim(),
-            ConfirmedAt = DateTimeConverter.Now
+            ConfirmedAt = ConverterDateTimeExtensions.Now
         };
     }
 

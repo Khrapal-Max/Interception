@@ -69,7 +69,7 @@ public class ParticipantCandidateGroup
             SuggestedName = NormalizeOptional(suggestedName),
             SuggestedRole = NormalizeOptional(suggestedRole),
             SuggestedDivision = NormalizeOptional(suggestedDivision),
-            CreatedAt = DateTimeConverter.Now
+            CreatedAt = ConverterDateTimeExtensions.Now
         };
     }
 
@@ -85,7 +85,7 @@ public class ParticipantCandidateGroup
         Status = CandidateGroupStatus.Confirmed;
         ResolvedParticipantId = resolvedParticipantId;
         ResolvedBy = resolvedBy.Trim();
-        ResolvedAt = DateTimeConverter.Now;
+        ResolvedAt = ConverterDateTimeExtensions.Now;
     }
 
     public void Dismiss(string resolvedBy)
@@ -96,7 +96,7 @@ public class ParticipantCandidateGroup
 
         Status = CandidateGroupStatus.Dismissed;
         ResolvedBy = resolvedBy.Trim();
-        ResolvedAt = DateTimeConverter.Now;
+        ResolvedAt = ConverterDateTimeExtensions.Now;
     }
 
     public void UpdateSuggestedName(string? name)

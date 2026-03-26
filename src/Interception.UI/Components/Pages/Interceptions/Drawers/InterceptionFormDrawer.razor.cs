@@ -67,7 +67,7 @@ public partial class InterceptionFormDrawer : ComponentBase
 
         _form = new InterceptionFormDto
         {
-            ObservedDate = DateTimeConverter.ToDisplay(DateTimeConverter.Now),
+            ObservedDate = ConverterDateTimeExtensions.ToDisplay(ConverterDateTimeExtensions.Now),
             Frequency = topFreq?.Frequency,
             Division = topFreq?.Division,
             VectorSignal = topFreq?.VectorSignal,
@@ -99,7 +99,7 @@ public partial class InterceptionFormDrawer : ComponentBase
 
         _form = new InterceptionFormDto
         {
-            ObservedDate = DateTimeConverter.ToDisplay(message.ObservedDate),
+            ObservedDate = ConverterDateTimeExtensions.ToDisplay(message.ObservedDate),
             Frequency = message.Frequency,
             Division = message.Division,
             PointSignal = message.PointSignal,

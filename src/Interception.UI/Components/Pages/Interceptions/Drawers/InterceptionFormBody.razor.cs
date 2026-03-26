@@ -47,7 +47,7 @@ public partial class InterceptionFormBody : ComponentBase
 
     private void OnObservedDateChange(ChangeEventArgs e)
     {
-        var parsed = DateTimeConverter.Parse(e.Value?.ToString());
+        var parsed = ConverterDateTimeExtensions.Parse(e.Value?.ToString());
         if (parsed.HasValue)
             Form.ObservedDate = parsed.Value;
     }

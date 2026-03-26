@@ -32,7 +32,7 @@ public class DailyReport
             ReportDate = reportDate,
             TotalMessages = messages.Count,
             GeneratedBy = NormalizeOptional(generatedBy),
-            GeneratedAt = DateTimeConverter.Now,
+            GeneratedAt = ConverterDateTimeExtensions.Now,
             Status = DailyReportStatus.Draft
         };
 
@@ -51,7 +51,7 @@ public class DailyReport
             throw new ArgumentException("Ідентифікатор оператора обов'язковий.", nameof(publishedBy));
 
         Status = DailyReportStatus.Published;
-        PublishedAt = DateTimeConverter.Now;
+        PublishedAt = ConverterDateTimeExtensions.Now;
     }
 
     internal void Supersede() => Status = DailyReportStatus.Superseded;

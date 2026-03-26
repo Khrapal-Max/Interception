@@ -9,7 +9,7 @@
     <div class="col-6">
         <label class="form-label form-label-sm">Дата та час</label>
         <input type="datetime-local" class="form-control form-control-sm"
-               value="@DateTimeConverter.Format(Form.ObservedDate)"
+               value="@ConverterDateTimeExtensions.Format(Form.ObservedDate)"
                @onchange="OnObservedDateChange" />
     </div>
 

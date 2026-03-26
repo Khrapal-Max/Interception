@@ -9,7 +9,7 @@ namespace Interception.UI.Application.Interceptions.Dtos;
 public sealed class InterceptionFormDto
 {
     // DateTimeConverter.Now = DateTime.UtcNow — Kind=Utc, Npgsql приймає
-    public DateTime ObservedDate { get; set; } = DateTimeConverter.Now;
+    public DateTime ObservedDate { get; set; } = ConverterDateTimeExtensions.Now;
     public string? Frequency { get; set; }
     public string? Division { get; set; }
     public string? PointSignal { get; set; }

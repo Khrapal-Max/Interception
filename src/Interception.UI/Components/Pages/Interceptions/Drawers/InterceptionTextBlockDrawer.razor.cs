@@ -93,8 +93,8 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         }
 
         var observedDate = r.ObservedDate.HasValue
-            ? DateTimeConverter.ToUtc(r.ObservedDate.Value)
-            : DateTimeConverter.ToDisplay(DateTimeConverter.Now);
+            ? ConverterDateTimeExtensions.ToUtc(r.ObservedDate.Value)
+            : ConverterDateTimeExtensions.ToDisplay(ConverterDateTimeExtensions.Now);
 
         return new InterceptionFormDto
         {
@@ -115,7 +115,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
     private void OnObservedDateChange(ChangeEventArgs e)
     {
         if (_form is null) return;
-        var parsed = DateTimeConverter.Parse(e.Value?.ToString());
+        var parsed = ConverterDateTimeExtensions.Parse(e.Value?.ToString());
         if (parsed.HasValue) _form.ObservedDate = parsed.Value;
     }
 

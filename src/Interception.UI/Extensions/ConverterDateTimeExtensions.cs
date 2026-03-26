@@ -2,6 +2,8 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
+using System.Globalization;
+
 namespace Interception.UI.Extensions;
 
 /// <summary>
@@ -13,7 +15,7 @@ namespace Interception.UI.Extensions;
 /// Оператор вводить локальний час у форму → конвертуємо в UTC перед збереженням.
 /// При відображенні → конвертуємо назад в локальний час.
 /// </summary>
-public static class DateTimeConverter
+public static class ConverterDateTimeExtensions
 {
     /// <summary>
     /// Поточний час у UTC.
@@ -58,4 +60,22 @@ public static class DateTimeConverter
         DateTimeKind.Unspecified => DateTime.SpecifyKind(value, DateTimeKind.Local).ToUniversalTime(),
         _ => value.ToUniversalTime()
     };
+
+    public static string? FormatDate(DateTime? value)
+    => value?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    public static DateTime? ParseDate(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        return DateTime.TryParseExact(
+            value,
+            "yyyy-MM-dd",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out var parsed)
+            ? parsed
+            : null;
+    }
 }
