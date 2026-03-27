@@ -3,6 +3,8 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
+using Interception.UI.Application.Interceptions.Dtos;
+using Interception.UI.Application.Interceptions.Services.Candidates;
 using Interception.UI.Application.Interceptions.Services.Reports;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Records;
@@ -111,6 +113,57 @@ public sealed class DivisionReportServiceTests
         var people = report.Groups.Single().People;
         people.Should().ContainSingle();
         people.Single().Name.Should().Be("ШАПКА");
+    }
+
+    [Fact]
+    public async Task BuildAsync_IncludesConfirmedResolvedParticipantsInReport()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+        var resolvedParticipantService = new ResolvedParticipantService(factory);
+
+        Guid groupId;
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var action = InterceptionAction.Create("доповідь", string.Empty);
+            db.InterceptionActions.Add(action);
+
+            var m1 = CreateMessage(action, new DateTime(2026, 03, 26, 11, 0, 0, DateTimeKind.Utc), division: "336 мсп", frequency: "142.4500");
+            var p1 = m1.AddParticipant("НВ 1", isUnknown: true, role: "невідома", ordinal: 1);
+
+            var m2 = CreateMessage(action, new DateTime(2026, 03, 26, 11, 10, 0, DateTimeKind.Utc), division: "336 мсп", frequency: "142.4500");
+            var p2 = m2.AddParticipant("НВ 2", isUnknown: true, role: "невідома", ordinal: 1);
+
+            var group = CreateUnknownGroup([p1, p2], [m1, m2], suggestedDivision: "336 мсп");
+            groupId = group.Id;
+
+            db.InterceptionMessages.AddRange(m1, m2);
+            db.ParticipantCandidateGroups.Add(group);
+            await db.SaveChangesAsync(ct);
+        }
+
+        await resolvedParticipantService.ConfirmGroupAsync(
+            groupId,
+            new ConfirmCandidateGroupDto
+            {
+                Name = "МАДЖЕСТИК",
+                Role = "оператор бпла",
+                Division = "336 мсп"
+            },
+            operatorName: "analyst",
+            ct: ct);
+
+        var report = await service.BuildAsync(ct: ct);
+
+        var person = report.Groups
+            .Single(x => x.Division == "336 мсп")
+            .People
+            .Single(x => x.Name == "МАДЖЕСТИК");
+
+        person.Role.Should().Be("оператор бпла");
+        person.LastSeenAt.Should().Be(new DateTime(2026, 03, 26, 11, 10, 0, DateTimeKind.Utc));
     }
 
     [Fact]
