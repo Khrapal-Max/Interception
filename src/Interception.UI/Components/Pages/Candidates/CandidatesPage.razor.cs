@@ -8,7 +8,7 @@ using Interception.UI.Application.Toasts;
 using Interception.UI.Domain.Enums;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Pages.Analytics;
+namespace Interception.UI.Components.Pages.Candidates;
 
 public partial class CandidatesPage : ComponentBase
 {

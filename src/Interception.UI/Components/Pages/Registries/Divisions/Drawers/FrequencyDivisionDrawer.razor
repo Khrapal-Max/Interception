@@ -1,0 +1,65 @@
+<Drawer IsOpen="@IsOpen"
+        IsOpenChanged="IsOpenChanged"
+        Title="Коригування підрозділу"
+        DisableClose="@_saving"
+        CloseOnBackdrop="true"
+        CloseOnEscape="true"
+        OnClosed="OnDrawerClosed">
+    <ChildContent>
+        <div class="row g-3">
+
+            <div class="col-12">
+                <label class="form-label form-label-sm">Частота</label>
+                <input type="text"
+                       class="form-control form-control-sm"
+                       value="@_frequency"
+                       readonly />
+            </div>
+
+            <div class="col-12">
+                <label class="form-label form-label-sm">
+                    Підрозділ <span class="text-danger">*</span>
+                </label>
+                <input type="text"
+                       class="form-control form-control-sm @(_divisionError ? "is-invalid" : "")"
+                       placeholder="напр. ВЖ 1 мсб 656 мсп"
+                       value="@_division"
+                       @oninput="e => { _division = e.Value?.ToString(); _divisionError = false; }"
+                       maxlength="200" />
+                @if (_divisionError)
+                {
+                    <div class="invalid-feedback">Підрозділ обов'язковий</div>
+                }
+                <div class="form-text text-muted">
+                    Коригування застосовується до записів цієї частоти, де підрозділ порожній або службовий.
+                </div>
+            </div>
+
+            @if (_serverError is not null)
+            {
+                <div class="col-12">
+                    <div class="alert alert-danger py-2 px-3 mb-0 small">
+                        <i class="bi bi-exclamation-triangle me-1"></i>@_serverError
+                    </div>
+                </div>
+            }
+
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button class="btn btn-secondary btn-sm"
+                @onclick="CloseAsync"
+                disabled="@_saving">
+            Скасувати
+        </button>
+        <button class="btn btn-primary btn-sm"
+                @onclick="SaveAsync"
+                disabled="@_saving">
+            @if (_saving)
+            {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            Зберегти
+        </button>
+    </FooterContent>
+</Drawer>

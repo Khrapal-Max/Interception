@@ -1,20 +1,24 @@
-@page "/analytics/resolved"
-@using Interception.UI.Application.Interceptions.Dtos
-@using Interception.UI.Components.Pages.Analytics.Drawers
-@namespace Interception.UI.Components.Pages.Analytics
+@page "/registries/resolved-participant"
+@using Interception.UI.Components.Pages.Registries.ResolvedParticipants.Drawers
+@using Interception.UI.Components.Pages.Registries.Toolbar
 
-<PageTitle>Встановлені особи</PageTitle>
+<PageTitle>Регістри — Підтвержені особи</PageTitle>
 
 <div class="page-shell">
 
-    <div class="registry-toolbar flex-shrink-0">
-        <div class="registry-toolbar-meta">
+    <RegistriesToolbar ActiveSection="resolved-participant">
+        <MetaContent>
             @if (_participants is not null)
             {
                 <span>Всього: <strong>@_participants.Count</strong></span>
             }
-        </div>
-    </div>
+        </MetaContent>
+        <ActionsContent>
+            <button class="btn btn-success btn-sm" @onclick="LoadAsync" disabled="@_loading">
+                <i class="bi bi-arrow-repeat me-1"></i>Оновити
+            </button>
+        </ActionsContent>
+    </RegistriesToolbar>
 
     <div class="page-panel">
         @if (_loading)
@@ -31,7 +35,7 @@
                 <div class="text-center py-5">
                     <i class="bi bi-person-check fs-1 d-block mb-2 opacity-25"></i>
                     <div>Підтверджених осіб ще немає</div>
-                    <div class="small mt-1">Підтвердження виконуються на сторінці <a href="/analytics/candidates">аналітики</a></div>
+                    <div class="small mt-1">Підтвердження виконуються на сторінці <a href="/analytics/candidates">кандидатів</a></div>
                 </div>
             </div>
         }
@@ -49,9 +53,8 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var p in _participants)
+                        @foreach (var participant in _participants)
                         {
-                            var participant = p;
                             <tr>
                                 <td class="fw-medium">@participant.Name</td>
                                 <td class="small text-muted">@(participant.Role ?? "—")</td>

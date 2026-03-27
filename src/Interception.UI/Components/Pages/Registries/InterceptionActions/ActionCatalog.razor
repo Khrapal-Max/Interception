@@ -1,24 +1,25 @@
-@page "/catalogs/actions"
+@page "/registries/actions"
+@using Interception.UI.Components.Pages.Registries.InterceptionActions.Drawers
+@using Interception.UI.Components.Pages.Registries.Toolbar
 @using Interception.UI.Domain
-@namespace Interception.UI.Components.Pages.Catalogs
 
-<PageTitle>Каталог дій</PageTitle>
+<PageTitle>Регістри — Дії</PageTitle>
 
 <div class="page-shell">
 
-    <div class="registry-toolbar flex-shrink-0">
-        <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-primary btn-sm" @onclick="OpenCreate">
-                <i class="bi bi-plus-lg me-1"></i>Додати дію
-            </button>
-        </div>
-        <div class="registry-toolbar-meta">
+    <RegistriesToolbar ActiveSection="actions">
+        <MetaContent>
             @if (_actions is not null)
             {
                 <span>Всього: <strong>@_actions.Count</strong></span>
             }
-        </div>
-    </div>
+        </MetaContent>
+        <ActionsContent>
+            <button class="btn btn-success btn-sm" @onclick="OpenCreate">
+                <i class="bi bi-plus-lg me-1"></i>Додати дію
+            </button>
+        </ActionsContent>
+    </RegistriesToolbar>
 
     <div class="page-panel">
         @if (_loading)
@@ -35,7 +36,7 @@
                 <div class="text-center py-5">
                     <i class="bi bi-collection fs-1 d-block mb-2 opacity-25"></i>
                     <div>Дій ще немає</div>
-                    <button class="btn btn-link btn-sm mt-2" @onclick="OpenCreate">Додати першу дію</button>
+                    <button class="btn btn-success btn-sm mt-2" @onclick="OpenCreate">Додати першу дію</button>
                 </div>
             </div>
         }

@@ -7,7 +7,7 @@ using Interception.UI.Application.Toasts;
 using Interception.UI.Domain;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Pages.Catalogs;
+namespace Interception.UI.Components.Pages.Registries.InterceptionActions;
 
 public partial class ActionCatalog : ComponentBase
 {

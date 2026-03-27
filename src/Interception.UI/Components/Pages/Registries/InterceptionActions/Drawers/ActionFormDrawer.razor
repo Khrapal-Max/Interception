@@ -1,6 +1,4 @@
 @using Interception.UI.Domain
-@using Interception.UI.Components.Shared.Drawer
-@namespace Interception.UI.Components.Pages.Catalogs.Drawers
 
 <Drawer IsOpen="@IsOpen"
         IsOpenChanged="IsOpenChanged"
@@ -61,7 +59,7 @@
                 disabled="@_saving">
             Скасувати
         </button>
-        <button class="btn btn-primary btn-sm"
+        <button class="btn btn-success btn-sm"
                 @onclick="SaveAsync"
                 disabled="@_saving">
             @if (_saving)

@@ -7,7 +7,7 @@ using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Pages.Analytics.Drawers;
+namespace Interception.UI.Components.Pages.Registries.ResolvedParticipants.Drawers;
 
 public partial class ResolvedParticipantDrawer : ComponentBase
 {

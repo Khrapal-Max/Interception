@@ -7,7 +7,7 @@ using Interception.UI.Application.Toasts;
 using Interception.UI.Domain;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Pages.Catalogs.Drawers;
+namespace Interception.UI.Components.Pages.Registries.InterceptionActions.Drawers;
 
 public partial class ActionFormDrawer : ComponentBase
 {

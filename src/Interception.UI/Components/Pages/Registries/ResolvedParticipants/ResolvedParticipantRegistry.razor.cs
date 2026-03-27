@@ -7,9 +7,12 @@ using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Pages.Analytics;
+namespace Interception.UI.Components.Pages.Registries.ResolvedParticipants;
 
-public partial class ResolvedParticipantsPage : ComponentBase
+/// <summary>
+/// Реєстр підтверджених осіб.
+/// </summary>
+public partial class ResolvedParticipantRegistry : ComponentBase
 {
     [Inject] private IResolvedParticipantService ResolvedService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
@@ -20,9 +23,13 @@ public partial class ResolvedParticipantsPage : ComponentBase
     private bool _drawerOpen;
     private ResolvedParticipantDto? _editingParticipant;
 
+    /// <inheritdoc />
     protected override async Task OnInitializedAsync()
         => await LoadAsync();
 
+    /// <summary>
+    /// Завантажує список підтверджених осіб.
+    /// </summary>
     internal async Task LoadAsync()
     {
         _loading = true;
@@ -41,6 +48,10 @@ public partial class ResolvedParticipantsPage : ComponentBase
         }
     }
 
+    /// <summary>
+    /// Відкриває drawer редагування підтвердженої особи.
+    /// </summary>
+    /// <param name="participant">Особа для редагування.</param>
     private void OpenEdit(ResolvedParticipantDto participant)
     {
         _editingParticipant = participant;
