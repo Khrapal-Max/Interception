@@ -121,7 +121,7 @@ public sealed class ActionCatalogTests : BunitContext
 
         var cut = Render<ActionCatalog>();
 
-        cut.Find("button.btn-primary").Click();
+        cut.Find("button.btn-success").Click();
 
         var drawer = cut.FindComponent<Stub<ActionFormDrawer>>();
         drawer.Instance.Parameters.Get(d => d.IsOpen).Should().BeTrue();
@@ -150,7 +150,7 @@ public sealed class ActionCatalogTests : BunitContext
 
         var cut = Render<ActionCatalog>();
 
-        cut.Find("button.btn-link").Click();
+        cut.Find("button.btn-success").Click();
 
         var drawer = cut.FindComponent<Stub<ActionFormDrawer>>();
         drawer.Instance.Parameters.Get(d => d.IsOpen).Should().BeTrue();
