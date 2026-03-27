@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Abstractions.Registry;
+using Interception.UI.Application.Interceptions.Abstractions.Interceptions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Interceptions.Models.Registry;
 using Interception.UI.Domain;
@@ -10,7 +10,7 @@ using Interception.UI.Domain.Enums;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace Interception.UI.Application.Interceptions.Services.Registry;
+namespace Interception.UI.Application.Interceptions.Services.Interceptions;
 
 /// <summary>
 /// Реалізація read-side реєстру перехоплень і деталізації одного повідомлення.

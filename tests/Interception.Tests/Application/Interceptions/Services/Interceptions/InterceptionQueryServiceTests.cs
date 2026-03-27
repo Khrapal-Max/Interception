@@ -4,12 +4,12 @@
 
 using FluentAssertions;
 using Interception.UI.Application.Interceptions.Dtos;
-using Interception.UI.Application.Interceptions.Services.Registry;
+using Interception.UI.Application.Interceptions.Services.Interceptions;
 using Interception.UI.Domain;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace Interception.Tests.Application.Interceptions.Services.Registry;
+namespace Interception.Tests.Application.Interceptions.Services.Interceptions;
 
 public sealed class InterceptionQueryServiceTests
 {

@@ -3,8 +3,6 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Application.Interceptions.Dtos;
-using Interception.UI.Application.Interceptions.Services.Candidates;
 using Interception.UI.Application.Interceptions.Services.Reports;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Records;
@@ -116,14 +114,11 @@ public sealed class DivisionReportServiceTests
     }
 
     [Fact]
-    public async Task BuildAsync_IncludesConfirmedResolvedParticipantsInReport()
+    public async Task BuildAsync_IncludesConfirmedPersonInReport()
     {
         var ct = TestContext.Current.CancellationToken;
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var resolvedParticipantService = new ResolvedParticipantService(factory);
-
-        Guid groupId;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
         {
@@ -137,23 +132,21 @@ public sealed class DivisionReportServiceTests
             var p2 = m2.AddParticipant("НВ 2", isUnknown: true, role: "невідома", ordinal: 1);
 
             var group = CreateUnknownGroup([p1, p2], [m1, m2], suggestedDivision: "336 мсп");
-            groupId = group.Id;
+            var resolved = ResolvedParticipant.Create(
+                name: "МАДЖЕСТИК",
+                confirmedBy: "analyst",
+                role: "оператор бпла",
+                division: "336 мсп");
+
+            group.UpdateSuggestedRole("оператор бпла");
+            group.UpdateSuggestedDivision("336 мсп");
+            group.Confirm("МАДЖЕСТИК", "analyst", resolved.Id);
 
             db.InterceptionMessages.AddRange(m1, m2);
+            db.ResolvedParticipants.Add(resolved);
             db.ParticipantCandidateGroups.Add(group);
             await db.SaveChangesAsync(ct);
         }
-
-        await resolvedParticipantService.ConfirmGroupAsync(
-            groupId,
-            new ConfirmCandidateGroupDto
-            {
-                Name = "МАДЖЕСТИК",
-                Role = "оператор бпла",
-                Division = "336 мсп"
-            },
-            operatorName: "analyst",
-            ct: ct);
 
         var report = await service.BuildAsync(ct: ct);
 

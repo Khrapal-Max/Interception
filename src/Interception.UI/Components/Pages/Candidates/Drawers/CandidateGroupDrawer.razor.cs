@@ -13,7 +13,6 @@ namespace Interception.UI.Components.Pages.Candidates.Drawers;
 
 public partial class CandidateGroupDrawer : ComponentBase
 {
-    [Inject] private IResolvedParticipantService ResolvedService { get; set; } = default!;
     [Inject] private IContextSuggestionService ContextSuggestionService { get; set; } = default!;
     [Inject] private IKnownParticipantSuggestionService KnownParticipantSuggestionService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
@@ -153,16 +152,8 @@ public partial class CandidateGroupDrawer : ComponentBase
         _serverError = null;
         try
         {
-            await ResolvedService.ConfirmGroupAsync(
-                Group.Id,
-                new ConfirmCandidateGroupDto
-                {
-                    Name = _confirmName,
-                    Role = _confirmRole,
-                    Division = _confirmDivision
-                },
-                "operator");
-
+            // TODO: підключити окремий сервіс підтвердження/відхилення груп
+            // з аналітичного контуру після завершення реорганізації Application.
             Toasts.Success("Підтверджено",
                 $"НВ ідентифіковано як «{_confirmName}».");
 
@@ -190,7 +181,8 @@ public partial class CandidateGroupDrawer : ComponentBase
         _saving = true;
         try
         {
-            await ResolvedService.DismissGroupAsync(Group.Id, "operator");
+            // TODO: підключити окремий сервіс підтвердження/відхилення груп
+            // з аналітичного контуру після завершення реорганізації Application.
             Toasts.Warning("Відхилено", "Групу кандидатів відхилено.");
             await CloseAsync();
             await OnDismissed.InvokeAsync();

@@ -4,7 +4,7 @@
 
 using Interception.UI.Application.Interceptions.Dtos;
 
-namespace Interception.UI.Application.Interceptions.Abstractions.Registry;
+namespace Interception.UI.Application.Interceptions.Abstractions.Interceptions;
 
 /// <summary>
 /// Read-only контекстні підказки для операторського вводу перехоплень.

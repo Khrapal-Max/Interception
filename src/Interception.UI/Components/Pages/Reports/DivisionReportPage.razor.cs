@@ -27,11 +27,6 @@ public partial class DivisionReportPage : ComponentBase
     private string? DateFromStr => ConverterDateTimeExtensions.FormatDate(_dateFrom);
     private string? DateToStr => ConverterDateTimeExtensions.FormatDate(_dateTo);
 
-    private int GroupsCount => _report?.Groups.Count ?? 0;
-    private int KnownPeopleCount => _report?.Groups.Sum(x => x.People.Count) ?? 0;
-    private int UnknownMentionsCount => _report?.Groups.Sum(x => x.UnknownMentionsCount) ?? 0;
-    private int UnknownGroupsCount => _report?.Groups.Sum(x => x.UnknownGroupsCount) ?? 0;
-
     protected override async Task OnInitializedAsync()
         => await LoadAsync();
 

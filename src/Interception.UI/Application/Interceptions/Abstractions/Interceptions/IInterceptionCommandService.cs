@@ -5,7 +5,7 @@
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain;
 
-namespace Interception.UI.Application.Interceptions.Abstractions.Registry;
+namespace Interception.UI.Application.Interceptions.Abstractions.Interceptions;
 
 /// <summary>
 /// Write-side сервіс для створення, оновлення та видалення повідомлень перехоплення.

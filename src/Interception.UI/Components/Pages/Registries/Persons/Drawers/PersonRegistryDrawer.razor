@@ -1,4 +1,7 @@
-@* <Drawer IsOpen="@IsOpen"
+@using Interception.UI.Application.Interceptions.Dtos
+@using Interception.UI.Components.Shared.Drawer
+
+<Drawer IsOpen="@IsOpen"
         IsOpenChanged="IsOpenChanged"
         Title="Редагування особи"
         DisableClose="@_saving"
@@ -25,7 +28,7 @@
             <div class="col-6">
                 <label class="form-label form-label-sm">Роль</label>
                 <input type="text" class="form-control form-control-sm"
-                       placeholder="напр. центр (бпла)"
+                       placeholder="напр. оператор бпла"
                        value="@_role"
                        @oninput="e => _role = e.Value?.ToString()" />
             </div>
@@ -55,7 +58,7 @@
                 disabled="@_saving">
             Скасувати
         </button>
-        <button class="btn btn-primary btn-sm"
+        <button class="btn btn-success btn-sm"
                 @onclick="SaveAsync"
                 disabled="@_saving">
             @if (_saving)
@@ -66,4 +69,3 @@
         </button>
     </FooterContent>
 </Drawer>
- *@

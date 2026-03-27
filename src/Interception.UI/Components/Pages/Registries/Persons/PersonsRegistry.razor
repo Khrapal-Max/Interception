@@ -1,20 +1,80 @@
 @page "/registries/persons"
+@using Interception.UI.Application.Interceptions.Dtos
+@using Interception.UI.Components.Pages.Registries.Persons.Drawers
 @using Interception.UI.Components.Pages.Registries.Toolbar
 
 <PageTitle>Регістри — Особи</PageTitle>
 
 <div class="page-shell">
 
-    <RegistriesToolbar ActiveSection="persons" />
+    <RegistriesToolbar ActiveSection="persons">
+        <MetaContent>
+            @if (_participants is not null)
+            {
+                <span>Всього: <strong>@_participants.Count</strong></span>
+            }
+        </MetaContent>
+    </RegistriesToolbar>
 
     <div class="page-panel">
-        <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
-            <div class="text-center py-5">
-                <i class="bi bi-people fs-1 d-block mb-2 opacity-25"></i>
-                <div>Реєстр осіб готується</div>
-                <div class="small mt-1">Сторінка буде наповнена після узгодження сценаріїв реєстру осіб.</div>
+        @if (_loading)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-sm me-2"></div>Завантаження...
+                </div>
             </div>
-        </div>
+        }
+        else if (_participants is null || _participants.Count == 0)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <i class="bi bi-people fs-1 d-block mb-2 opacity-25"></i>
+                    <div>Осіб у реєстрі ще немає</div>
+                    <div class="small mt-1">Підтвердження виконуються на сторінці <a href="/analytics/candidates">аналітики</a></div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="table table-hover table-sm align-middle data-table">
+                    <thead>
+                        <tr>
+                            <th>Позивний</th>
+                            <th>Роль</th>
+                            <th>Підрозділ</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var person in _participants)
+                        {
+                            <tr>
+                                <td class="fw-medium">@person.Name</td>
+                                <td class="small text-muted">@(person.Role ?? "—")</td>
+                                <td class="small text-muted">
+                                    <span class="text-truncate d-block" style="max-width: 220px" title="@person.Division">
+                                        @(person.Division ?? "—")
+                                    </span>
+                                </td>
+                                <td class="text-end pe-2 text-nowrap">
+                                    <button class="btn btn-secondary btn-sm"
+                                            title="Редагувати"
+                                            @onclick="() => OpenEdit(person)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
     </div>
 
 </div>
+
+<PersonRegistryDrawer @bind-IsOpen="_drawerOpen"
+                      Participant="_editingParticipant"
+                      OnSaved="LoadAsync" />

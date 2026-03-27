@@ -44,28 +44,6 @@
             </NavLink>
         }
 
-        @if (ActiveSection == "resolved-participant")
-        {
-            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
-                     href="/registries/resolved-participant"
-                     Match="NavLinkMatch.All"
-                     title="Підтверджені особи"
-                     aria-label="Підтверджені особи">
-                <i class="bi bi-person-check"></i>
-                <span class="visually-hidden">Підтверджені особи</span>
-            </NavLink>
-        }
-        else
-        {
-            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
-                     href="/registries/resolved-participant"
-                     title="Підтверджені особи"
-                     aria-label="Підтверджені особи">
-                <i class="bi bi-person-check"></i>
-                <span class="visually-hidden">Підтверджені особи</span>
-            </NavLink>
-        }
-
         @if (ActiveSection == "actions")
         {
             <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"

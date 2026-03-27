@@ -2,12 +2,12 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Abstractions.Registry;
+using Interception.UI.Application.Interceptions.Abstractions.Interceptions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace Interception.UI.Application.Interceptions.Services.Registry;
+namespace Interception.UI.Application.Interceptions.Services.Interceptions;
 
 /// <summary>
 /// Реалізація контекстних підказок для операторського вводу перехоплень.

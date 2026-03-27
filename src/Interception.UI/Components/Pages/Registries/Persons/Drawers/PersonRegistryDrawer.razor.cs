@@ -1,4 +1,4 @@
-/*//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
@@ -7,16 +7,19 @@ using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Pages.Registries.ResolvedParticipants.Drawers;
+namespace Interception.UI.Components.Pages.Registries.Persons.Drawers;
 
-public partial class ResolvedParticipantDrawer : ComponentBase
+/// <summary>
+/// Drawer редагування запису реєстру осіб.
+/// </summary>
+public partial class PersonRegistryDrawer : ComponentBase
 {
-    [Inject] private IResolvedParticipantService ResolvedService { get; set; } = default!;
+    [Inject] private IPersonRegistryService PersonRegistryService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
-    [Parameter] public ResolvedParticipantDto? Participant { get; set; }
+    [Parameter] public PersonRegistryItemDto? Participant { get; set; }
     [Parameter] public EventCallback OnSaved { get; set; }
 
     private string? _name;
@@ -29,10 +32,16 @@ public partial class ResolvedParticipantDrawer : ComponentBase
 
     protected override void OnParametersSet()
     {
-        if (!IsOpen) { _initialized = false; return; }
-        if (_initialized) return;
-        _initialized = true;
+        if (!IsOpen)
+        {
+            _initialized = false;
+            return;
+        }
 
+        if (_initialized)
+            return;
+
+        _initialized = true;
         _name = Participant?.Name ?? string.Empty;
         _role = Participant?.Role ?? string.Empty;
         _division = Participant?.Division ?? string.Empty;
@@ -49,7 +58,8 @@ public partial class ResolvedParticipantDrawer : ComponentBase
 
     private async Task SaveAsync()
     {
-        if (Participant is null) return;
+        if (Participant is null)
+            return;
 
         if (string.IsNullOrWhiteSpace(_name))
         {
@@ -61,9 +71,9 @@ public partial class ResolvedParticipantDrawer : ComponentBase
         _serverError = null;
         try
         {
-            await ResolvedService.UpdateAsync(
+            await PersonRegistryService.UpdateAsync(
                 Participant.Id,
-                new ConfirmCandidateGroupDto
+                new PersonRegistryUpdateDto
                 {
                     Name = _name,
                     Role = _role,
@@ -91,4 +101,3 @@ public partial class ResolvedParticipantDrawer : ComponentBase
     private async Task CloseAsync()
         => await IsOpenChanged.InvokeAsync(false);
 }
-*/

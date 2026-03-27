@@ -4,10 +4,12 @@
 
 using Interception.UI.Application.Interceptions.Abstractions.Candidates;
 using Interception.UI.Application.Interceptions.Abstractions.Import;
+using Interception.UI.Application.Interceptions.Abstractions.Interceptions;
 using Interception.UI.Application.Interceptions.Abstractions.Registry;
 using Interception.UI.Application.Interceptions.Abstractions.Reports;
 using Interception.UI.Application.Interceptions.Services.Candidates;
 using Interception.UI.Application.Interceptions.Services.Import;
+using Interception.UI.Application.Interceptions.Services.Interceptions;
 using Interception.UI.Application.Interceptions.Services.Registry;
 using Interception.UI.Application.Interceptions.Services.Reports;
 using Interception.UI.Application.Toasts;
@@ -38,7 +40,7 @@ builder.Services.AddScoped<ToastService>();
 // Поточні контракти, які ще використовує фронт.
 builder.Services.AddScoped<IInterceptionImportService, InterceptionImportService>();
 builder.Services.AddScoped<IInterceptionActionService, InterceptionActionService>();
-builder.Services.AddScoped<IResolvedParticipantService, ResolvedParticipantService>();
+builder.Services.AddScoped<IPersonRegistryService, PersonRegistryService>();
 
 // Нові registry-сервіси 
 builder.Services.AddScoped<IInterceptionQueryService, InterceptionQueryService>();

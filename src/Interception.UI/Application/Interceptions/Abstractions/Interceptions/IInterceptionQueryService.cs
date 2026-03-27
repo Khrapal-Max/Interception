@@ -5,7 +5,7 @@
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain;
 
-namespace Interception.UI.Application.Interceptions.Abstractions.Registry;
+namespace Interception.UI.Application.Interceptions.Abstractions.Interceptions;
 
 /// <summary>
 /// Read-side сервіс реєстру перехоплень та деталей одного повідомлення.

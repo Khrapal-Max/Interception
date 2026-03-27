@@ -40,6 +40,15 @@
                                 — @Group.ResolvedBy · @Group.ResolvedAt?.ToString("dd.MM.yy HH:mm")
                             </span>
                         }
+                        @if (Group.Status == CandidateGroupStatus.Confirmed)
+                        {
+                            <div class="mt-2">
+                                <a class="btn btn-outline-success btn-sm"
+                                   href="/registries/persons">
+                                    <i class="bi bi-people me-1"></i>Реєстр осіб
+                                </a>
+                            </div>
+                        }
                     </div>
                 }
 
