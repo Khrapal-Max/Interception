@@ -12,7 +12,7 @@ public class InterceptionMessage
 
     public DateTime ObservedDate { get; private set; }
     public string? Frequency { get; private set; }
-    public string? Division { get; private set; }
+    public string? Division { get; set; }
     public string? PointSignal { get; private set; }
     public string? VectorSignal { get; private set; }
 
