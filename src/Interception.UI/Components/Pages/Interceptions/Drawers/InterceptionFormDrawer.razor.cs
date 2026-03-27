@@ -33,10 +33,16 @@ public partial class InterceptionFormDrawer : ComponentBase
 
     protected override async Task OnParametersSetAsync()
     {
-        if (!IsOpen) { _initialized = false; return; }
-        if (_initialized) return;
-        _initialized = true;
+        if (!IsOpen)
+        {
+            _initialized = false;
+            return;
+        }
 
+        if (_initialized)
+            return;
+
+        _initialized = true;
         _actions = await ActionService.GetAllAsync();
 
         if (EditingId.HasValue)
@@ -61,7 +67,6 @@ public partial class InterceptionFormDrawer : ComponentBase
 
         var topFreq = _frequencySuggestions.Count > 0 ? _frequencySuggestions[0] : null;
 
-        // FIX: frequency — другий параметр, не перший
         _vectorSuggestions = await InterceptionSuggestionService
             .GetVectorSignalSuggestionsAsync(query: null, frequency: topFreq?.Frequency);
 
@@ -93,7 +98,6 @@ public partial class InterceptionFormDrawer : ComponentBase
         _frequencySuggestions = await InterceptionSuggestionService
             .GetFrequencyWithDivisionAsync(message.Frequency);
 
-        // FIX: frequency — другий параметр
         _vectorSuggestions = await InterceptionSuggestionService
             .GetVectorSignalSuggestionsAsync(query: null, frequency: message.Frequency);
 
@@ -110,9 +114,9 @@ public partial class InterceptionFormDrawer : ComponentBase
                 .OrderBy(pt => pt.Ordinal)
                 .Select(pt => new ParticipantFormDto
                 {
-                    Ordinal   = pt.Ordinal,
-                    Name      = pt.Name,
-                    Role      = pt.Role,
+                    Ordinal = pt.Ordinal,
+                    Name = pt.Name,
+                    Role = pt.Role,
                     IsUnknown = pt.IsUnknown
                 })],
             Labels = [.. message.Labels.Select(l => l.NameLabel)]
@@ -136,7 +140,6 @@ public partial class InterceptionFormDrawer : ComponentBase
     /// </summary>
     internal async Task ApplyFrequencySuggestion(FrequencySuggestionDto s)
     {
-        // FIX: frequency — другий параметр
         _vectorSuggestions = await InterceptionSuggestionService
             .GetVectorSignalSuggestionsAsync(query: null, frequency: s.Frequency);
         await InvokeAsync(StateHasChanged);
@@ -148,7 +151,6 @@ public partial class InterceptionFormDrawer : ComponentBase
     /// </summary>
     internal async Task SearchVectorAsync(string? query)
     {
-        // FIX: передаємо поточну частоту як контекст
         _vectorSuggestions = await InterceptionSuggestionService
             .GetVectorSignalSuggestionsAsync(query: query, frequency: _form?.Frequency);
         await InvokeAsync(StateHasChanged);
@@ -163,7 +165,14 @@ public partial class InterceptionFormDrawer : ComponentBase
 
     private async Task SaveAsync()
     {
-        if (_form is null) return;
+        if (_form is null)
+            return;
+
+        if (_form.InterceptionActionId == Guid.Empty)
+        {
+            Toasts.Warning("Не обрано дію", "Оберіть дію перед збереженням.");
+            return;
+        }
 
         _saving = true;
         try

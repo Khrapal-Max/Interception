@@ -151,6 +151,7 @@
                            value="@participant.Name"
                            autocomplete="off"
                            @oninput="e => OnParticipantNameInput(participant, e.Value?.ToString())"
+                           @onchange="e => OnParticipantNameChangedAsync(participant, e.Value?.ToString())"
                            @onblur="() => CloseParticipantSuggestions(participant.Ordinal)" />
 
                     @if (_participantOpen.Contains(participant.Ordinal)

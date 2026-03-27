@@ -17,6 +17,7 @@ namespace Interception.UI.Components.Pages.Interceptions.Drawers;
 public partial class InterceptionTextBlockDrawer : ComponentBase
 {
     [Inject] private IInterceptionCommandService InterceptionCommandService { get; set; } = default!;
+    [Inject] private IInterceptionSuggestionService InterceptionSuggestionService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
     [Parameter] public bool IsOpen { get; set; }
@@ -45,7 +46,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
     // Крок 1 — парсинг
     // -------------------------------------------------------------------------
 
-    private void ParseAsync()
+    private async Task ParseAsync()
     {
         _parseError = null;
         var result = TextBlockParser.Parse(_rawText);
@@ -59,6 +60,8 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         _parsed = result;
         _form = BuildForm(result);
         _newLabel = null;
+
+        await PopulateParticipantRolesAsync(_form);
     }
 
     private static InterceptionFormDto BuildForm(TextBlockParseResult r)
@@ -66,15 +69,14 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         var ordinal = 1;
         var participants = new List<ParticipantFormDto>
         {
-            // Ініціатор
-            new() {
+            new()
+            {
                 Ordinal = ordinal++,
                 Name = r.Initiator,
                 IsUnknown = r.Initiator is null
             }
         };
 
-        // Відповідачі
         foreach (var name in r.Responders)
         {
             participants.Add(new ParticipantFormDto
@@ -85,7 +87,6 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
             });
         }
 
-        // Якщо нікого не розпізнали — два порожніх НВ
         if (participants.Count == 0)
         {
             participants.Add(new ParticipantFormDto { Ordinal = 1, IsUnknown = true });
@@ -103,7 +104,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
             Division = r.Division,
             VectorSignal = r.VectorSignal,
             Note = r.Note,
-            InterceptionActionId = Guid.Empty,   // оператор обирає вручну
+            InterceptionActionId = Guid.Empty,
             Participants = participants,
         };
     }
@@ -114,14 +115,19 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
 
     private void OnObservedDateChange(ChangeEventArgs e)
     {
-        if (_form is null) return;
+        if (_form is null)
+            return;
+
         var parsed = ConverterDateTimeExtensions.Parse(e.Value?.ToString());
-        if (parsed.HasValue) _form.ObservedDate = parsed.Value;
+        if (parsed.HasValue)
+            _form.ObservedDate = parsed.Value;
     }
 
     private void OnActionChange(ChangeEventArgs e)
     {
-        if (_form is null) return;
+        if (_form is null)
+            return;
+
         if (Guid.TryParse(e.Value?.ToString(), out var id))
             _form.InterceptionActionId = id;
     }
@@ -129,15 +135,37 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
     private static void OnUnknownToggle(ParticipantFormDto p, bool isUnknown)
     {
         p.IsUnknown = isUnknown;
-        if (isUnknown) p.Name = null;
+        if (isUnknown)
+        {
+            p.Name = null;
+            p.Role = null;
+        }
+    }
+
+    private async Task OnParticipantNameChangedAsync(ParticipantFormDto participant, string? value)
+    {
+        participant.Name = value;
+
+        if (participant.IsUnknown || string.IsNullOrWhiteSpace(value))
+            return;
+
+        var suggestions = await InterceptionSuggestionService.GetParticipantSuggestionsAsync(value.Trim());
+        var matched = suggestions.FirstOrDefault(x =>
+            string.Equals(x.Name, value.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        if (matched is not null && !string.IsNullOrWhiteSpace(matched.Role))
+            participant.Role = matched.Role;
     }
 
     private void AddParticipant()
     {
-        if (_form is null) return;
+        if (_form is null)
+            return;
+
         var next = _form.Participants.Count == 0
             ? 1
             : _form.Participants.Max(p => p.Ordinal) + 1;
+
         _form.Participants.Add(new ParticipantFormDto { Ordinal = next, IsUnknown = true });
     }
 
@@ -185,13 +213,39 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         return normalized.Length == 0 ? null : normalized;
     }
 
+    private async Task PopulateParticipantRolesAsync(InterceptionFormDto form)
+    {
+        foreach (var participant in form.Participants.Where(x => !x.IsUnknown && !string.IsNullOrWhiteSpace(x.Name)))
+            await TryPopulateParticipantRoleAsync(participant);
+    }
+
+    private async Task TryPopulateParticipantRoleAsync(ParticipantFormDto participant)
+    {
+        if (string.IsNullOrWhiteSpace(participant.Name))
+            return;
+
+        var suggestions = await InterceptionSuggestionService.GetParticipantSuggestionsAsync(participant.Name.Trim());
+        var matched = suggestions.FirstOrDefault(x =>
+            string.Equals(x.Name, participant.Name.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        if (matched is not null && !string.IsNullOrWhiteSpace(matched.Role))
+            participant.Role = matched.Role;
+    }
+
     // -------------------------------------------------------------------------
     // Збереження
     // -------------------------------------------------------------------------
 
     private async Task SaveAsync()
     {
-        if (_form is null) return;
+        if (_form is null)
+            return;
+
+        if (_form.InterceptionActionId == Guid.Empty)
+        {
+            Toasts.Warning("Не обрано дію", "Оберіть дію перед збереженням.");
+            return;
+        }
 
         _saving = true;
         try
@@ -199,9 +253,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
             await InterceptionCommandService.CreateAsync(_form, "operator");
             Toasts.Success("Збережено", $"Запис від {_form.ObservedDate:dd.MM HH:mm} створено.");
 
-            // Явно скидаємо стан — готуємо дравер до наступного запису
             ResetState();
-
             await CloseAsync();
             await OnSaved.InvokeAsync();
         }

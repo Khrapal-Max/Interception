@@ -139,7 +139,8 @@
                                        placeholder="@(participant.IsUnknown ? "НВ" : "Позивний")"
                                        disabled="@participant.IsUnknown"
                                        value="@participant.Name"
-                                       @oninput="e => participant.Name = e.Value?.ToString()" />
+                                       @oninput="e => participant.Name = e.Value?.ToString()"
+                                       @onchange="e => OnParticipantNameChangedAsync(participant, e.Value?.ToString())" />
                             </div>
                             <div class="col">
                                 <input type="text" class="form-control form-control-sm"
@@ -223,7 +224,7 @@
     <FooterContent>
         <button class="btn btn-secondary btn-sm"
                 @onclick="CloseAsync"
-                disabled="@_saving">
+                disabled="@(_saving || _form is null || _form.InterceptionActionId == Guid.Empty)">
             Скасувати
         </button>
 

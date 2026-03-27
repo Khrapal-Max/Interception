@@ -75,7 +75,8 @@ public partial class InterceptionFormBody : ComponentBase
 
     private void OnFrequencyFocus()
     {
-        if (FrequencySuggestions.Count > 0) _freqOpen = true;
+        if (FrequencySuggestions.Count > 0)
+            _freqOpen = true;
     }
 
     private void OnFrequencyBlur() => _freqOpen = false;
@@ -83,8 +84,11 @@ public partial class InterceptionFormBody : ComponentBase
     private async Task OnFrequencySuggestionSelected(FrequencySuggestionDto s)
     {
         Form.Frequency = s.Frequency;
-        if (!string.IsNullOrWhiteSpace(s.Division)) Form.Division = s.Division;
-        if (!string.IsNullOrWhiteSpace(s.VectorSignal)) Form.VectorSignal = s.VectorSignal;
+        if (!string.IsNullOrWhiteSpace(s.Division))
+            Form.Division = s.Division;
+        if (!string.IsNullOrWhiteSpace(s.VectorSignal))
+            Form.VectorSignal = s.VectorSignal;
+
         _freqOpen = false;
         await OnFrequencySelected.InvokeAsync(s);
     }
@@ -102,7 +106,8 @@ public partial class InterceptionFormBody : ComponentBase
 
     private void OnVectorFocus()
     {
-        if (VectorSuggestions.Count > 0) _vecOpen = true;
+        if (VectorSuggestions.Count > 0)
+            _vecOpen = true;
     }
 
     private void OnVectorBlur() => _vecOpen = false;
@@ -132,6 +137,7 @@ public partial class InterceptionFormBody : ComponentBase
         if (isUnknown)
         {
             p.Name = null;
+            p.Role = null;
             _participantSuggestions.Remove(p.Ordinal);
             _participantOpen.Remove(p.Ordinal);
         }
@@ -152,6 +158,21 @@ public partial class InterceptionFormBody : ComponentBase
         _participantOpen.Add(p.Ordinal);
     }
 
+    private async Task OnParticipantNameChangedAsync(ParticipantFormDto p, string? value)
+    {
+        p.Name = value;
+
+        if (OnParticipantSearch is null || string.IsNullOrWhiteSpace(value) || p.IsUnknown)
+            return;
+
+        var suggestions = await OnParticipantSearch(value);
+        var matched = suggestions.FirstOrDefault(x =>
+            string.Equals(x.Name, value.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        if (matched is not null && !string.IsNullOrWhiteSpace(matched.Role))
+            p.Role = matched.Role;
+    }
+
     private void CloseParticipantSuggestions(int ordinal)
         => _participantOpen.Remove(ordinal);
 
@@ -170,15 +191,19 @@ public partial class InterceptionFormBody : ComponentBase
 
     private void AddLabel()
     {
-        if (string.IsNullOrWhiteSpace(_newLabel)) return;
+        if (string.IsNullOrWhiteSpace(_newLabel))
+            return;
+
         var norm = _newLabel.Trim();
         if (!Form.Labels.Contains(norm, StringComparer.OrdinalIgnoreCase))
             Form.Labels.Add(norm);
+
         _newLabel = null;
     }
 
     private void OnLabelKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key is "Enter") AddLabel();
+        if (e.Key is "Enter")
+            AddLabel();
     }
 }
