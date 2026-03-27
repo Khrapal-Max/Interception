@@ -1,6 +1,6 @@
-//-----------------------------------------------------------------------------
+//----------------------------------------------------------------------------- 
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
-//-----------------------------------------------------------------------------
+//----------------------------------------------------------------------------- 
 
 using FluentAssertions;
 using Interception.UI.Application.Interceptions.Services.Reports;
@@ -53,6 +53,46 @@ public sealed class DivisionReportServiceTests
         var report = await service.BuildAsync(ct: ct);
 
         report.Groups.Select(x => x.Division).Should().BeEquivalentTo(["336 мсп", "186 мсп"]);
+    }
+
+    [Fact]
+    public async Task BuildAsync_UsesEffectiveDivisionFromFrequency_WhenDivisionIsEmpty()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var action = InterceptionAction.Create("доповідь", string.Empty);
+            db.InterceptionActions.Add(action);
+
+            var knownDivision = CreateMessage(
+                action,
+                new DateTime(2026, 03, 26, 9, 10, 0, DateTimeKind.Utc),
+                division: "336 мсп",
+                frequency: "142.4500");
+            knownDivision.AddParticipant("ШАПКА", isUnknown: false, role: "оператор", ordinal: 1);
+
+            var emptyDivision = CreateMessage(
+                action,
+                new DateTime(2026, 03, 26, 9, 20, 0, DateTimeKind.Utc),
+                division: null,
+                frequency: "142.4500");
+            emptyDivision.AddParticipant("ГРОМ", isUnknown: false, role: "старший", ordinal: 1);
+
+            db.InterceptionMessages.AddRange(knownDivision, emptyDivision);
+            await db.SaveChangesAsync(ct);
+        }
+
+        var report = await service.BuildAsync(ct: ct);
+
+        report.Groups.Should().ContainSingle();
+        var group = report.Groups.Single();
+
+        group.Division.Should().Be("336 мсп");
+        group.Frequencies.Should().BeEquivalentTo(["142.4500"]);
+        group.People.Select(x => x.Name).Should().BeEquivalentTo(["ШАПКА", "ГРОМ"]);
     }
 
     [Fact]
@@ -160,6 +200,56 @@ public sealed class DivisionReportServiceTests
     }
 
     [Fact]
+    public async Task BuildAsync_PrefersConfirmedPersonDivisionOverDominantObservedDivision()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var action = InterceptionAction.Create("доповідь", string.Empty);
+            db.InterceptionActions.Add(action);
+
+            var m1 = CreateMessage(action, new DateTime(2026, 03, 26, 11, 20, 0, DateTimeKind.Utc), division: "336 мсп", frequency: "142.4500");
+            var p1 = m1.AddParticipant("НВ 1", isUnknown: true, role: "невідома", ordinal: 1);
+
+            var m2 = CreateMessage(action, new DateTime(2026, 03, 26, 11, 30, 0, DateTimeKind.Utc), division: "336 мсп", frequency: "142.4500");
+            var p2 = m2.AddParticipant("НВ 2", isUnknown: true, role: "невідома", ordinal: 1);
+
+            var m3 = CreateMessage(action, new DateTime(2026, 03, 26, 11, 40, 0, DateTimeKind.Utc), division: "186 мсп", frequency: "145.1000");
+            var p3 = m3.AddParticipant("НВ 3", isUnknown: true, role: "невідома", ordinal: 1);
+
+            var seedGroupMessage = CreateMessage(action, new DateTime(2026, 03, 26, 11, 50, 0, DateTimeKind.Utc), division: "186 мсп", frequency: "145.1000");
+            seedGroupMessage.AddParticipant("ГРОМ", isUnknown: false, role: "старший", ordinal: 1);
+
+            var group = CreateUnknownGroup([p1, p2, p3], [m1, m2, m3], suggestedDivision: "336 мсп");
+            var resolved = ResolvedParticipant.Create(
+                name: "МАДЖЕСТИК",
+                confirmedBy: "analyst",
+                role: "оператор бпла",
+                division: "186 мсп");
+
+            group.UpdateSuggestedRole("оператор бпла");
+            group.UpdateSuggestedDivision("336 мсп");
+            group.Confirm("МАДЖЕСТИК", "analyst", resolved.Id);
+
+            db.InterceptionMessages.AddRange(m1, m2, m3, seedGroupMessage);
+            db.ResolvedParticipants.Add(resolved);
+            db.ParticipantCandidateGroups.Add(group);
+            await db.SaveChangesAsync(ct);
+        }
+
+        var report = await service.BuildAsync(ct: ct);
+
+        report.Groups.Single(x => x.Division == "186 мсп")
+            .People.Should().ContainSingle(x => x.Name == "МАДЖЕСТИК");
+
+        report.Groups.Single(x => x.Division == "336 мсп")
+            .People.Should().NotContain(x => x.Name == "МАДЖЕСТИК");
+    }
+
+    [Fact]
     public async Task BuildAsync_ReturnsUnknownMentionsCountPerDivision()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -187,6 +277,41 @@ public sealed class DivisionReportServiceTests
 
         report.Groups.Single(x => x.Division == "336 мсп").UnknownMentionsCount.Should().Be(2);
         report.Groups.Single(x => x.Division == "186 мсп").UnknownMentionsCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task BuildAsync_UsesEffectiveDivisionForUnknownMentionsAndUnknownGroups()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var action = InterceptionAction.Create("доповідь", string.Empty);
+            db.InterceptionActions.Add(action);
+
+            var knownDivision = CreateMessage(action, new DateTime(2026, 03, 26, 11, 30, 0, DateTimeKind.Utc), division: "336 мсп", frequency: "142.4500");
+            knownDivision.AddParticipant("ШАПКА", isUnknown: false, role: "оператор", ordinal: 1);
+
+            var unknown1 = CreateMessage(action, new DateTime(2026, 03, 26, 11, 40, 0, DateTimeKind.Utc), division: null, frequency: "142.4500");
+            var p1 = unknown1.AddParticipant("НВ 1", isUnknown: true, role: "невідома", ordinal: 1);
+
+            var unknown2 = CreateMessage(action, new DateTime(2026, 03, 26, 11, 50, 0, DateTimeKind.Utc), division: "НВ підрозділ", frequency: "142.4500");
+            var p2 = unknown2.AddParticipant("НВ 2", isUnknown: true, role: "невідома", ordinal: 1);
+
+            var candidateGroup = CreateUnknownGroup([p1, p2], [unknown1, unknown2], suggestedDivision: "НВ підрозділ");
+
+            db.InterceptionMessages.AddRange(knownDivision, unknown1, unknown2);
+            db.ParticipantCandidateGroups.Add(candidateGroup);
+            await db.SaveChangesAsync(ct);
+        }
+
+        var report = await service.BuildAsync(ct: ct);
+
+        var group = report.Groups.Single(x => x.Division == "336 мсп");
+        group.UnknownMentionsCount.Should().Be(2);
+        group.UnknownGroupsCount.Should().Be(1);
     }
 
     [Fact]
@@ -334,7 +459,7 @@ public sealed class DivisionReportServiceTests
     }
 
     [Fact]
-    public async Task BuildAsync_SameNameInDifferentDivisions_CreatesRowsInDifferentGroups()
+    public async Task BuildAsync_AssignsObservedKnownPersonToDominantEffectiveDivision()
     {
         var ct = TestContext.Current.CancellationToken;
         var factory = TestDbFactory.CreateFactory();
@@ -345,23 +470,26 @@ public sealed class DivisionReportServiceTests
             var action = InterceptionAction.Create("доповідь", string.Empty);
             db.InterceptionActions.Add(action);
 
-            var m1 = CreateMessage(action, new DateTime(2026, 03, 26, 15, 0, 0, DateTimeKind.Utc), division: "186 мсп", frequency: "142.4500");
+            var m1 = CreateMessage(action, new DateTime(2026, 03, 26, 15, 0, 0, DateTimeKind.Utc), division: "336 мсп", frequency: "142.4500");
             m1.AddParticipant("ЯКУТ", isUnknown: false, role: "оператор", ordinal: 1);
 
-            var m2 = CreateMessage(action, new DateTime(2026, 03, 26, 15, 5, 0, DateTimeKind.Utc), division: "336 мсп", frequency: "145.1000");
-            m2.AddParticipant("ЯКУТ", isUnknown: false, role: "старший", ordinal: 1);
+            var m2 = CreateMessage(action, new DateTime(2026, 03, 26, 15, 5, 0, DateTimeKind.Utc), division: null, frequency: "142.4500");
+            m2.AddParticipant("ЯКУТ", isUnknown: false, role: null, ordinal: 1);
 
-            db.InterceptionMessages.AddRange(m1, m2);
+            var m3 = CreateMessage(action, new DateTime(2026, 03, 26, 15, 10, 0, DateTimeKind.Utc), division: "186 мсп", frequency: "145.1000");
+            m3.AddParticipant("ЯКУТ", isUnknown: false, role: "старший", ordinal: 1);
+
+            db.InterceptionMessages.AddRange(m1, m2, m3);
             await db.SaveChangesAsync(ct);
         }
 
         var report = await service.BuildAsync(ct: ct);
 
-        var group186 = report.Groups.Single(x => x.Division == "186 мсп");
-        var group336 = report.Groups.Single(x => x.Division == "336 мсп");
+        report.Groups.Single(x => x.Division == "336 мсп")
+            .People.Should().ContainSingle(x => x.Name == "ЯКУТ");
 
-        group186.People.Should().ContainSingle(x => x.Name == "ЯКУТ");
-        group336.People.Should().ContainSingle(x => x.Name == "ЯКУТ");
+        report.Groups.Single(x => x.Division == "186 мсп")
+            .People.Should().NotContain(x => x.Name == "ЯКУТ");
     }
 
     private static InterceptionMessage CreateMessage(

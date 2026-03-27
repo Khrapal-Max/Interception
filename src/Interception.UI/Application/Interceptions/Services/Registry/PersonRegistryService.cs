@@ -41,7 +41,7 @@ public sealed class PersonRegistryService(IDbContextFactory<AppDbContext> dbFact
             .ToListAsync(ct);
 
         var observedPeople = observedRows
-            .GroupBy(x => NormalizeKey(x.Name)!, StringComparer.Ordinal)
+            .GroupBy(x => BuildObservedKey(x.Name, x.Division), StringComparer.Ordinal)
             .Select(group =>
             {
                 var ordered = group
@@ -65,21 +65,29 @@ public sealed class PersonRegistryService(IDbContextFactory<AppDbContext> dbFact
                     IsConfirmed = false
                 };
             })
-            .ToDictionary(x => NormalizeKey(x.Name)!, x => x, StringComparer.Ordinal);
+            .ToList();
 
-        var resolvedRows = await db.ResolvedParticipants
+        var resolvedPeople = await db.ResolvedParticipants
             .AsNoTracking()
             .OrderBy(x => x.Name)
+            .Select(x => MapToDto(x))
             .ToListAsync(ct);
 
-        foreach (var resolved in resolvedRows)
+        var items = new List<PersonRegistryItemDto>(resolvedPeople);
+
+        foreach (var observed in observedPeople)
         {
-            observedPeople[NormalizeKey(resolved.Name)!] = MapToDto(resolved);
+            var hasExactConfirmed = resolvedPeople.Any(x => SamePersonKey(x.Name, x.Division, observed.Name, observed.Division));
+            if (!hasExactConfirmed)
+            {
+                items.Add(observed);
+            }
         }
 
-        return observedPeople.Values
+        return [.. items
             .OrderBy(x => x.Name, StringComparer.Ordinal)
-            .ToList();
+            .ThenBy(x => x.Division, StringComparer.Ordinal)
+            .ThenBy(x => x.Role, StringComparer.Ordinal)];
     }
 
     /// <inheritdoc />
@@ -93,19 +101,12 @@ public sealed class PersonRegistryService(IDbContextFactory<AppDbContext> dbFact
 
         var normalizedRole = SemanticValue.NormalizeMeaningfulOrNull(dto.Role);
         var normalizedDivision = SemanticValue.NormalizeMeaningfulOrNull(dto.Division);
-        var normalizedNameKey = NormalizeKey(normalizedName)!;
 
         var resolved = await db.ResolvedParticipants
             .FirstOrDefaultAsync(x => x.Id == id, ct);
 
         if (resolved is not null)
         {
-            var nameConflict = await db.ResolvedParticipants
-                .AnyAsync(x => x.Id != id && x.Name.ToUpper() == normalizedNameKey, ct);
-
-            if (nameConflict)
-                throw new InvalidOperationException($"Встановлена особа з ім'ям '{normalizedName}' вже існує.");
-
             resolved.Update(normalizedName, normalizedRole, normalizedDivision);
             await db.SaveChangesAsync(ct);
             return MapToDto(resolved);
@@ -117,12 +118,6 @@ public sealed class PersonRegistryService(IDbContextFactory<AppDbContext> dbFact
         if (participant is null || participant.IsUnknown || string.IsNullOrWhiteSpace(participant.Name))
             throw new InvalidOperationException($"Особу '{id}' не знайдено.");
 
-        var observedConflict = await db.ResolvedParticipants
-            .AnyAsync(x => x.Name.ToUpper() == normalizedNameKey, ct);
-
-        if (observedConflict)
-            throw new InvalidOperationException($"Встановлена особа з ім'ям '{normalizedName}' вже існує.");
-
         var created = ResolvedParticipant.Create(
             normalizedName,
             confirmedBy: "registry",
@@ -131,8 +126,8 @@ public sealed class PersonRegistryService(IDbContextFactory<AppDbContext> dbFact
 
         db.ResolvedParticipants.Add(created);
 
-        // Для вже відомої особи зі спостереження синхронізуємо принаймні ім'я і роль,
-        // щоб реєстр та звіти бачили один канонічний варіант назви.
+        // Для відомої особи зі спостереження синхронізуємо канонічне ім'я і роль,
+        // щоб реєстр і звіти бачили один варіант назви.
         participant.ResolveAsKnown(normalizedName, normalizedRole);
 
         await db.SaveChangesAsync(ct);
@@ -153,7 +148,20 @@ public sealed class PersonRegistryService(IDbContextFactory<AppDbContext> dbFact
         };
 
     /// <summary>
-    /// Нормалізує ключ імені для злиття записів.
+    /// Будує ключ observed-особи для злиття рядків реєстру.
+    /// </summary>
+    private static string BuildObservedKey(string? name, string? division)
+        => $"{NormalizeKey(name) ?? string.Empty}|{NormalizeKey(division) ?? string.Empty}";
+
+    /// <summary>
+    /// Перевіряє, що два рядки описують одну й ту саму особу для реєстру.
+    /// </summary>
+    private static bool SamePersonKey(string? leftName, string? leftDivision, string? rightName, string? rightDivision)
+        => string.Equals(NormalizeKey(leftName), NormalizeKey(rightName), StringComparison.Ordinal)
+            && string.Equals(NormalizeKey(leftDivision), NormalizeKey(rightDivision), StringComparison.Ordinal);
+
+    /// <summary>
+    /// Нормалізує ключ значення для порівняння.
     /// </summary>
     private static string? NormalizeKey(string? value)
         => SemanticValue.NormalizeKeyOrNull(value);

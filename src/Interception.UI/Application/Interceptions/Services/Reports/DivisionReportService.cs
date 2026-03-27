@@ -17,6 +17,7 @@ namespace Interception.UI.Application.Interceptions.Services.Reports;
 public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFactory)
     : IDivisionReportService
 {
+    private const string UnknownDivision = "НВ підрозділ";
     private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
 
     /// <inheritdoc />
@@ -38,53 +39,64 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
         if (dateTo.HasValue)
             messagesQuery = messagesQuery.Where(x => x.ObservedDate <= dateTo.Value);
 
-        var messages = await messagesQuery
-            .Where(x => !string.IsNullOrWhiteSpace(x.Division))
-            .ToListAsync(ct);
+        var messages = await messagesQuery.ToListAsync(ct);
 
-        var messageIds = messages
-            .Select(x => x.Id)
+        if (messages.Count == 0)
+            return new DivisionReportModel([]);
+
+        var frequencyDivisionMap = BuildFrequencyDivisionMap(messages);
+
+        var messageRows = messages
+            .Select(message => (
+                Message: message,
+                EffectiveDivision: ResolveEffectiveDivision(message.Division, message.Frequency, frequencyDivisionMap)))
+            .Where(x => !string.IsNullOrWhiteSpace(x.EffectiveDivision))
+            .ToList();
+
+        if (messageRows.Count == 0)
+            return new DivisionReportModel([]);
+
+        var messageIds = messageRows
+            .Select(x => x.Message.Id)
             .ToHashSet();
 
-        var messageDates = messages
-            .ToDictionary(x => x.Id, x => x.ObservedDate);
+        var messageDates = messageRows
+            .ToDictionary(x => x.Message.Id, x => x.Message.ObservedDate);
 
-        var messageDivisions = messages
-            .Where(x => !string.IsNullOrWhiteSpace(x.Division))
-            .ToDictionary(x => x.Id, x => x.Division!, EqualityComparer<Guid>.Default);
+        var messageEffectiveDivisions = messageRows
+            .ToDictionary(x => x.Message.Id, x => x.EffectiveDivision!, EqualityComparer<Guid>.Default);
 
-        var openUnknownGroups = await db.ParticipantCandidateGroups
-            .AsNoTracking()
-            .Where(x =>
-                x.Status == CandidateGroupStatus.Open &&
-                !string.IsNullOrWhiteSpace(x.SuggestedDivision))
-            .ToListAsync(ct);
-
-        var unknownGroupsCountByDivision = openUnknownGroups
-            .Where(x => x.ParticipantRefs.Any(r => messageIds.Contains(r.MessageId)))
-            .GroupBy(x => x.SuggestedDivision!)
-            .ToDictionary(
-                x => x.Key,
-                x => x.Count(),
-                StringComparer.OrdinalIgnoreCase);
+        var unknownGroupsCountByDivision = await LoadUnknownGroupsCountByDivisionAsync(
+            db,
+            messageIds,
+            messageEffectiveDivisions,
+            ct);
 
         var confirmedPeople = await LoadConfirmedPeopleAsync(
             db,
             messageIds,
             messageDates,
-            messageDivisions,
+            messageEffectiveDivisions,
             ct);
 
-        var confirmedPeopleByDivision = confirmedPeople
-            .GroupBy(x => x.Division, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                x => x.Key,
-                x => x.ToList(),
-                StringComparer.OrdinalIgnoreCase);
+        var observedPeople = BuildObservedPeople(messageRows);
 
-        var groups = messages
-            .GroupBy(x => x.Division!, StringComparer.OrdinalIgnoreCase)
-            .Select(x => BuildGroup(x.Key, [.. x], unknownGroupsCountByDivision, confirmedPeopleByDivision))
+        var divisions = messageRows
+            .Select(x => x.EffectiveDivision!)
+            .Concat(confirmedPeople.Select(x => x.Division))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x)
+            .ToList();
+
+        var groups = divisions
+            .Select(division => BuildGroup(
+                division,
+                messageRows.Where(x => string.Equals(x.EffectiveDivision, division, StringComparison.OrdinalIgnoreCase))
+                    .Select(x => x.Message)
+                    .ToList(),
+                observedPeople.Where(x => string.Equals(x.Division, division, StringComparison.OrdinalIgnoreCase)).ToList(),
+                confirmedPeople.Where(x => string.Equals(x.Division, division, StringComparison.OrdinalIgnoreCase)).ToList(),
+                unknownGroupsCountByDivision))
             .OrderBy(x => x.Division)
             .ToList();
 
@@ -94,8 +106,9 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
     private static DivisionReportGroupModel BuildGroup(
         string division,
         List<InterceptionMessage> messages,
-        Dictionary<string, int> unknownGroupsCountByDivision,
-        Dictionary<string, List<(string Division, string Name, string? Role, DateTime LastSeenAt)>> confirmedPeopleByDivision)
+        List<(string Division, string Name, string? Role, DateTime LastSeenAt)> observedPeople,
+        List<(string Division, string Name, string? Role, DateTime LastSeenAt)> confirmedPeople,
+        Dictionary<string, int> unknownGroupsCountByDivision)
     {
         var frequencies = messages
             .Select(x => x.Frequency)
@@ -113,11 +126,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
             ? count
             : 0;
 
-        var confirmedPeople = confirmedPeopleByDivision.TryGetValue(division, out var people)
-            ? people
-            : [];
-
-        var reportPeople = BuildPeople(messages, confirmedPeople);
+        var reportPeople = BuildPeople(observedPeople, confirmedPeople);
 
         return new DivisionReportGroupModel(
             Division: division,
@@ -128,26 +137,14 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
     }
 
     private static List<DivisionReportPersonRowModel> BuildPeople(
-        List<InterceptionMessage> messages,
+        List<(string Division, string Name, string? Role, DateTime LastSeenAt)> observedPeople,
         List<(string Division, string Name, string? Role, DateTime LastSeenAt)> confirmedPeople)
     {
-        var people = messages
-            .SelectMany(message => message.Participants
-                .Where(participant =>
-                    !participant.IsUnknown &&
-                    !string.IsNullOrWhiteSpace(participant.Name))
-                .Select(participant => (
-                    Name: participant.Name!,
-                    participant.Role,
-                    LastSeenAt: message.ObservedDate)))
-            .ToList();
+        var people = new List<(string Name, string? Role, DateTime LastSeenAt)>();
+        people.AddRange(observedPeople.Select(x => (x.Name, x.Role, x.LastSeenAt)));
+        people.AddRange(confirmedPeople.Select(x => (x.Name, x.Role, x.LastSeenAt)));
 
-        people.AddRange(confirmedPeople.Select(x => (
-            x.Name,
-            x.Role,
-            x.LastSeenAt)));
-
-        var rows = people
+        return people
             .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
             .Select(group =>
             {
@@ -155,34 +152,147 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
                     .OrderByDescending(x => x.LastSeenAt)
                     .ToList();
 
-                var (Name, Role, LastSeenAt) = ordered.First();
+                var latest = ordered.First();
 
                 var lastNonEmptyRole = ordered
                     .Select(x => x.Role)
                     .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
 
-                var name = Name;
-
                 return new DivisionReportPersonRowModel(
-                    PersonKey: name.Trim().ToUpperInvariant(),
-                    Name: name,
+                    PersonKey: latest.Name.Trim().ToUpperInvariant(),
+                    Name: latest.Name,
                     Role: lastNonEmptyRole,
-                    LastSeenAt: LastSeenAt);
+                    LastSeenAt: latest.LastSeenAt);
             })
             .OrderBy(x => x.Name)
             .ToList();
-
-        return rows;
     }
 
     /// <summary>
-    /// Завантажує підтверджених осіб, які мають зв'язок з повідомленнями вибраного звіту.
+    /// Будує карту частота → домінуючий підрозділ за наявними спостереженнями.
+    /// </summary>
+    private static Dictionary<string, string> BuildFrequencyDivisionMap(List<InterceptionMessage> messages)
+    {
+        return messages
+            .Where(x => !string.IsNullOrWhiteSpace(x.Frequency))
+            .GroupBy(x => x.Frequency!, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new
+            {
+                Frequency = group.Key,
+                Division = group
+                    .Select(x => x.Division)
+                    .Where(IsMeaningfulDivision)
+                    .GroupBy(x => x!, StringComparer.OrdinalIgnoreCase)
+                    .OrderByDescending(x => x.Count())
+                    .ThenBy(x => x.Key)
+                    .Select(x => x.Key)
+                    .FirstOrDefault()
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.Division))
+            .ToDictionary(x => x.Frequency, x => x.Division!, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Повертає ефективний підрозділ для повідомлення.
+    /// </summary>
+    private static string? ResolveEffectiveDivision(
+        string? observedDivision,
+        string? frequency,
+        IReadOnlyDictionary<string, string> frequencyDivisionMap)
+    {
+        if (IsMeaningfulDivision(observedDivision))
+            return observedDivision!.Trim();
+
+        if (!string.IsNullOrWhiteSpace(frequency)
+            && frequencyDivisionMap.TryGetValue(frequency.Trim(), out var division)
+            && IsMeaningfulDivision(division))
+        {
+            return division;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Будує observed-known осіб і відносить кожну до домінуючого effective division.
+    /// </summary>
+    private static List<(string Division, string Name, string? Role, DateTime LastSeenAt)> BuildObservedPeople(
+        List<(InterceptionMessage Message, string? EffectiveDivision)> messageRows)
+    {
+        var observations = messageRows
+            .SelectMany(messageRow => messageRow.Message.Participants
+                .Where(participant =>
+                    !participant.IsUnknown &&
+                    !string.IsNullOrWhiteSpace(participant.Name) &&
+                    !string.IsNullOrWhiteSpace(messageRow.EffectiveDivision))
+                .Select(participant => (
+                    Division: messageRow.EffectiveDivision!,
+                    Name: participant.Name!,
+                    participant.Role,
+                    LastSeenAt: messageRow.Message.ObservedDate)))
+            .ToList();
+
+        return observations
+            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                var assignedDivision = group
+                    .GroupBy(x => x.Division, StringComparer.OrdinalIgnoreCase)
+                    .OrderByDescending(x => x.Count())
+                    .ThenByDescending(x => x.Max(y => y.LastSeenAt))
+                    .ThenBy(x => x.Key)
+                    .Select(x => x.Key)
+                    .First();
+
+                var ordered = group
+                    .OrderByDescending(x => x.LastSeenAt)
+                    .ToList();
+
+                var latest = ordered.First();
+
+                var lastNonEmptyRole = ordered
+                    .Select(x => x.Role)
+                    .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+
+                return (
+                    Division: assignedDivision,
+                    Name: latest.Name,
+                    Role: lastNonEmptyRole,
+                    LastSeenAt: latest.LastSeenAt);
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Рахує open-групи НВ за effective division пов'язаних повідомлень.
+    /// </summary>
+    private static async Task<Dictionary<string, int>> LoadUnknownGroupsCountByDivisionAsync(
+        AppDbContext db,
+        HashSet<Guid> messageIds,
+        IReadOnlyDictionary<Guid, string> messageEffectiveDivisions,
+        CancellationToken ct)
+    {
+        var openUnknownGroups = await db.ParticipantCandidateGroups
+            .AsNoTracking()
+            .Where(x => x.Status == CandidateGroupStatus.Open)
+            .ToListAsync(ct);
+
+        return openUnknownGroups
+            .Where(x => x.ParticipantRefs.Any(r => messageIds.Contains(r.MessageId)))
+            .Select(group => ResolveGroupDivision(group, messageEffectiveDivisions))
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .GroupBy(x => x!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(x => x.Key, x => x.Count(), StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Завантажує підтверджених осіб і визначає effective division з пріоритетом confirmed division.
     /// </summary>
     private static async Task<List<(string Division, string Name, string? Role, DateTime LastSeenAt)>> LoadConfirmedPeopleAsync(
         AppDbContext db,
         HashSet<Guid> messageIds,
-        Dictionary<Guid, DateTime> messageDates,
-        Dictionary<Guid, string> messageDivisions,
+        IReadOnlyDictionary<Guid, DateTime> messageDates,
+        IReadOnlyDictionary<Guid, string> messageEffectiveDivisions,
         CancellationToken ct)
     {
         var confirmedGroups = await db.ParticipantCandidateGroups
@@ -198,7 +308,6 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
             return [];
 
         var resolvedIds = confirmedGroups
-            .Where(x => x.ResolvedParticipantId.HasValue)
             .Select(x => x.ResolvedParticipantId!.Value)
             .Distinct()
             .ToList();
@@ -212,10 +321,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
 
         foreach (var group in confirmedGroups)
         {
-            if (!group.ResolvedParticipantId.HasValue)
-                continue;
-
-            if (!resolvedParticipants.TryGetValue(group.ResolvedParticipantId.Value, out var resolvedParticipant))
+            if (!resolvedParticipants.TryGetValue(group.ResolvedParticipantId!.Value, out var resolvedParticipant))
                 continue;
 
             var lastSeenAt = group.ParticipantRefs
@@ -227,28 +333,69 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
             if (lastSeenAt == default)
                 continue;
 
-            var division = group.SuggestedDivision;
-
-            if (string.IsNullOrWhiteSpace(division))
-            {
-                division = group.ParticipantRefs
-                    .Select(x => messageDivisions.TryGetValue(x.MessageId, out var messageDivision) ? messageDivision : null)
-                    .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
-            }
-
-            if (string.IsNullOrWhiteSpace(division))
-                division = resolvedParticipant.Division;
-
+            var division = ResolveConfirmedDivision(resolvedParticipant.Division, group, messageEffectiveDivisions);
             if (string.IsNullOrWhiteSpace(division))
                 continue;
 
             people.Add((
                 Division: division,
-                resolvedParticipant.Name,
+                Name: resolvedParticipant.Name,
                 Role: resolvedParticipant.Role ?? group.SuggestedRole,
                 LastSeenAt: lastSeenAt));
         }
 
         return people;
     }
+
+    private static string? ResolveConfirmedDivision(
+        string? confirmedDivision,
+        ParticipantCandidateGroup group,
+        IReadOnlyDictionary<Guid, string> messageEffectiveDivisions)
+    {
+        if (IsMeaningfulDivision(confirmedDivision))
+            return confirmedDivision!.Trim();
+
+        var dominantObservedDivision = group.ParticipantRefs
+            .Select(x => messageEffectiveDivisions.TryGetValue(x.MessageId, out var division) ? division : null)
+            .Where(IsMeaningfulDivision)
+            .GroupBy(x => x!, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(x => x.Count())
+            .ThenBy(x => x.Key)
+            .Select(x => x.Key)
+            .FirstOrDefault();
+
+        if (!string.IsNullOrWhiteSpace(dominantObservedDivision))
+            return dominantObservedDivision;
+
+        if (IsMeaningfulDivision(group.SuggestedDivision))
+            return group.SuggestedDivision!.Trim();
+
+        return null;
+    }
+
+    private static string? ResolveGroupDivision(
+        ParticipantCandidateGroup group,
+        IReadOnlyDictionary<Guid, string> messageEffectiveDivisions)
+    {
+        var dominantObservedDivision = group.ParticipantRefs
+            .Select(x => messageEffectiveDivisions.TryGetValue(x.MessageId, out var division) ? division : null)
+            .Where(IsMeaningfulDivision)
+            .GroupBy(x => x!, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(x => x.Count())
+            .ThenBy(x => x.Key)
+            .Select(x => x.Key)
+            .FirstOrDefault();
+
+        if (!string.IsNullOrWhiteSpace(dominantObservedDivision))
+            return dominantObservedDivision;
+
+        if (IsMeaningfulDivision(group.SuggestedDivision))
+            return group.SuggestedDivision!.Trim();
+
+        return null;
+    }
+
+    private static bool IsMeaningfulDivision(string? division)
+        => !string.IsNullOrWhiteSpace(division)
+           && !string.Equals(division.Trim(), UnknownDivision, StringComparison.OrdinalIgnoreCase);
 }
