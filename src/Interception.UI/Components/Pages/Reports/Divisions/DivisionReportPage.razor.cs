@@ -8,7 +8,7 @@ using Interception.UI.Application.Toasts;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Pages.Reports;
+namespace Interception.UI.Components.Pages.Reports.Divisions;
 
 /// <summary>
 /// Сторінка зведеного звіту по підрозділах.
@@ -33,7 +33,7 @@ public partial class DivisionReportPage : ComponentBase
     internal async Task LoadAsync()
     {
         _loading = true;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
 
         try
         {
@@ -65,7 +65,7 @@ public partial class DivisionReportPage : ComponentBase
         finally
         {
             _loading = false;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
     }
 

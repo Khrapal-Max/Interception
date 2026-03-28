@@ -1,51 +1,52 @@
 @page "/reports/divisions"
+@using Interception.UI.Components.Pages.Reports.Toolbar
 
-<PageTitle>Звіт по підрозділах</PageTitle>
+<PageTitle>Звіти — Підрозділи</PageTitle>
 
 <div class="page-shell">
 
-    <div class="registry-toolbar flex-shrink-0">
-        <div class="d-flex align-items-end gap-2 flex-wrap">
-            <div>
-                <label class="form-label form-label-sm mb-1">Дата від</label>
-                <input type="date"
-                       class="form-control form-control-sm"
-                       value="@DateFromStr"
-                       @onchange="e => OnDateFromChanged(e.Value?.ToString())" />
+    <ReportsToolbar ActiveSection="divisions">
+        <ActionsContent>
+            <div class="d-flex align-items-end gap-2 flex-wrap">
+                <div>
+                    <label class="form-label form-label-sm mb-1">Дата від</label>
+                    <input type="date"
+                           class="form-control form-control-sm"
+                           value="@DateFromStr"
+                           @onchange="e => OnDateFromChanged(e.Value?.ToString())" />
+                </div>
+
+                <div>
+                    <label class="form-label form-label-sm mb-1">Дата до</label>
+                    <input type="date"
+                           class="form-control form-control-sm"
+                           value="@DateToStr"
+                           @onchange="e => OnDateToChanged(e.Value?.ToString())" />
+                </div>
+
+                <button class="btn btn-success btn-sm"
+                        @onclick="LoadAsync"
+                        disabled="@_loading">
+                    @if (_loading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-arrow-repeat me-1"></i>
+                    }
+                    Оновити
+                </button>
+
+                <button class="btn btn-light btn-sm"
+                        @onclick="ResetPeriodAsync"
+                        disabled="@_loading">
+                    <i class="bi bi-clock-history me-1"></i>
+                    Останні 7 днів
+                </button>
             </div>
-
-            <div>
-                <label class="form-label form-label-sm mb-1">Дата до</label>
-                <input type="date"
-                       class="form-control form-control-sm"
-                       value="@DateToStr"
-                       @onchange="e => OnDateToChanged(e.Value?.ToString())" />
-            </div>
-        </div>
-
-        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-            <button class="btn btn-primary btn-sm"
-                    @onclick="LoadAsync"
-                    disabled="@_loading">
-                @if (_loading)
-                {
-                    <span class="spinner-border spinner-border-sm me-1"></span>
-                }
-                else
-                {
-                    <i class="bi bi-arrow-repeat me-1"></i>
-                }
-                Оновити
-            </button>
-
-            <button class="btn btn-light btn-sm"
-                    @onclick="ResetPeriodAsync"
-                    disabled="@_loading">
-                <i class="bi bi-clock-history me-1"></i>
-                Останні 7 днів
-            </button>
-        </div>
-    </div>
+        </ActionsContent>
+    </ReportsToolbar>
 
     <div class="page-panel">
         @if (_loading)

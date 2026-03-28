@@ -5,9 +5,12 @@
 namespace Interception.UI.Application.Interceptions.Models.Reports;
 
 /// <summary>
-/// Коренева модель картини дня.
+/// Група пов'язаних спостережень у межах дня.
 /// </summary>
-public sealed record DayPictureModel(
-    DateOnly Day,
-    int TotalMessages,
-    IReadOnlyList<DayPictureGroupModel> Groups);
+public sealed record DayPictureGroupModel(
+    string? GroupKey,
+    string? Frequency,
+    string? VectorSignal,
+    string? Division,
+    int MessageCount,
+    IReadOnlyList<DayPictureEntryModel> Entries);
