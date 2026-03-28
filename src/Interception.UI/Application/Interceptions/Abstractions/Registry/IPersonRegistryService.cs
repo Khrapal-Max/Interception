@@ -12,12 +12,14 @@ namespace Interception.UI.Application.Interceptions.Abstractions.Registry;
 public interface IPersonRegistryService
 {
     /// <summary>
-    /// Повертає всіх відомих осіб у системі.
+    /// Повертає всіх не-НВ осіб у системі:
+    /// confirmed, observed-known та partial.
     /// </summary>
     Task<IReadOnlyList<PersonRegistryItemDto>> GetAllAsync(CancellationToken ct = default);
 
     /// <summary>
-    /// Оновлює канонічну особу або створює її для відомої особи зі спостережень.
+    /// Оновлює confirmed person або створює canonical person
+    /// при першій правці observed-known / partial особи.
     /// </summary>
     Task<PersonRegistryItemDto> UpdateAsync(Guid id, PersonRegistryUpdateDto dto, CancellationToken ct = default);
 }

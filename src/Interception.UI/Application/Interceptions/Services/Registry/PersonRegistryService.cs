@@ -12,93 +12,89 @@ using Microsoft.EntityFrameworkCore;
 namespace Interception.UI.Application.Interceptions.Services.Registry;
 
 /// <summary>
-/// Реєстр осіб системи.
+/// Сервіс реєстру осіб.
 /// </summary>
-public sealed class PersonRegistryService(IDbContextFactory<AppDbContext> dbFactory)
-    : IPersonRegistryService
+public sealed class PersonRegistryService(
+    IDbContextFactory<AppDbContext> dbFactory) : IPersonRegistryService
 {
-    private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
-
     /// <inheritdoc />
     public async Task<IReadOnlyList<PersonRegistryItemDto>> GetAllAsync(CancellationToken ct = default)
     {
-        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+
+        var confirmed = await db.ResolvedParticipants
+            .AsNoTracking()
+            .Select(x => new PersonRegistryItemDto
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Role = x.Role,
+                Division = x.Division,
+                IsConfirmed = true,
+                ConfirmedBy = x.ConfirmedBy,
+                ConfirmedAt = x.ConfirmedAt
+            })
+            .ToListAsync(ct);
+
+        var singleConfirmedByName = confirmed
+            .GroupBy(x => x.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Where(x => x.Count() == 1)
+            .ToDictionary(x => x.Key, x => x.Single(), StringComparer.OrdinalIgnoreCase);
 
         var observedRows = await db.InterceptionMessages
             .AsNoTracking()
             .SelectMany(
-                x => x.Participants,
+                message => message.Participants,
                 (message, participant) => new
                 {
-                    participant.Id,
+                    ParticipantId = participant.Id,
                     participant.Name,
                     participant.Role,
                     participant.IsUnknown,
-                    message.Division,
-                    message.ObservedDate
+                    message.Division
                 })
-            .Where(x => !x.IsUnknown && x.Name != null)
+            .Where(x =>
+                !x.IsUnknown &&
+                !string.IsNullOrWhiteSpace(x.Name))
             .ToListAsync(ct);
 
-        var observedPeople = observedRows
-            .GroupBy(x => BuildObservedKey(x.Name, x.Division), StringComparer.Ordinal)
-            .Select(group =>
-            {
-                var ordered = group
-                    .OrderByDescending(x => x.ObservedDate)
-                    .ToList();
+        var observed = observedRows
+             .GroupBy(x => new
+             {
+                 NameKey = x.Name!.Trim().ToUpperInvariant(),
+                 DivisionKey = (SemanticValue.NormalizeMeaningfulOrNull(x.Division) ?? string.Empty).ToUpperInvariant()
+             })
+             .Select(group => new PersonRegistryItemDto
+             {
+                 Id = group.OrderBy(x => x.ParticipantId).Select(x => x.ParticipantId).First(),
+                 Name = group.Select(x => x.Name!.Trim()).First(),
+                 Role = group.Select(x => SemanticValue.NormalizeMeaningfulOrNull(x.Role))
+                     .FirstOrDefault(x => x is not null),
+                 Division = string.IsNullOrWhiteSpace(group.Key.DivisionKey)
+                     ? null
+                     : group.Select(x => SemanticValue.NormalizeMeaningfulOrNull(x.Division))
+                         .FirstOrDefault(x => x is not null),
+                 IsConfirmed = false,
+                 ConfirmedBy = null,
+                 ConfirmedAt = null
+             })
+             .Where(x => !ShouldHideObservedRow(x, singleConfirmedByName))
+             .ToList();
 
-                var latest = ordered[0];
-                var role = ordered
-                    .Select(x => SemanticValue.NormalizeMeaningfulOrNull(x.Role))
-                    .FirstOrDefault(x => x is not null);
-                var division = ordered
-                    .Select(x => SemanticValue.NormalizeMeaningfulOrNull(x.Division))
-                    .FirstOrDefault(x => x is not null);
-
-                return new PersonRegistryItemDto
-                {
-                    Id = latest.Id,
-                    Name = latest.Name!,
-                    Role = role,
-                    Division = division,
-                    IsConfirmed = false
-                };
-            })
-            .ToList();
-
-        var resolvedPeople = await db.ResolvedParticipants
-            .AsNoTracking()
-            .OrderBy(x => x.Name)
-            .Select(x => MapToDto(x))
-            .ToListAsync(ct);
-
-        var items = new List<PersonRegistryItemDto>(resolvedPeople);
-
-        foreach (var observed in observedPeople)
-        {
-            var hasExactConfirmed = resolvedPeople.Any(x => SamePersonKey(x.Name, x.Division, observed.Name, observed.Division));
-            if (!hasExactConfirmed)
-            {
-                items.Add(observed);
-            }
-        }
-
-        return [.. items
-            .OrderBy(x => x.Name, StringComparer.Ordinal)
-            .ThenBy(x => x.Division, StringComparer.Ordinal)
-            .ThenBy(x => x.Role, StringComparer.Ordinal)];
+        return [.. confirmed
+             .Concat(observed)
+             .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+             .ThenBy(x => x.Division, StringComparer.OrdinalIgnoreCase)];
     }
 
     /// <inheritdoc />
     public async Task<PersonRegistryItemDto> UpdateAsync(Guid id, PersonRegistryUpdateDto dto, CancellationToken ct = default)
     {
-        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        ArgumentNullException.ThrowIfNull(dto);
 
-        var normalizedName = dto.Name?.Trim();
-        if (string.IsNullOrWhiteSpace(normalizedName))
-            throw new ArgumentException("Ім'я особи обов'язкове.", nameof(dto));
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
 
+        var normalizedName = dto.Name.Trim();
         var normalizedRole = SemanticValue.NormalizeMeaningfulOrNull(dto.Role);
         var normalizedDivision = SemanticValue.NormalizeMeaningfulOrNull(dto.Division);
 
@@ -109,7 +105,17 @@ public sealed class PersonRegistryService(IDbContextFactory<AppDbContext> dbFact
         {
             resolved.Update(normalizedName, normalizedRole, normalizedDivision);
             await db.SaveChangesAsync(ct);
-            return MapToDto(resolved);
+
+            return new PersonRegistryItemDto
+            {
+                Id = resolved.Id,
+                Name = resolved.Name,
+                Role = resolved.Role,
+                Division = resolved.Division,
+                IsConfirmed = true,
+                ConfirmedBy = resolved.ConfirmedBy,
+                ConfirmedAt = resolved.ConfirmedAt
+            };
         }
 
         var participant = await db.InterceptionMessageParticipants
@@ -118,6 +124,8 @@ public sealed class PersonRegistryService(IDbContextFactory<AppDbContext> dbFact
         if (participant is null || participant.IsUnknown || string.IsNullOrWhiteSpace(participant.Name))
             throw new InvalidOperationException($"Особу '{id}' не знайдено.");
 
+        participant.ResolveAsKnown(normalizedName, normalizedRole);
+
         var created = ResolvedParticipant.Create(
             normalizedName,
             confirmedBy: "registry",
@@ -125,44 +133,43 @@ public sealed class PersonRegistryService(IDbContextFactory<AppDbContext> dbFact
             division: normalizedDivision);
 
         db.ResolvedParticipants.Add(created);
-
-        // Для відомої особи зі спостереження синхронізуємо канонічне ім'я і роль,
-        // щоб реєстр і звіти бачили один варіант назви.
-        participant.ResolveAsKnown(normalizedName, normalizedRole);
-
         await db.SaveChangesAsync(ct);
-        return MapToDto(created);
+
+        return new PersonRegistryItemDto
+        {
+            Id = created.Id,
+            Name = created.Name,
+            Role = created.Role,
+            Division = created.Division,
+            IsConfirmed = true,
+            ConfirmedBy = created.ConfirmedBy,
+            ConfirmedAt = created.ConfirmedAt
+        };
     }
 
     /// <summary>
-    /// Перетворює встановлену особу в DTO реєстру.
+    /// Визначає, чи треба приховати observed-рядок, якщо для нього вже існує
+    /// однозначний canonical person.
     /// </summary>
-    private static PersonRegistryItemDto MapToDto(ResolvedParticipant value)
-        => new()
-        {
-            Id = value.Id,
-            Name = value.Name,
-            Role = value.Role,
-            Division = value.Division,
-            IsConfirmed = true
-        };
+    private static bool ShouldHideObservedRow(
+        PersonRegistryItemDto observed,
+        Dictionary<string, PersonRegistryItemDto> singleConfirmedByName)
+    {
+        if (!singleConfirmedByName.TryGetValue(observed.Name, out var confirmed))
+            return false;
 
-    /// <summary>
-    /// Будує ключ observed-особи для злиття рядків реєстру.
-    /// </summary>
-    private static string BuildObservedKey(string? name, string? division)
-        => $"{NormalizeKey(name) ?? string.Empty}|{NormalizeKey(division) ?? string.Empty}";
+        var observedDivision = SemanticValue.NormalizeMeaningfulOrNull(observed.Division);
+        var confirmedDivision = SemanticValue.NormalizeMeaningfulOrNull(confirmed.Division);
 
-    /// <summary>
-    /// Перевіряє, що два рядки описують одну й ту саму особу для реєстру.
-    /// </summary>
-    private static bool SamePersonKey(string? leftName, string? leftDivision, string? rightName, string? rightDivision)
-        => string.Equals(NormalizeKey(leftName), NormalizeKey(rightName), StringComparison.Ordinal)
-            && string.Equals(NormalizeKey(leftDivision), NormalizeKey(rightDivision), StringComparison.Ordinal);
+        if (observedDivision is null)
+            return true;
 
-    /// <summary>
-    /// Нормалізує ключ значення для порівняння.
-    /// </summary>
-    private static string? NormalizeKey(string? value)
-        => SemanticValue.NormalizeKeyOrNull(value);
+        if (confirmedDivision is null)
+            return true;
+
+        return string.Equals(
+            observedDivision,
+            confirmedDivision,
+            StringComparison.OrdinalIgnoreCase);
+    }
 }

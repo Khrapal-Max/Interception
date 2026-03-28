@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Components;
 namespace Interception.UI.Components.Pages.Registries.Persons.Drawers;
 
 /// <summary>
-/// Drawer редагування запису реєстру осіб.
+/// Дравер редагування особи з реєстру.
 /// </summary>
 public partial class PersonRegistryDrawer : ComponentBase
 {
@@ -30,6 +30,7 @@ public partial class PersonRegistryDrawer : ComponentBase
     private bool _saving;
     private bool _initialized;
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         if (!IsOpen)
@@ -49,6 +50,9 @@ public partial class PersonRegistryDrawer : ComponentBase
         _serverError = null;
     }
 
+    /// <summary>
+    /// Скидає локальний стан після закриття дравера.
+    /// </summary>
     private void OnDrawerClosed()
     {
         _initialized = false;
@@ -56,6 +60,9 @@ public partial class PersonRegistryDrawer : ComponentBase
         _nameError = false;
     }
 
+    /// <summary>
+    /// Зберігає правку особи.
+    /// </summary>
     private async Task SaveAsync()
     {
         if (Participant is null)
@@ -98,6 +105,9 @@ public partial class PersonRegistryDrawer : ComponentBase
         }
     }
 
+    /// <summary>
+    /// Закриває дравер.
+    /// </summary>
     private async Task CloseAsync()
         => await IsOpenChanged.InvokeAsync(false);
 }

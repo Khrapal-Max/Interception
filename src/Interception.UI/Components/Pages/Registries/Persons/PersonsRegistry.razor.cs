@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Components;
 namespace Interception.UI.Components.Pages.Registries.Persons;
 
 /// <summary>
-/// Реєстр підтверджених осіб.
+/// Єдиний реєстр усіх не-НВ осіб у системі.
 /// </summary>
 public partial class PersonsRegistry : ComponentBase
 {
@@ -23,9 +23,16 @@ public partial class PersonsRegistry : ComponentBase
     private bool _drawerOpen;
     private PersonRegistryItemDto? _editingParticipant;
 
+    private int ConfirmedCount => _participants?.Count(x => x.IsConfirmed) ?? 0;
+    private int ObservedCount => _participants?.Count(x => !x.IsConfirmed) ?? 0;
+
+    /// <inheritdoc />
     protected override async Task OnInitializedAsync()
         => await LoadAsync();
 
+    /// <summary>
+    /// Завантажує осіб реєстру.
+    /// </summary>
     internal async Task LoadAsync()
     {
         _loading = true;
@@ -40,10 +47,14 @@ public partial class PersonsRegistry : ComponentBase
         finally
         {
             _loading = false;
-            await InvokeAsync(StateHasChanged);
+            StateHasChanged();
         }
     }
 
+    /// <summary>
+    /// Відкриває дравер редагування вибраної особи.
+    /// </summary>
+    /// <param name="participant">Рядок реєстру.</param>
     private void OpenEdit(PersonRegistryItemDto participant)
     {
         _editingParticipant = participant;

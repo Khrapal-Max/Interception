@@ -1,5 +1,4 @@
 @page "/registries/persons"
-@using Interception.UI.Application.Interceptions.Dtos
 @using Interception.UI.Components.Pages.Registries.Persons.Drawers
 @using Interception.UI.Components.Pages.Registries.Toolbar
 
@@ -12,8 +11,15 @@
             @if (_participants is not null)
             {
                 <span>Всього: <strong>@_participants.Count</strong></span>
+                <span>Підтверджені: <strong>@ConfirmedCount</strong></span>
+                <span>Зі спостережень: <strong>@ObservedCount</strong></span>
             }
         </MetaContent>
+        <ActionsContent>
+            <button class="btn btn-success btn-sm" @onclick="LoadAsync" disabled="@_loading">
+                <i class="bi bi-arrow-repeat me-1"></i>Оновити
+            </button>
+        </ActionsContent>
     </RegistriesToolbar>
 
     <div class="page-panel">
@@ -31,7 +37,7 @@
                 <div class="text-center py-5">
                     <i class="bi bi-people fs-1 d-block mb-2 opacity-25"></i>
                     <div>Осіб у реєстрі ще немає</div>
-                    <div class="small mt-1">Підтвердження виконуються на сторінці <a href="/analytics/candidates">аналітики</a></div>
+                    <div class="small mt-1">У реєстр потрапляють відомі особи зі спостережень і підтверджені особи.</div>
                 </div>
             </div>
         }
@@ -41,10 +47,11 @@
                 <table class="table table-hover table-sm align-middle data-table">
                     <thead>
                         <tr>
-                            <th>Позивний</th>
-                            <th>Роль</th>
-                            <th>Підрозділ</th>
-                            <th></th>
+                            <th style="width: 28%">Позивний</th>
+                            <th style="width: 18%">Статус</th>
+                            <th style="width: 22%">Роль</th>
+                            <th style="width: 24%">Підрозділ</th>
+                            <th style="width: 8%"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -52,10 +59,24 @@
                         {
                             <tr>
                                 <td class="fw-medium">@person.Name</td>
-                                <td class="small text-muted">@(person.Role ?? "—")</td>
+                                <td>
+                                    @if (person.IsConfirmed)
+                                    {
+                                        <span class="badge text-bg-success">Підтверджено</span>
+                                    }
+                                    else if (string.IsNullOrWhiteSpace(person.Role) || string.IsNullOrWhiteSpace(person.Division))
+                                    {
+                                        <span class="badge text-bg-secondary">Частково відома</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge text-bg-secondary">Зі спостережень</span>
+                                    }
+                                </td>
+                                <td class="small text-muted">@(string.IsNullOrWhiteSpace(person.Role) ? "—" : person.Role)</td>
                                 <td class="small text-muted">
                                     <span class="text-truncate d-block" style="max-width: 220px" title="@person.Division">
-                                        @(person.Division ?? "—")
+                                        @(string.IsNullOrWhiteSpace(person.Division) ? "—" : person.Division)
                                     </span>
                                 </td>
                                 <td class="text-end pe-2 text-nowrap">

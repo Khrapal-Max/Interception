@@ -41,6 +41,15 @@
                        @oninput="e => _division = e.Value?.ToString()" />
             </div>
 
+            @if (Participant is not null && !Participant.IsConfirmed)
+            {
+                <div class="col-12">
+                    <div class="alert alert-secondary py-2 px-3 small mb-0">
+                        Після першого редагування для цієї особи буде створено канонічний запис реєстру.
+                    </div>
+                </div>
+            }
+
             @if (_serverError is not null)
             {
                 <div class="col-12">
