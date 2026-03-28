@@ -55,6 +55,7 @@ builder.Services.AddScoped<IParticipantCandidateAnalysisService, ParticipantCand
 builder.Services.AddScoped<IParticipantCandidateGroupQueryService, ParticipantCandidateGroupQueryService>();
 
 // Нові reports-сервіси 
+builder.Services.AddScoped<IDayPictureService, DayPictureService>();
 builder.Services.AddScoped<IDivisionReportService, DivisionReportService>();
 
 var app = builder.Build();
