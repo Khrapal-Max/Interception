@@ -48,7 +48,8 @@ builder.Services.AddScoped<IInterceptionCommandService, InterceptionCommandServi
 builder.Services.AddScoped<IInterceptionSuggestionService, InterceptionSuggestionService>();
 builder.Services.AddScoped<IFrequencyDivisionService, FrequencyDivisionService>();
 
-// Нові candidate-сервіси 
+// Нові candidate-сервіси
+builder.Services.AddScoped<ILinkMapService, LinkMapService>();
 builder.Services.AddScoped<IContextSuggestionService, ContextSuggestionService>();
 builder.Services.AddScoped<IKnownParticipantSuggestionService, KnownParticipantSuggestionService>();
 builder.Services.AddScoped<IParticipantCandidateAnalysisService, ParticipantCandidateAnalysisService>();

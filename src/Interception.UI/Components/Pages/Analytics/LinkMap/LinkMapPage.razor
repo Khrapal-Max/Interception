@@ -1,0 +1,148 @@
+@page "/analytics/link-map"
+@using Interception.UI.Components.Pages.Analytics.LinkMap.Drawers
+@using Interception.UI.Components.Pages.Analytics.Toolbar
+
+<PageTitle>Аналітика — Карта зв'язків</PageTitle>
+
+<div class="page-shell">
+
+    <CandidatesToolbar ActiveSection="link-map">
+        <MetaContent>
+            @if (_map is not null)
+            {
+                <span>Груп: <strong>@_map.Groups.Count</strong></span>
+                <span class="ms-2">Мостів: <strong>@TotalBridgeCount</strong></span>
+            }
+        </MetaContent>
+        <ActionsContent>
+            <div class="d-flex align-items-end gap-2 flex-wrap">
+                <div>
+                    <label class="form-label form-label-sm mb-1">Дата від</label>
+                    <input type="date"
+                           class="form-control form-control-sm"
+                           value="@DateFromStr"
+                           @onchange="e => OnDateFromChanged(e.Value?.ToString())" />
+                </div>
+
+                <div>
+                    <label class="form-label form-label-sm mb-1">Дата до</label>
+                    <input type="date"
+                           class="form-control form-control-sm"
+                           value="@DateToStr"
+                           @onchange="e => OnDateToChanged(e.Value?.ToString())" />
+                </div>
+
+                <button class="btn btn-success btn-sm"
+                        @onclick="LoadAsync"
+                        disabled="@_loading">
+                    @if (_loading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-arrow-repeat me-1"></i>
+                    }
+                    Оновити
+                </button>
+
+                <button class="btn btn-light btn-sm"
+                        @onclick="ResetPeriodAsync"
+                        disabled="@_loading">
+                    <i class="bi bi-clock-history me-1"></i>
+                    Останні 7 днів
+                </button>
+            </div>
+        </ActionsContent>
+    </CandidatesToolbar>
+
+    <div class="page-panel">
+        @if (_loading)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-sm me-2"></div>Завантаження...
+                </div>
+            </div>
+        }
+        else if (_map is null || _map.Groups.Count == 0)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <i class="bi bi-bezier2 fs-1 d-block mb-2 opacity-25"></i>
+                    <div>Даних для карти зв'язків немає</div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="table table-hover table-sm align-middle data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 18%;">Ключова особа</th>
+                            <th style="width: 18%;">Підрозділ</th>
+                            <th style="width: 18%;">Частоти</th>
+                            <th style="width: 10%;" class="text-nowrap">Учасники</th>
+                            <th style="width: 12%;" class="text-nowrap">Внутр. вага</th>
+                            <th style="width: 12%;" class="text-nowrap">Мости</th>
+                            <th style="width: 12%;" class="text-nowrap">Вага мостів</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var group in _map.Groups)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-medium">@group.KeyPersonName</div>
+                                    <small class="text-muted">@(string.IsNullOrWhiteSpace(group.KeyPersonRole) ? "—" : group.KeyPersonRole)</small>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(group.Division))
+                                    {
+                                        <span>@group.Division</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (group.Frequencies.Count == 0)
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex flex-wrap gap-1">
+                                            @foreach (var frequency in group.Frequencies)
+                                            {
+                                                <span class="badge bg-secondary">@frequency</span>
+                                            }
+                                        </div>
+                                    }
+                                </td>
+                                <td class="text-nowrap">@group.Members.Count</td>
+                                <td class="text-nowrap">@GetInternalConnectionWeight(group)</td>
+                                <td class="text-nowrap">@group.Bridges.Count</td>
+                                <td class="text-nowrap">@GetBridgeWeight(group)</td>
+                                <td class="text-end p-2 text-nowrap">
+                                    <button class="btn btn-secondary btn-sm"
+                                            title="Деталі"
+                                            @onclick="() => OpenGroup(group)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+</div>
+
+<LinkMapGroupDrawer @bind-IsOpen="_drawerOpen"
+                    Group="_selectedGroup" />

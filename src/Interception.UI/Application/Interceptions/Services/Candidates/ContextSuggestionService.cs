@@ -4,7 +4,7 @@
 
 using Interception.UI.Application.Interceptions.Abstractions.Candidates;
 using Interception.UI.Application.Interceptions.Dtos;
-using Interception.UI.Application.Interceptions.Models.PatternRecognition;
+using Interception.UI.Application.Interceptions.Models.Candidates;
 using Interception.UI.Domain;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;

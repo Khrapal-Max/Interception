@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Interceptions.Abstractions.Candidates;
-using Interception.UI.Application.Interceptions.Models.PatternRecognition;
+using Interception.UI.Application.Interceptions.Models.Candidates;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
 using Interception.UI.Domain.Records;
@@ -65,11 +65,11 @@ public sealed class ParticipantCandidateAnalysisService(
                     ParticipantId: p.Id,
                     Ordinal: p.Ordinal,
                     MessageId: p.InterceptionMessageId,
-                    Frequency: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.Frequency),
-                    VectorSignal: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.VectorSignal),
-                    PointSignal: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.PointSignal),
-                    Division: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.Division),
-                    Role: Extensions.SemanticValue.NormalizeMeaningfulOrNull(p.Role),
+                    Frequency: SemanticValue.NormalizeMeaningfulOrNull(m.Frequency),
+                    VectorSignal: SemanticValue.NormalizeMeaningfulOrNull(m.VectorSignal),
+                    PointSignal: SemanticValue.NormalizeMeaningfulOrNull(m.PointSignal),
+                    Division: SemanticValue.NormalizeMeaningfulOrNull(m.Division),
+                    Role: SemanticValue.NormalizeMeaningfulOrNull(p.Role),
                     ObservedDate: m.ObservedDate,
                     KnownPartnerNames: PatternRecognitionMath.ToNormalizedSet(m.KnownPartners),
                     Labels: PatternRecognitionMath.ToNormalizedSet(m.Labels));

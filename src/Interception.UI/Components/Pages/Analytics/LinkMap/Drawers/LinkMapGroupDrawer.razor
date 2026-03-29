@@ -1,0 +1,131 @@
+@using Interception.UI.Application.Interceptions.Models.Candidates
+
+<Drawer IsOpen="@IsOpen"
+        IsOpenChanged="IsOpenChanged"
+        Title="@DrawerTitle"
+        CloseOnBackdrop="true"
+        CloseOnEscape="true"
+        OnClosed="OnDrawerClosed">
+    <ChildContent>
+        @if (Group is null)
+        {
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm"></div>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-3">
+
+                <div class="row g-2">
+                    <div class="col-12 col-md-4">
+                        <div class="border rounded-0 p-3 h-100">
+                            <div class="form-label form-label-sm text-muted mb-1">Ключова особа</div>
+                            <div class="fw-semibold">@Group.KeyPersonName</div>
+                            <small class="text-muted">@(string.IsNullOrWhiteSpace(Group.KeyPersonRole) ? "—" : Group.KeyPersonRole)</small>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="border rounded-0 p-3 h-100">
+                            <div class="form-label form-label-sm text-muted mb-1">Підрозділ</div>
+                            <div>@(string.IsNullOrWhiteSpace(Group.Division) ? "—" : Group.Division)</div>
+                            <small class="text-muted">Груповий ключ приховано від оператора</small>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="border rounded-0 p-3 h-100">
+                            <div class="form-label form-label-sm text-muted mb-1">Метрики</div>
+                            <div class="small d-flex flex-column gap-1">
+                                <span>Учасники: <strong>@Group.Members.Count</strong></span>
+                                <span>Внутр. вага: <strong>@InternalConnectionWeight</strong></span>
+                                <span>Мости: <strong>@Group.Bridges.Count</strong></span>
+                                <span>Вага мостів: <strong>@BridgeWeight</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="form-label form-label-sm text-muted mb-1">Частоти групи</div>
+                    @if (Group.Frequencies.Count == 0)
+                    {
+                        <div class="text-muted small">—</div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-wrap gap-1">
+                            @foreach (var frequency in Group.Frequencies)
+                            {
+                                <span class="badge bg-secondary">@frequency</span>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="form-label form-label-sm text-muted mb-0">Учасники групи</div>
+                        <small class="text-muted">@Group.Members.Count записів</small>
+                    </div>
+                    <div class="border rounded-0 p-2">
+                        <div class="d-flex flex-wrap gap-1">
+                            @foreach (var member in Group.Members.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                            {
+                                <span class="badge bg-primary">@member</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="form-label form-label-sm text-muted mb-0">Мости з іншими групами</div>
+                        <small class="text-muted">@Group.Bridges.Count зв'язків</small>
+                    </div>
+
+                    @if (Group.Bridges.Count == 0)
+                    {
+                        <div class="border rounded-0 p-3 text-muted small">Мостів не знайдено.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive border rounded-0">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Контактна особа</th>
+                                        <th>Цільовий підрозділ</th>
+                                        <th>Частота моста</th>
+                                        <th class="text-nowrap">Вага</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var bridge in Group.Bridges
+                                        .OrderByDescending(x => x.Weight)
+                                        .ThenBy(x => x.TargetDivision ?? string.Empty)
+                                        .ThenBy(x => x.ContactPersonName))
+                                    {
+                                        <tr>
+                                            <td class="fw-medium">@bridge.ContactPersonName</td>
+                                            <td>@(string.IsNullOrWhiteSpace(bridge.TargetDivision) ? "—" : bridge.TargetDivision)</td>
+                                            <td><span class="badge bg-secondary">@bridge.BridgeFrequency</span></td>
+                                            <td class="text-nowrap">@bridge.Weight</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </ChildContent>
+
+    <FooterContent>
+        <button type="button"
+                class="btn btn-light btn-sm"
+                @onclick="CloseAsync">
+            Закрити
+        </button>
+    </FooterContent>
+</Drawer>

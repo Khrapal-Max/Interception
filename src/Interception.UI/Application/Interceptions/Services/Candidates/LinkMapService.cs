@@ -3,7 +3,8 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Interceptions.Abstractions.Candidates;
-using Interception.UI.Application.Interceptions.Models.PatternRecognition;
+using Interception.UI.Application.Interceptions.Models.Candidates;
+using Interception.UI.Application.Interceptions.Services.Candidates.Builders.LinkMap;
 using Interception.UI.Domain;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore;
 namespace Interception.UI.Application.Interceptions.Services.Candidates;
 
 /// <summary>
-/// Будує аналітичну карту зв'язків між особами.
+/// Будує карту зв'язків за логікою communication-first.
+/// Спочатку визначаються стійкі комунікаційні групи, а вже потім
+/// для них робиться спроба вивести підрозділ та міжгрупові мости.
 /// </summary>
-public sealed class LinkMapService(IDbContextFactory<AppDbContext> dbFactory) : ILinkMapService
+public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFactory) : ILinkMapService
 {
     private const string UnknownDivision = "НВ підрозділ";
     private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
@@ -29,7 +32,6 @@ public sealed class LinkMapService(IDbContextFactory<AppDbContext> dbFactory) : 
         var query = db.InterceptionMessages
             .AsNoTracking()
             .Include(x => x.Participants)
-            .Include(x => x.Labels)
             .AsQueryable();
 
         if (dateFrom.HasValue)
@@ -40,164 +42,48 @@ public sealed class LinkMapService(IDbContextFactory<AppDbContext> dbFactory) : 
 
         var messages = await query.ToListAsync(ct);
         if (messages.Count == 0)
-            return new LinkMapModel([], []);
+            return new LinkMapModel([]);
 
         var frequencyDivisionMap = BuildFrequencyDivisionMap(messages);
 
         var messageRows = messages
-            .Select(x => new
-            {
-                Message = x,
-                EffectiveDivision = ResolveEffectiveDivision(x.Division, x.Frequency, frequencyDivisionMap)
-            })
+            .Select(message => new MessageRow(
+                message,
+                ResolveEffectiveDivision(message.Division, message.Frequency, frequencyDivisionMap),
+                GetKnownParticipants(message)))
+            .Where(x => x.KnownParticipants.Count >= 2)
             .ToList();
 
-        var nodes = new Dictionary<string, NodeAccumulator>(StringComparer.OrdinalIgnoreCase);
-        var edges = new Dictionary<string, EdgeAccumulator>(StringComparer.OrdinalIgnoreCase);
+        if (messageRows.Count == 0)
+            return new LinkMapModel([]);
 
-        foreach (var row in messageRows)
-        {
-            var knownParticipants = row.Message.Participants
-                .Where(x => !x.IsUnknown && !string.IsNullOrWhiteSpace(x.Name))
-                .Select(x => new
-                {
-                    Name = x.Name!.Trim(),
-                    x.Role
-                })
-                .GroupBy(x => ToPersonKey(x.Name), StringComparer.OrdinalIgnoreCase)
-                .Select(x => x.First())
-                .ToList();
+        var groups = BuildGroupsByCommunication(messageRows, frequencyDivisionMap);
+        if (groups.Count == 0)
+            return new LinkMapModel([]);
 
-            foreach (var participant in knownParticipants)
-            {
-                var key = ToPersonKey(participant.Name);
+        groups = MergeStableGroupsAcrossFrequencies(groups);
+        if (groups.Count == 0)
+            return new LinkMapModel([]);
 
-                if (!nodes.TryGetValue(key, out var node))
-                {
-                    node = new NodeAccumulator
-                    {
-                        PersonKey = key,
-                        Name = participant.Name
-                    };
-                    nodes[key] = node;
-                }
+        ApplyBridges(groups, messageRows);
 
-                if (!string.IsNullOrWhiteSpace(row.EffectiveDivision))
-                    node.Divisions.Add(row.EffectiveDivision!);
+        var groupCountByMember = groups.Values
+            .SelectMany(group => group.Members)
+            .GroupBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                x => x.Key,
+                x => x.Count(),
+                StringComparer.OrdinalIgnoreCase);
 
-                if (!string.IsNullOrWhiteSpace(row.Message.Frequency))
-                    node.Frequencies.Add(row.Message.Frequency!.Trim());
-
-                if (!string.IsNullOrWhiteSpace(participant.Role))
-                {
-                    if (node.Role is null || row.Message.ObservedDate >= node.RoleObservedAt)
-                    {
-                        node.Role = participant.Role!.Trim();
-                        node.RoleObservedAt = row.Message.ObservedDate;
-                    }
-                }
-            }
-
-            for (var i = 0; i < knownParticipants.Count; i++)
-            {
-                for (var j = i + 1; j < knownParticipants.Count; j++)
-                {
-                    var leftKey = ToPersonKey(knownParticipants[i].Name);
-                    var rightKey = ToPersonKey(knownParticipants[j].Name);
-
-                    if (string.Compare(leftKey, rightKey, StringComparison.OrdinalIgnoreCase) > 0)
-                    {
-                        (leftKey, rightKey) = (rightKey, leftKey);
-                    }
-
-                    var edgeKey = $"{leftKey}||{rightKey}";
-                    if (!edges.TryGetValue(edgeKey, out var edge))
-                    {
-                        edge = new EdgeAccumulator
-                        {
-                            FromPersonKey = leftKey,
-                            ToPersonKey = rightKey
-                        };
-                        edges[edgeKey] = edge;
-                    }
-
-                    edge.Weight++;
-
-                    if (!string.IsNullOrWhiteSpace(row.EffectiveDivision))
-                        edge.Divisions.Add(row.EffectiveDivision!);
-
-                    if (!string.IsNullOrWhiteSpace(row.Message.Frequency))
-                        edge.Frequencies.Add(row.Message.Frequency!.Trim());
-
-                    foreach (var label in row.Message.Labels)
-                    {
-                        if (!string.IsNullOrWhiteSpace(label.NameLabel))
-                            edge.Labels.Add(label.NameLabel.Trim());
-                    }
-                }
-            }
-        }
-
-        if (nodes.Count == 0)
-            return new LinkMapModel([], []);
-
-        var adjacency = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var nodeKey in nodes.Keys)
-            adjacency[nodeKey] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var edge in edges.Values)
-        {
-            adjacency[edge.FromPersonKey].Add(edge.ToPersonKey);
-            adjacency[edge.ToPersonKey].Add(edge.FromPersonKey);
-        }
-
-        var nodeModels = nodes.Values
-            .Select(node =>
-            {
-                var neighborKeys = adjacency.TryGetValue(node.PersonKey, out var set)
-                    ? set
-                    : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                var connectionCount = neighborKeys.Count;
-                var neighborEdgeCount = CountNeighborEdges(neighborKeys, edges);
-
-                var neighborDivisions = neighborKeys
-                    .Where(x => nodes.ContainsKey(x))
-                    .SelectMany(x => nodes[x].Divisions)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-
-                var isMultiDivisionCandidate = node.Divisions.Count > 1;
-                var isBridgeCandidate = isMultiDivisionCandidate && neighborDivisions.Count > 1;
-                var isLocalCenterCandidate = connectionCount >= 3 && neighborEdgeCount <= 1;
-
-                return new LinkMapNodeModel(
-                    PersonKey: node.PersonKey,
-                    Name: node.Name,
-                    Role: node.Role,
-                    Divisions: node.Divisions.OrderBy(x => x).ToList(),
-                    Frequencies: node.Frequencies.OrderBy(x => x).ToList(),
-                    ConnectionCount: connectionCount,
-                    IsLocalCenterCandidate: isLocalCenterCandidate,
-                    IsBridgeCandidate: isBridgeCandidate,
-                    IsMultiDivisionCandidate: isMultiDivisionCandidate);
-            })
-            .OrderBy(x => x.Name)
+        var models = groups.Values
+            .Select(x => x.ToModel(groupCountByMember))
+            .OrderByDescending(x => x.Bridges.Count)
+            .ThenByDescending(x => x.Members.Count)
+            .ThenBy(x => x.Division ?? string.Empty)
+            .ThenBy(x => x.KeyPersonName)
             .ToList();
 
-        var edgeModels = edges.Values
-            .Select(edge => new LinkMapEdgeModel(
-                FromPersonKey: edge.FromPersonKey,
-                ToPersonKey: edge.ToPersonKey,
-                Weight: edge.Weight,
-                Divisions: edge.Divisions.OrderBy(x => x).ToList(),
-                Frequencies: edge.Frequencies.OrderBy(x => x).ToList(),
-                Labels: edge.Labels.OrderBy(x => x).ToList()))
-            .OrderBy(x => x.FromPersonKey)
-            .ThenBy(x => x.ToPersonKey)
-            .ToList();
-
-        return new LinkMapModel(nodeModels, edgeModels);
+        return new LinkMapModel(models);
     }
 
     /// <summary>
@@ -214,7 +100,7 @@ public sealed class LinkMapService(IDbContextFactory<AppDbContext> dbFactory) : 
                 Division = group
                     .Select(x => x.Division)
                     .Where(IsMeaningfulDivision)
-                    .GroupBy(x => x!, StringComparer.OrdinalIgnoreCase)
+                    .GroupBy(x => x!.Trim(), StringComparer.OrdinalIgnoreCase)
                     .OrderByDescending(x => x.Count())
                     .ThenBy(x => x.Key)
                     .Select(x => x.Key)
@@ -225,79 +111,423 @@ public sealed class LinkMapService(IDbContextFactory<AppDbContext> dbFactory) : 
     }
 
     /// <summary>
-    /// Повертає ефективний підрозділ для observation.
+    /// Визначає effective division для message, якщо його вже можна впевнено вивести.
     /// </summary>
     private static string? ResolveEffectiveDivision(
         string? observedDivision,
         string? frequency,
-        IReadOnlyDictionary<string, string> frequencyDivisionMap)
+        Dictionary<string, string> frequencyDivisionMap)
     {
         if (IsMeaningfulDivision(observedDivision))
             return observedDivision!.Trim();
 
         if (!string.IsNullOrWhiteSpace(frequency)
-            && frequencyDivisionMap.TryGetValue(frequency.Trim(), out var division)
-            && IsMeaningfulDivision(division))
+            && frequencyDivisionMap.TryGetValue(frequency.Trim(), out var inferred)
+            && IsMeaningfulDivision(inferred))
         {
-            return division;
+            return inferred.Trim();
         }
 
         return null;
     }
 
     /// <summary>
-    /// Рахує кількість ребер між сусідами вузла.
+    /// Повертає відомих учасників повідомлення без дублікатів по імені.
     /// </summary>
-    private static int CountNeighborEdges(
-        IEnumerable<string> neighbors,
-        IReadOnlyDictionary<string, EdgeAccumulator> edges)
+    private static List<ParticipantSnapshot> GetKnownParticipants(InterceptionMessage message)
     {
-        var list = neighbors.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        var count = 0;
+        return
+        [
+            .. message.Participants
+                .Where(x => !x.IsUnknown && !string.IsNullOrWhiteSpace(x.Name))
+                .Select(x => new ParticipantSnapshot(
+                    x.Name!.Trim(),
+                    NormalizeMeaningfulOrNull(x.Role),
+                    message.ObservedDate,
+                    NormalizeMeaningfulOrNull(message.Frequency)))
+                .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(x => x.First())
+        ];
+    }
 
-        for (var i = 0; i < list.Count; i++)
+    /// <summary>
+    /// Будує стійкі комунікаційні групи. Базовий carrier групи — частота, а не підрозділ.
+    /// На цій фазі використовується тимчасовий frequency-scoped key, щоб однакове ядро
+    /// на різних частотах не перетирало одна одну до post-merge.
+    /// </summary>
+    private static Dictionary<string, GroupAccumulator> BuildGroupsByCommunication(
+        IReadOnlyList<MessageRow> messageRows,
+        Dictionary<string, string> frequencyDivisionMap)
+    {
+        var groups = new Dictionary<string, GroupAccumulator>(StringComparer.OrdinalIgnoreCase);
+
+        var byFrequency = messageRows
+            .Where(x => !string.IsNullOrWhiteSpace(x.Message.Frequency))
+            .GroupBy(x => x.Message.Frequency!.Trim(), StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x.Key)
+            .ToList();
+
+        foreach (var frequencyGroup in byFrequency)
         {
-            for (var j = i + 1; j < list.Count; j++)
+            var adjacency = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            var people = new Dictionary<string, PersonAccumulator>(StringComparer.OrdinalIgnoreCase);
+            var componentRows = frequencyGroup.ToList();
+            var frequency = frequencyGroup.Key;
+
+            foreach (var row in componentRows)
             {
-                var left = list[i];
-                var right = list[j];
+                foreach (var participant in row.KnownParticipants)
+                {
+                    if (!people.TryGetValue(participant.Name, out var person))
+                    {
+                        person = new PersonAccumulator(participant.Name);
+                        people[participant.Name] = person;
+                    }
 
-                if (string.Compare(left, right, StringComparison.OrdinalIgnoreCase) > 0)
-                    (left, right) = (right, left);
+                    person.RegisterMention(participant.ObservedAt, participant.Role, participant.Frequency);
 
-                var edgeKey = $"{left}||{right}";
-                if (edges.ContainsKey(edgeKey))
-                    count++;
+                    if (!adjacency.ContainsKey(participant.Name))
+                        adjacency[participant.Name] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                }
+
+                for (var i = 0; i < row.KnownParticipants.Count; i++)
+                {
+                    for (var j = i + 1; j < row.KnownParticipants.Count; j++)
+                    {
+                        var left = row.KnownParticipants[i].Name;
+                        var right = row.KnownParticipants[j].Name;
+
+                        adjacency[left].Add(right);
+                        adjacency[right].Add(left);
+
+                        people[left].AddConnectionWeight();
+                        people[right].AddConnectionWeight();
+                    }
+                }
+            }
+
+            foreach (var person in people.Values)
+            {
+                if (adjacency.TryGetValue(person.Name, out var partners))
+                    person.SetUniquePartnerCount(partners.Count);
+            }
+
+            var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var personName in people.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+            {
+                if (visited.Contains(personName))
+                    continue;
+
+                var component = TraverseComponent(personName, adjacency, visited);
+                if (component.Count < 3)
+                    continue;
+
+                var relevantRows = componentRows
+                    .Where(row => row.KnownParticipants.Any(p => component.Contains(p.Name)))
+                    .ToList();
+
+                var group = new GroupAccumulator();
+                group.AddFrequency(frequency);
+                group.AddMessageCount(relevantRows.Count);
+
+                var inferredDivision = relevantRows
+                    .Select(row => row.EffectiveDivision)
+                    .Where(IsMeaningfulDivision)
+                    .GroupBy(x => x!, StringComparer.OrdinalIgnoreCase)
+                    .OrderByDescending(x => x.Count())
+                    .ThenBy(x => x.Key)
+                    .Select(x => x.Key)
+                    .FirstOrDefault();
+
+                if (string.IsNullOrWhiteSpace(inferredDivision)
+                    && frequencyDivisionMap.TryGetValue(frequency, out var frequencyDivision)
+                    && IsMeaningfulDivision(frequencyDivision))
+                {
+                    inferredDivision = frequencyDivision.Trim();
+                }
+
+                group.AddDivisionHint(NormalizeMeaningfulOrNull(inferredDivision));
+
+                foreach (var person in component.Select(name => people[name]))
+                    group.AddPerson(person);
+
+                group.AddInternalConnectionWeight(group.People.Values.Sum(x => x.ConnectionWeight));
+                group.FinalizeCoreProperties();
+
+                var tempGroupKey = BuildFrequencyScopedGroupKey(frequency, group.GroupKey);
+                groups[tempGroupKey] = group;
             }
         }
 
-        return count;
+        return groups;
     }
 
-    private static string ToPersonKey(string name)
-        => name.Trim().ToUpperInvariant();
+    /// <summary>
+    /// Додає міжгрупові мости через observation, у яких одночасно присутні учасники з різних груп.
+    /// </summary>
+    private static void ApplyBridges(
+        IReadOnlyDictionary<string, GroupAccumulator> groups,
+        IReadOnlyList<MessageRow> messageRows)
+    {
+        if (groups.Count < 2)
+            return;
+
+        var personToGroupKeys = groups.Values
+            .SelectMany(group => group.Members.Select(member => new { Member = member, group.GroupKey }))
+            .GroupBy(x => x.Member, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                x => x.Key,
+                x => x.Select(y => y.GroupKey).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+                StringComparer.OrdinalIgnoreCase);
+
+        var bridgeMap = new Dictionary<string, PairBridgeAccumulator>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var row in messageRows)
+        {
+            var frequency = NormalizeMeaningfulOrNull(row.Message.Frequency);
+            if (frequency is null)
+                continue;
+
+            var groupContacts = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var participant in row.KnownParticipants)
+            {
+                if (!personToGroupKeys.TryGetValue(participant.Name, out var groupKeys))
+                    continue;
+
+                foreach (var groupKey in groupKeys)
+                {
+                    if (!groupContacts.TryGetValue(groupKey, out var contacts))
+                    {
+                        contacts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        groupContacts[groupKey] = contacts;
+                    }
+
+                    contacts.Add(participant.Name);
+                }
+            }
+
+            var representedGroups = groupContacts.Keys
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (representedGroups.Count < 2)
+                continue;
+
+            for (var i = 0; i < representedGroups.Count; i++)
+            {
+                for (var j = i + 1; j < representedGroups.Count; j++)
+                {
+                    var leftGroupKey = representedGroups[i];
+                    var rightGroupKey = representedGroups[j];
+
+                    if (!groups.TryGetValue(leftGroupKey, out var leftGroup)
+                        || !groups.TryGetValue(rightGroupKey, out var rightGroup))
+                    {
+                        continue;
+                    }
+
+                    var pairKey = BuildPairKey(leftGroupKey, rightGroupKey);
+                    if (!bridgeMap.TryGetValue(pairKey, out var pairAccumulator))
+                    {
+                        pairAccumulator = new PairBridgeAccumulator(leftGroupKey, rightGroupKey);
+                        bridgeMap[pairKey] = pairAccumulator;
+                    }
+
+                    pairAccumulator.TotalWeight++;
+
+                    if (!pairAccumulator.ByFrequency.TryGetValue(frequency, out var frequencyAccumulator))
+                    {
+                        frequencyAccumulator = new FrequencyBridgeAccumulator(frequency);
+                        pairAccumulator.ByFrequency[frequency] = frequencyAccumulator;
+                    }
+
+                    frequencyAccumulator.Weight++;
+
+                    foreach (var name in groupContacts[leftGroupKey])
+                        frequencyAccumulator.LeftContacts.Increment(name);
+
+                    foreach (var name in groupContacts[rightGroupKey])
+                        frequencyAccumulator.RightContacts.Increment(name);
+                }
+            }
+        }
+
+        foreach (var pair in bridgeMap.Values)
+        {
+            if (!groups.TryGetValue(pair.LeftGroupKey, out var leftGroup)
+                || !groups.TryGetValue(pair.RightGroupKey, out var rightGroup))
+            {
+                continue;
+            }
+
+            var chosenFrequency = pair.ByFrequency.Values
+                .OrderByDescending(x => x.Weight)
+                .ThenBy(x => x.Frequency)
+                .FirstOrDefault();
+
+            if (chosenFrequency is null)
+                continue;
+
+            var leftContact = chosenFrequency.LeftContacts.GetTopName();
+            var rightContact = chosenFrequency.RightContacts.GetTopName();
+            if (string.IsNullOrWhiteSpace(leftContact) || string.IsNullOrWhiteSpace(rightContact))
+                continue;
+
+            leftGroup.Bridges.Add(new BridgeAccumulator(
+                rightGroup.GroupKey,
+                rightGroup.Division,
+                rightContact,
+                chosenFrequency.Frequency,
+                pair.TotalWeight));
+
+            rightGroup.Bridges.Add(new BridgeAccumulator(
+                leftGroup.GroupKey,
+                leftGroup.Division,
+                leftContact,
+                chosenFrequency.Frequency,
+                pair.TotalWeight));
+        }
+    }
+
+    /// <summary>
+    /// Зливає групи, які мають однакове стале ядро, але були знайдені на різних частотах.
+    /// Це дає більш стабільну модель, де carrier-frequency не створює зайву дубль-групу.
+    /// </summary>
+    private static Dictionary<string, GroupAccumulator> MergeStableGroupsAcrossFrequencies(
+        IReadOnlyDictionary<string, GroupAccumulator> groups)
+    {
+        if (groups.Count <= 1)
+            return groups.Values.ToDictionary(x => x.GroupKey, x => x, StringComparer.OrdinalIgnoreCase);
+
+        var nodeIds = groups
+            .Select((pair, index) => new { NodeId = $"node:{index}", Group = pair.Value })
+            .OrderBy(x => x.NodeId, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var adjacency = nodeIds.ToDictionary(
+            x => x.NodeId,
+            _ => new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            StringComparer.OrdinalIgnoreCase);
+
+        for (var i = 0; i < nodeIds.Count; i++)
+        {
+            for (var j = i + 1; j < nodeIds.Count; j++)
+            {
+                if (!ShouldMergeGroups(nodeIds[i].Group, nodeIds[j].Group))
+                    continue;
+
+                adjacency[nodeIds[i].NodeId].Add(nodeIds[j].NodeId);
+                adjacency[nodeIds[j].NodeId].Add(nodeIds[i].NodeId);
+            }
+        }
+
+        var merged = new Dictionary<string, GroupAccumulator>(StringComparer.OrdinalIgnoreCase);
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in nodeIds)
+        {
+            if (visited.Contains(item.NodeId))
+                continue;
+
+            var componentNodeIds = TraverseComponent(item.NodeId, adjacency, visited);
+            var componentGroups = nodeIds
+                .Where(x => componentNodeIds.Contains(x.NodeId))
+                .Select(x => x.Group)
+                .ToList();
+
+            var mergedGroup = MergeGroupComponent(componentGroups);
+            merged[mergedGroup.GroupKey] = mergedGroup;
+        }
+
+        return merged;
+    }
+
+    private static bool ShouldMergeGroups(GroupAccumulator left, GroupAccumulator right)
+    {
+        if (string.Equals(left.GroupKey, right.GroupKey, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (!string.Equals(left.KeyPersonName, right.KeyPersonName, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var sharedMembers = left.Members.Intersect(right.Members, StringComparer.OrdinalIgnoreCase).Count();
+        if (sharedMembers < 2)
+            return false;
+
+        var smallerGroupSize = Math.Min(left.Members.Count, right.Members.Count);
+        if (smallerGroupSize == 0)
+            return false;
+
+        return sharedMembers * 2 >= smallerGroupSize;
+    }
+
+    private static GroupAccumulator MergeGroupComponent(List<GroupAccumulator> componentGroups)
+    {
+        if (componentGroups.Count == 1)
+            return componentGroups[0];
+
+        var merged = new GroupAccumulator();
+
+        foreach (var group in componentGroups)
+            merged.MergeFrom(group);
+
+        merged.FinalizeCoreProperties();
+        return merged;
+    }
+
+    private static HashSet<string> TraverseComponent(
+        string start,
+        Dictionary<string, HashSet<string>> adjacency,
+        HashSet<string> visited)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var stack = new Stack<string>();
+        stack.Push(start);
+
+        while (stack.Count > 0)
+        {
+            var current = stack.Pop();
+            if (!visited.Add(current))
+                continue;
+
+            result.Add(current);
+
+            if (!adjacency.TryGetValue(current, out var neighbours))
+                continue;
+
+            foreach (var neighbour in neighbours)
+            {
+                if (!visited.Contains(neighbour))
+                    stack.Push(neighbour);
+            }
+        }
+
+        return result;
+    }
+
+    private static string BuildFrequencyScopedGroupKey(string frequency, string stableGroupKey)
+        => $"{frequency.Trim().ToUpperInvariant()}::{stableGroupKey}";
+
+    private static string BuildPairKey(string leftGroupKey, string rightGroupKey)
+    {
+        return string.Compare(leftGroupKey, rightGroupKey, StringComparison.OrdinalIgnoreCase) <= 0
+            ? $"{leftGroupKey}::{rightGroupKey}"
+            : $"{rightGroupKey}::{leftGroupKey}";
+    }
+
+    private static string? NormalizeMeaningfulOrNull(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static bool IsMeaningfulDivision(string? division)
         => !string.IsNullOrWhiteSpace(division)
            && !string.Equals(division.Trim(), UnknownDivision, StringComparison.OrdinalIgnoreCase);
 
-    private sealed class NodeAccumulator
+    internal static bool IsCenterCandidate(string name, string? role)
     {
-        public string PersonKey { get; init; } = string.Empty;
-        public string Name { get; init; } = string.Empty;
-        public string? Role { get; set; }
-        public DateTime RoleObservedAt { get; set; }
-        public HashSet<string> Divisions { get; } = new(StringComparer.OrdinalIgnoreCase);
-        public HashSet<string> Frequencies { get; } = new(StringComparer.OrdinalIgnoreCase);
-    }
-
-    private sealed class EdgeAccumulator
-    {
-        public string FromPersonKey { get; init; } = string.Empty;
-        public string ToPersonKey { get; init; } = string.Empty;
-        public int Weight { get; set; }
-        public HashSet<string> Divisions { get; } = new(StringComparer.OrdinalIgnoreCase);
-        public HashSet<string> Frequencies { get; } = new(StringComparer.OrdinalIgnoreCase);
-        public HashSet<string> Labels { get; } = new(StringComparer.OrdinalIgnoreCase);
+        return name.Contains("ЦЕНТР", StringComparison.OrdinalIgnoreCase)
+            || (!string.IsNullOrWhiteSpace(role)
+                && role.Contains("координ", StringComparison.OrdinalIgnoreCase));
     }
 }

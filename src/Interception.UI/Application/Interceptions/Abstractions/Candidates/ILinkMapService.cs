@@ -2,17 +2,17 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Models.PatternRecognition;
+using Interception.UI.Application.Interceptions.Models.Candidates;
 
 namespace Interception.UI.Application.Interceptions.Abstractions.Candidates;
 
 /// <summary>
-/// Будує аналітичну карту зв'язків між особами.
+/// Сервіс карти зв'язків.
 /// </summary>
 public interface ILinkMapService
 {
     /// <summary>
-    /// Будує карту зв'язків за вказаний період.
+    /// Будує карту зв'язків для вибраного періоду.
     /// </summary>
     Task<LinkMapModel> BuildAsync(
         DateTime? dateFrom = null,

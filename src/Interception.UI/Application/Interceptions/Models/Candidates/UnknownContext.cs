@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Interceptions.Models.PatternRecognition;
+namespace Interception.UI.Application.Interceptions.Models.Candidates;
 
 /// <summary>
 /// Плоский контекст невідомого учасника без EF-навігацій.

@@ -1,0 +1,61 @@
+<div class="registry-toolbar flex-shrink-0">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        @if (ActiveSection == "groups")
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/analytics/candidates"
+                     Match="NavLinkMatch.All"
+                     title="Групи на розгляд"
+                     aria-label="Групи на розгляд">
+                <i class="bi bi-collection"></i>
+                <span class="visually-hidden">Групи на розгляд</span>
+            </NavLink>
+        }
+        else
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/analytics/candidates"
+                     title="Групи на розгляд"
+                     aria-label="Групи на розгляд">
+                <i class="bi bi-collection"></i>
+                <span class="visually-hidden">Групи на розгляд</span>
+            </NavLink>
+        }
+
+        @if (ActiveSection == "link-map")
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/analytics/link-map"
+                     Match="NavLinkMatch.All"
+                     title="Карта зв'язків"
+                     aria-label="Карта зв'язків">
+                <i class="bi bi-bezier2"></i>
+                <span class="visually-hidden">Карта зв'язків</span>
+            </NavLink>
+        }
+        else
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/analytics/link-map"
+                     title="Карта зв'язків"
+                     aria-label="Карта зв'язків">
+                <i class="bi bi-bezier2"></i>
+                <span class="visually-hidden">Карта зв'язків</span>
+            </NavLink>
+        }
+    </div>
+
+    <div class="registry-toolbar-meta">
+        @if (MetaContent is not null)
+        {
+            @MetaContent
+        }
+    </div>
+
+    <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+        @if (ActionsContent is not null)
+        {
+            @ActionsContent
+        }
+    </div>
+</div>

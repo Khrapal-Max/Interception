@@ -9,7 +9,7 @@ using Interception.UI.Domain.Enums;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Pages.Candidates.Drawers;
+namespace Interception.UI.Components.Pages.Analytics.Candidates.Drawers;
 
 public partial class CandidateGroupDrawer : ComponentBase
 {

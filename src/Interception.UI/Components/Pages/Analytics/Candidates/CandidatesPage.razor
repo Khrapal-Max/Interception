@@ -1,20 +1,21 @@
 @page "/analytics/candidates"
-@using Interception.UI.Components.Pages.Candidates.Drawers
+@using Interception.UI.Components.Pages.Analytics.Candidates.Drawers
+@using Interception.UI.Components.Pages.Analytics.Toolbar
 @using Interception.UI.Domain.Enums
 
-<PageTitle>Кандидати на ідентифікацію</PageTitle>
+<PageTitle>Групи на розгляд</PageTitle>
 
 <div class="page-shell">
 
-    <div class="registry-toolbar flex-shrink-0">
-        <div class="registry-toolbar-meta">
+    <CandidatesToolbar ActiveSection="groups">
+        <MetaContent>
             @if (_pagedResult is not null)
             {
                 <span>Всього: <strong>@_pagedResult.TotalCount</strong></span>
             }
-        </div>
-        <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-primary btn-sm"
+        </MetaContent>
+        <ActionsContent>
+            <button class="btn btn-success btn-sm"
                     @onclick="RunAnalysisAsync"
                     disabled="@(_running || _activeTab != CandidateGroupStatus.Open)">
                 @if (_running)
@@ -27,8 +28,8 @@
                 }
                 Запустити аналіз
             </button>
-        </div>
-    </div>
+        </ActionsContent>
+    </CandidatesToolbar>
 
     <div class="flex-shrink-0 px-1 px-md-2">
         <ul class="nav nav-tabs">
