@@ -14,11 +14,11 @@ namespace Interception.Tests.Application.Interceptions.Services.Candidates;
 /// TDD-тести для карти зв'язків.
 /// Частина кейсів фіксує вже прийняту базову поведінку,
 /// а частина навмисно закодовує вимоги стабільної моделі,
-/// які поточна frequency-first реалізація ще не виконує.
+/// включно з аналітичним шаром по діях груп і мостів.
 /// </summary>
 public sealed class LinkMapServiceTests
 {
-    private static LinkMapService CreateService(IDbContextFactory<Interception.UI.Infrastructure.AppDbContext> factory)
+    private static LinkMapService CreateService(IDbContextFactory<AppDbContext> factory)
         => new(factory);
 
     [Fact]
@@ -321,6 +321,120 @@ public sealed class LinkMapServiceTests
         bridgeFromB.Weight.Should().Be(3);
     }
 
+    [Fact]
+    public async Task BuildAsync_ReturnsPrimaryActionForGroup_WhenGroupHasDominantAction()
+    {
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+        var ct = TestContext.Current.CancellationToken;
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var report = InterceptionAction.Create("доповідь", string.Empty);
+            var recon = InterceptionAction.Create("дорозвідка", string.Empty);
+            db.InterceptionActions.AddRange(report, recon);
+
+            var m1 = CreateMessage(report, new DateTime(2026, 03, 28, 15, 0, 0, DateTimeKind.Utc), division: null, frequency: "402.0000");
+            m1.AddParticipant("ЦЕНТР", false, "координатор", 1);
+            m1.AddParticipant("А", false, "оператор", 2);
+
+            var m2 = CreateMessage(report, new DateTime(2026, 03, 28, 15, 5, 0, DateTimeKind.Utc), division: null, frequency: "402.0000");
+            m2.AddParticipant("ЦЕНТР", false, "координатор", 1);
+            m2.AddParticipant("Б", false, "оператор", 2);
+
+            var m3 = CreateMessage(recon, new DateTime(2026, 03, 28, 15, 10, 0, DateTimeKind.Utc), division: null, frequency: "402.0000");
+            m3.AddParticipant("ЦЕНТР", false, "координатор", 1);
+            m3.AddParticipant("А", false, "оператор", 2);
+
+            db.InterceptionMessages.AddRange(m1, m2, m3);
+            await db.SaveChangesAsync(ct);
+        }
+
+        var result = await service.BuildAsync(ct: CancellationToken.None);
+
+        var group = result.Groups.Should().ContainSingle().Subject;
+        group.PrimaryAction.Should().Be("доповідь");
+        group.TopActions.Should().ContainInOrder("доповідь", "дорозвідка");
+    }
+
+    [Fact]
+    public async Task BuildAsync_ReturnsTopActionsForGroup_WhenGroupHasMixedActionProfile()
+    {
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+        var ct = TestContext.Current.CancellationToken;
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var report = InterceptionAction.Create("доповідь", string.Empty);
+            var fireAdjust = InterceptionAction.Create("коригування", string.Empty);
+            var recon = InterceptionAction.Create("дорозвідка", string.Empty);
+            db.InterceptionActions.AddRange(report, fireAdjust, recon);
+
+            var rows = new[]
+            {
+                CreateMessage(report, new DateTime(2026, 03, 28, 16, 0, 0, DateTimeKind.Utc), null, "402.0000"),
+                CreateMessage(report, new DateTime(2026, 03, 28, 16, 3, 0, DateTimeKind.Utc), null, "402.0000"),
+                CreateMessage(fireAdjust, new DateTime(2026, 03, 28, 16, 6, 0, DateTimeKind.Utc), null, "402.0000"),
+                CreateMessage(recon, new DateTime(2026, 03, 28, 16, 9, 0, DateTimeKind.Utc), null, "402.0000")
+            };
+
+            rows[0].AddParticipant("ЦЕНТР", false, "координатор", 1);
+            rows[0].AddParticipant("А", false, "оператор", 2);
+
+            rows[1].AddParticipant("ЦЕНТР", false, "координатор", 1);
+            rows[1].AddParticipant("Б", false, "оператор", 2);
+
+            rows[2].AddParticipant("ЦЕНТР", false, "координатор", 1);
+            rows[2].AddParticipant("А", false, "оператор", 2);
+
+            rows[3].AddParticipant("ЦЕНТР", false, "координатор", 1);
+            rows[3].AddParticipant("Б", false, "оператор", 2);
+
+            db.InterceptionMessages.AddRange(rows);
+            await db.SaveChangesAsync(ct);
+        }
+
+        var result = await service.BuildAsync(ct: CancellationToken.None);
+
+        var group = result.Groups.Should().ContainSingle().Subject;
+        group.TopActions.Should().HaveCount(3);
+        group.TopActions[0].Should().Be("доповідь");
+        group.TopActions.Should().Contain(["коригування", "дорозвідка"]);
+    }
+
+    [Fact]
+    public async Task BuildAsync_ReturnsPrimaryActionForBridge_WhenBridgeHasCharacteristicAction()
+    {
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+        var ct = TestContext.Current.CancellationToken;
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var report = InterceptionAction.Create("доповідь", string.Empty);
+            var coordination = InterceptionAction.Create("координація", string.Empty);
+            db.InterceptionActions.AddRange(report, coordination);
+
+            SeedTwoIndependentGroupsWithBridgeActions(db, report, coordination);
+            await db.SaveChangesAsync(ct);
+        }
+
+        var result = await service.BuildAsync(ct: CancellationToken.None);
+
+        var groupA = result.Groups.Single(x => x.KeyPersonName == "А-ЦЕНТР");
+        var groupB = result.Groups.Single(x => x.KeyPersonName == "Б-ЦЕНТР");
+
+        var bridgeFromA = groupA.Bridges.Single(x => x.TargetGroupKey == groupB.GroupKey);
+        var bridgeFromB = groupB.Bridges.Single(x => x.TargetGroupKey == groupA.GroupKey);
+
+        bridgeFromA.PrimaryAction.Should().Be("координація");
+        bridgeFromA.TopActions.Should().ContainInOrder("координація", "доповідь");
+
+        bridgeFromB.PrimaryAction.Should().Be("координація");
+        bridgeFromB.TopActions.Should().ContainInOrder("координація", "доповідь");
+    }
+
     private static void SeedStableCoreOnFrequency(
         AppDbContext db,
         InterceptionAction action,
@@ -339,7 +453,7 @@ public sealed class LinkMapServiceTests
     }
 
     private static void SeedTwoIndependentGroupsWithBridge(
-        Interception.UI.Infrastructure.AppDbContext db,
+        AppDbContext db,
         InterceptionAction action,
         bool includeSecondBridgeFrequency)
     {
@@ -405,6 +519,70 @@ public sealed class LinkMapServiceTests
         bridge3.AddParticipant("Б-ЦЕНТР", false, "координатор", 2);
 
         db.InterceptionMessages.Add(bridge3);
+    }
+
+    private static void SeedTwoIndependentGroupsWithBridgeActions(
+        AppDbContext db,
+        InterceptionAction internalAction,
+        InterceptionAction bridgeAction)
+    {
+        var a1 = CreateMessage(
+            internalAction,
+            new DateTime(2026, 03, 28, 17, 0, 0, DateTimeKind.Utc),
+            division: null,
+            frequency: "402.0000");
+        a1.AddParticipant("А-ЦЕНТР", false, "координатор", 1);
+        a1.AddParticipant("А-1", false, "оператор", 2);
+
+        var a2 = CreateMessage(
+            internalAction,
+            new DateTime(2026, 03, 28, 17, 2, 0, DateTimeKind.Utc),
+            division: null,
+            frequency: "402.0000");
+        a2.AddParticipant("А-ЦЕНТР", false, "координатор", 1);
+        a2.AddParticipant("А-2", false, "оператор", 2);
+
+        var b1 = CreateMessage(
+            internalAction,
+            new DateTime(2026, 03, 28, 17, 4, 0, DateTimeKind.Utc),
+            division: null,
+            frequency: "145.1000");
+        b1.AddParticipant("Б-ЦЕНТР", false, "координатор", 1);
+        b1.AddParticipant("Б-1", false, "оператор", 2);
+
+        var b2 = CreateMessage(
+            internalAction,
+            new DateTime(2026, 03, 28, 17, 6, 0, DateTimeKind.Utc),
+            division: null,
+            frequency: "145.1000");
+        b2.AddParticipant("Б-ЦЕНТР", false, "координатор", 1);
+        b2.AddParticipant("Б-2", false, "оператор", 2);
+
+        var bridge1 = CreateMessage(
+            bridgeAction,
+            new DateTime(2026, 03, 28, 17, 8, 0, DateTimeKind.Utc),
+            division: null,
+            frequency: "401.2000");
+        bridge1.AddParticipant("А-ЦЕНТР", false, "координатор", 1);
+        bridge1.AddParticipant("Б-ЦЕНТР", false, "координатор", 2);
+
+        var bridge2 = CreateMessage(
+            bridgeAction,
+            new DateTime(2026, 03, 28, 17, 10, 0, DateTimeKind.Utc),
+            division: null,
+            frequency: "401.2000");
+        bridge2.AddParticipant("А-ЦЕНТР", false, "координатор", 1);
+        bridge2.AddParticipant("Б-ЦЕНТР", false, "координатор", 2);
+
+        var bridge3 = CreateMessage(
+            internalAction,
+            new DateTime(2026, 03, 28, 17, 12, 0, DateTimeKind.Utc),
+            division: null,
+            frequency: "401.2000");
+        bridge3.AddParticipant("А-ЦЕНТР", false, "координатор", 1);
+        bridge3.AddParticipant("Б-ЦЕНТР", false, "координатор", 2);
+
+        db.InterceptionMessages.AddRange(a1, a2, b1, b2, bridge1, bridge2, bridge3);
     }
 
     private static InterceptionMessage CreateMessage(

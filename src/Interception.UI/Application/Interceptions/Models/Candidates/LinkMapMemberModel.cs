@@ -5,12 +5,12 @@
 namespace Interception.UI.Application.Interceptions.Models.Candidates;
 
 /// <summary>
-/// Деталізований вузол-учасник у межах комунікаційної групи.
+/// Детальний вузол-учасник усередині комунікаційної групи.
 /// </summary>
 public sealed record LinkMapMemberModel(
     string Name,
     string? Role,
-    int Mentions,
+    int MentionCount,
     int UniquePartnerCount,
     int ConnectionWeight,
     DateTime LastSeenAt,

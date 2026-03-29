@@ -5,8 +5,10 @@
 namespace Interception.UI.Application.Interceptions.Services.Candidates.Builders.LinkMap;
 
 internal sealed record BridgeAccumulator(
-        string TargetGroupKey,
-        string? TargetDivision,
-        string ContactPersonName,
-        string BridgeFrequency,
-        int Weight);
+    string TargetGroupKey,
+    string? TargetDivision,
+    string ContactPersonName,
+    string BridgeFrequency,
+    int Weight,
+    string? PrimaryAction,
+    IReadOnlyList<string> TopActions);

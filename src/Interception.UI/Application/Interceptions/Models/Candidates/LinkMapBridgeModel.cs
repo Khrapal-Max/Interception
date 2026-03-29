@@ -12,4 +12,6 @@ public sealed record LinkMapBridgeModel(
     string? TargetDivision,
     string ContactPersonName,
     string BridgeFrequency,
-    int Weight);
+    int Weight,
+    string? PrimaryAction,
+    IReadOnlyList<string> TopActions);

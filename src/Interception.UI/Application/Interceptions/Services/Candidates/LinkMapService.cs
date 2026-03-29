@@ -15,6 +15,7 @@ namespace Interception.UI.Application.Interceptions.Services.Candidates;
 /// Будує карту зв'язків за логікою communication-first.
 /// Спочатку визначаються стійкі комунікаційні групи, а вже потім
 /// для них робиться спроба вивести підрозділ та міжгрупові мости.
+/// Додатково агрегуються характерні дії групи й моста.
 /// </summary>
 public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFactory) : ILinkMapService
 {
@@ -32,6 +33,7 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
         var query = db.InterceptionMessages
             .AsNoTracking()
             .Include(x => x.Participants)
+            .Include(x => x.InterceptionAction)
             .AsQueryable();
 
         if (dateFrom.HasValue)
@@ -70,10 +72,7 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
         var groupCountByMember = groups.Values
             .SelectMany(group => group.Members)
             .GroupBy(x => x, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                x => x.Key,
-                x => x.Count(),
-                StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(x => x.Key, x => x.Count(), StringComparer.OrdinalIgnoreCase);
 
         var models = groups.Values
             .Select(x => x.ToModel(groupCountByMember))
@@ -136,24 +135,19 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
     /// </summary>
     private static List<ParticipantSnapshot> GetKnownParticipants(InterceptionMessage message)
     {
-        return
-        [
-            .. message.Participants
-                .Where(x => !x.IsUnknown && !string.IsNullOrWhiteSpace(x.Name))
-                .Select(x => new ParticipantSnapshot(
-                    x.Name!.Trim(),
-                    NormalizeMeaningfulOrNull(x.Role),
-                    message.ObservedDate,
-                    NormalizeMeaningfulOrNull(message.Frequency)))
-                .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(x => x.First())
-        ];
+        return [.. message.Participants
+            .Where(x => !x.IsUnknown && !string.IsNullOrWhiteSpace(x.Name))
+            .Select(x => new ParticipantSnapshot(
+                x.Name!.Trim(),
+                NormalizeMeaningfulOrNull(x.Role),
+                message.ObservedDate,
+                NormalizeMeaningfulOrNull(message.Frequency)))
+            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(x => x.First())];
     }
 
     /// <summary>
     /// Будує стійкі комунікаційні групи. Базовий carrier групи — частота, а не підрозділ.
-    /// На цій фазі використовується тимчасовий frequency-scoped key, щоб однакове ядро
-    /// на різних частотах не перетирало одна одну до post-merge.
     /// </summary>
     private static Dictionary<string, GroupAccumulator> BuildGroupsByCommunication(
         IReadOnlyList<MessageRow> messageRows,
@@ -172,7 +166,6 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
             var adjacency = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             var people = new Dictionary<string, PersonAccumulator>(StringComparer.OrdinalIgnoreCase);
             var componentRows = frequencyGroup.ToList();
-            var frequency = frequencyGroup.Key;
 
             foreach (var row in componentRows)
             {
@@ -208,11 +201,12 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
 
             foreach (var person in people.Values)
             {
-                if (adjacency.TryGetValue(person.Name, out var partners))
-                    person.SetUniquePartnerCount(partners.Count);
+                if (adjacency.TryGetValue(person.Name, out var neighbours))
+                    person.SetUniquePartnerCount(neighbours.Count);
             }
 
             var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var frequency = frequencyGroup.Key;
 
             foreach (var personName in people.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
             {
@@ -223,15 +217,12 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
                 if (component.Count < 3)
                     continue;
 
-                var relevantRows = componentRows
-                    .Where(row => row.KnownParticipants.Any(p => component.Contains(p.Name)))
+                var componentPeople = component
+                    .Select(name => people[name])
                     .ToList();
 
-                var group = new GroupAccumulator();
-                group.AddFrequency(frequency);
-                group.AddMessageCount(relevantRows.Count);
-
-                var inferredDivision = relevantRows
+                var inferredDivision = componentRows
+                    .Where(row => row.KnownParticipants.Any(p => component.Contains(p.Name)))
                     .Select(row => row.EffectiveDivision)
                     .Where(IsMeaningfulDivision)
                     .GroupBy(x => x!, StringComparer.OrdinalIgnoreCase)
@@ -247,15 +238,28 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
                     inferredDivision = frequencyDivision.Trim();
                 }
 
+                var group = new GroupAccumulator();
                 group.AddDivisionHint(NormalizeMeaningfulOrNull(inferredDivision));
+                group.AddFrequency(frequency);
 
-                foreach (var person in component.Select(name => people[name]))
+                foreach (var row in componentRows.Where(r => r.KnownParticipants.Any(p => component.Contains(p.Name))))
+                {
+                    group.AddMessageCount(1);
+                    group.AddAction(GetActionName(row.Message));
+                }
+
+                foreach (var person in componentPeople)
                     group.AddPerson(person);
 
-                group.AddInternalConnectionWeight(group.People.Values.Sum(x => x.ConnectionWeight));
+                group.AddInternalConnectionWeight(componentPeople.Sum(x => x.ConnectionWeight));
                 group.FinalizeCoreProperties();
 
-                var tempGroupKey = BuildFrequencyScopedGroupKey(frequency, group.GroupKey);
+                var tempGroupKey = BuildFrequencyScopedGroupKey(
+                    frequency,
+                    inferredDivision,
+                    componentPeople.Select(x => x.Name),
+                    group.KeyPersonName);
+
                 groups[tempGroupKey] = group;
             }
         }
@@ -336,6 +340,7 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
                     }
 
                     pairAccumulator.TotalWeight++;
+                    pairAccumulator.AddAction(GetActionName(row.Message));
 
                     if (!pairAccumulator.ByFrequency.TryGetValue(frequency, out var frequencyAccumulator))
                     {
@@ -375,19 +380,26 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
             if (string.IsNullOrWhiteSpace(leftContact) || string.IsNullOrWhiteSpace(rightContact))
                 continue;
 
+            var primaryAction = pair.GetPrimaryAction();
+            var topActions = pair.GetTopActions();
+
             leftGroup.Bridges.Add(new BridgeAccumulator(
                 rightGroup.GroupKey,
                 rightGroup.Division,
                 rightContact,
                 chosenFrequency.Frequency,
-                pair.TotalWeight));
+                pair.TotalWeight,
+                primaryAction,
+                topActions));
 
             rightGroup.Bridges.Add(new BridgeAccumulator(
                 leftGroup.GroupKey,
                 leftGroup.Division,
                 leftContact,
                 chosenFrequency.Frequency,
-                pair.TotalWeight));
+                pair.TotalWeight,
+                primaryAction,
+                topActions));
         }
     }
 
@@ -401,9 +413,12 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
         if (groups.Count <= 1)
             return groups.Values.ToDictionary(x => x.GroupKey, x => x, StringComparer.OrdinalIgnoreCase);
 
-        var nodeIds = groups
-            .Select((pair, index) => new { NodeId = $"node:{index}", Group = pair.Value })
-            .OrderBy(x => x.NodeId, StringComparer.OrdinalIgnoreCase)
+        var source = groups.Values
+            .OrderBy(x => x.GroupKey, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var nodeIds = source
+            .Select((group, index) => new { NodeId = $"node:{index}", Group = group })
             .ToList();
 
         var adjacency = nodeIds.ToDictionary(
@@ -438,6 +453,7 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
                 .ToList();
 
             var mergedGroup = MergeGroupComponent(componentGroups);
+            mergedGroup.FinalizeCoreProperties();
             merged[mergedGroup.GroupKey] = mergedGroup;
         }
 
@@ -446,8 +462,8 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
 
     private static bool ShouldMergeGroups(GroupAccumulator left, GroupAccumulator right)
     {
-        if (string.Equals(left.GroupKey, right.GroupKey, StringComparison.OrdinalIgnoreCase))
-            return true;
+        left.FinalizeCoreProperties();
+        right.FinalizeCoreProperties();
 
         if (!string.Equals(left.KeyPersonName, right.KeyPersonName, StringComparison.OrdinalIgnoreCase))
             return false;
@@ -463,7 +479,7 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
         return sharedMembers * 2 >= smallerGroupSize;
     }
 
-    private static GroupAccumulator MergeGroupComponent(List<GroupAccumulator> componentGroups)
+    private static GroupAccumulator MergeGroupComponent(IReadOnlyList<GroupAccumulator> componentGroups)
     {
         if (componentGroups.Count == 1)
             return componentGroups[0];
@@ -473,7 +489,6 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
         foreach (var group in componentGroups)
             merged.MergeFrom(group);
 
-        merged.FinalizeCoreProperties();
         return merged;
     }
 
@@ -507,8 +522,27 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
         return result;
     }
 
-    private static string BuildFrequencyScopedGroupKey(string frequency, string stableGroupKey)
-        => $"{frequency.Trim().ToUpperInvariant()}::{stableGroupKey}";
+    private static string BuildFrequencyScopedGroupKey(
+        string frequency,
+        string? division,
+        IEnumerable<string> members,
+        string keyPersonName)
+    {
+        var stablePart = BuildStableGroupKey(division, members, keyPersonName);
+        return $"{frequency.Trim().ToUpperInvariant()}::{stablePart}";
+    }
+
+    private static string BuildStableGroupKey(string? division, IEnumerable<string> members, string keyPersonName)
+    {
+        var divisionPart = string.IsNullOrWhiteSpace(division) ? "NO-DIVISION" : division.Trim().ToUpperInvariant();
+        var membersPart = string.Join(";", members
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim().ToUpperInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
+
+        return $"{divisionPart}|{keyPersonName.Trim().ToUpperInvariant()}|{membersPart}";
+    }
 
     private static string BuildPairKey(string leftGroupKey, string rightGroupKey)
     {
@@ -519,6 +553,9 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
 
     private static string? NormalizeMeaningfulOrNull(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string? GetActionName(InterceptionMessage message)
+        => NormalizeMeaningfulOrNull(message.InterceptionAction?.Name);
 
     private static bool IsMeaningfulDivision(string? division)
         => !string.IsNullOrWhiteSpace(division)

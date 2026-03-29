@@ -27,7 +27,6 @@
   <ItemGroup>
     <Folder Include="Application\Interceptions\Abstractions\Reports\" />
     <Folder Include="Application\Interceptions\Services\Reports\" />
-    <Folder Include="Components\Pages\Analytics\LinkMap\" />
   </ItemGroup>
 
 </Project>

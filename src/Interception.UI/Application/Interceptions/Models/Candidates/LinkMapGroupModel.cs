@@ -18,4 +18,6 @@ public sealed record LinkMapGroupModel(
     int MentionCount,
     int InternalConnectionWeight,
     int BridgeWeight,
+    string? PrimaryAction,
+    IReadOnlyList<string> TopActions,
     IReadOnlyList<LinkMapBridgeModel> Bridges);

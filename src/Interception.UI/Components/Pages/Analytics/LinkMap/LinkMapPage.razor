@@ -1,148 +1,240 @@
 @page "/analytics/link-map"
+@using Interception.UI.Application.Interceptions.Models.Candidates
 @using Interception.UI.Components.Pages.Analytics.LinkMap.Drawers
-@using Interception.UI.Components.Pages.Analytics.Toolbar
-
-<PageTitle>Аналітика — Карта зв'язків</PageTitle>
 
 <div class="page-shell">
-
-    <CandidatesToolbar ActiveSection="link-map">
-        <MetaContent>
-            @if (_map is not null)
-            {
-                <span>Груп: <strong>@_map.Groups.Count</strong></span>
-                <span class="ms-2">Мостів: <strong>@TotalBridgeCount</strong></span>
-            }
-        </MetaContent>
-        <ActionsContent>
-            <div class="d-flex align-items-end gap-2 flex-wrap">
-                <div>
-                    <label class="form-label form-label-sm mb-1">Дата від</label>
-                    <input type="date"
-                           class="form-control form-control-sm"
-                           value="@DateFromStr"
-                           @onchange="e => OnDateFromChanged(e.Value?.ToString())" />
-                </div>
-
-                <div>
-                    <label class="form-label form-label-sm mb-1">Дата до</label>
-                    <input type="date"
-                           class="form-control form-control-sm"
-                           value="@DateToStr"
-                           @onchange="e => OnDateToChanged(e.Value?.ToString())" />
-                </div>
-
-                <button class="btn btn-success btn-sm"
-                        @onclick="LoadAsync"
-                        disabled="@_loading">
-                    @if (_loading)
-                    {
-                        <span class="spinner-border spinner-border-sm me-1"></span>
-                    }
-                    else
-                    {
-                        <i class="bi bi-arrow-repeat me-1"></i>
-                    }
-                    Оновити
-                </button>
-
-                <button class="btn btn-light btn-sm"
-                        @onclick="ResetPeriodAsync"
-                        disabled="@_loading">
-                    <i class="bi bi-clock-history me-1"></i>
-                    Останні 7 днів
-                </button>
+    <div class="registry-toolbar flex-wrap">
+        <div class="d-flex flex-wrap align-items-end gap-2">
+            <div>
+                <label class="form-label small mb-1">Від</label>
+                <input class="form-control form-control-sm rounded-0"
+                       type="date"
+                       value="@DateFromStr"
+                       @onchange="@(e => OnDateFromChanged(e.Value?.ToString()))" />
             </div>
-        </ActionsContent>
-    </CandidatesToolbar>
+
+            <div>
+                <label class="form-label small mb-1">До</label>
+                <input class="form-control form-control-sm rounded-0"
+                       type="date"
+                       value="@DateToStr"
+                       @onchange="@(e => OnDateToChanged(e.Value?.ToString()))" />
+            </div>
+
+            <div>
+                <label class="form-label small mb-1">Пошук</label>
+                <input class="form-control form-control-sm rounded-0"
+                       type="text"
+                       value="@_search"
+                       @oninput="@(e => OnSearchChanged(e.Value?.ToString()))"
+                       placeholder="Ключова особа / підрозділ / дія" />
+            </div>
+
+            <div>
+                <label class="form-label small mb-1">Порядок</label>
+                <select class="form-select form-select-sm rounded-0" @bind="_sort">
+                    <option value="connections">За зв'язками</option>
+                    <option value="action">За дією</option>
+                    <option value="name">За назвою</option>
+                </select>
+            </div>
+
+            <div class="form-check form-switch mb-1 ms-1">
+                <input class="form-check-input" type="checkbox" id="strongOnly" @bind="_strongOnly" />
+                <label class="form-check-label small" for="strongOnly">Лише зі зв'язками</label>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
+            <div class="registry-toolbar-meta">
+                Груп: <strong>@VisibleGroups.Count</strong>
+            </div>
+            <button type="button"
+                    class="btn btn-secondary btn-sm rounded-0"
+                    @onclick="ResetPeriodAsync"
+                    disabled="@_loading">
+                7 днів
+            </button>
+            <button type="button"
+                    class="btn btn-primary btn-sm rounded-0"
+                    @onclick="LoadAsync"
+                    disabled="@_loading">
+                Оновити
+            </button>
+        </div>
+    </div>
 
     <div class="page-panel">
         @if (_loading)
         {
-            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
-                <div class="text-center py-5">
-                    <div class="spinner-border spinner-border-sm me-2"></div>Завантаження...
-                </div>
-            </div>
+            <div class="p-3 text-muted small">Завантаження карти зв'язків…</div>
         }
-        else if (_map is null || _map.Groups.Count == 0)
+        else if (_map is null || VisibleGroups.Count == 0)
         {
-            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
-                <div class="text-center py-5">
-                    <i class="bi bi-bezier2 fs-1 d-block mb-2 opacity-25"></i>
-                    <div>Даних для карти зв'язків немає</div>
-                </div>
-            </div>
+            <div class="p-3 page-empty small">За поточним періодом груп не знайдено.</div>
         }
         else
         {
-            <div class="table-wrap">
-                <table class="table table-hover table-sm align-middle data-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 18%;">Ключова особа</th>
-                            <th style="width: 18%;">Підрозділ</th>
-                            <th style="width: 18%;">Частоти</th>
-                            <th style="width: 10%;" class="text-nowrap">Учасники</th>
-                            <th style="width: 12%;" class="text-nowrap">Внутр. вага</th>
-                            <th style="width: 12%;" class="text-nowrap">Мости</th>
-                            <th style="width: 12%;" class="text-nowrap">Вага мостів</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var group in _map.Groups)
+            <div class="d-flex flex-column flex-xl-row h-100">
+                <div class="border-end d-flex flex-column" style="flex: 0 0 22rem; min-width: 20rem; max-width: 24rem; min-height: 0;">
+                    <div class="px-3 py-2 border-bottom small d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold">Групи</span>
+                        <span class="text-muted">@VisibleGroups.Count</span>
+                    </div>
+
+                    <div class="panel-scroll p-2">
+                        @foreach (var group in VisibleGroups)
                         {
-                            <tr>
-                                <td>
-                                    <div class="fw-medium">@group.KeyPersonName</div>
-                                    <small class="text-muted">@(string.IsNullOrWhiteSpace(group.KeyPersonRole) ? "—" : group.KeyPersonRole)</small>
-                                </td>
-                                <td>
-                                    @if (!string.IsNullOrWhiteSpace(group.Division))
+                            var selected = _selectedGroup?.GroupKey == group.GroupKey;
+                            <button type="button"
+                                    class="btn btn-sm rounded-0 text-start w-100 mb-2"
+                                    style="@(selected
+                                        ? "background: rgba(13,110,253,.18); border: 1px solid rgba(13,110,253,.55); color: #dfe5ea;"
+                                        : "background: transparent; border: 1px solid var(--bs-border-color); color: inherit;")"
+                                    @onclick="() => SelectGroup(group)">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <div class="min-w-0 flex-grow-1">
+                                        <div class="fw-semibold text-truncate">@group.KeyPersonName</div>
+                                        <div class="small text-muted text-truncate">@(group.Division ?? "НВ підрозділ")</div>
+                                    </div>
+                                    @if (group.Bridges.Count > 0)
                                     {
-                                        <span>@group.Division</span>
+                                        <span class="badge bg-secondary rounded-0">@group.Bridges.Count</span>
                                     }
-                                    else
-                                    {
-                                        <span class="text-muted">—</span>
-                                    }
-                                </td>
-                                <td>
-                                    @if (group.Frequencies.Count == 0)
-                                    {
-                                        <span class="text-muted">—</span>
-                                    }
-                                    else
-                                    {
-                                        <div class="d-flex flex-wrap gap-1">
-                                            @foreach (var frequency in group.Frequencies)
-                                            {
-                                                <span class="badge bg-secondary">@frequency</span>
-                                            }
-                                        </div>
-                                    }
-                                </td>
-                                <td class="text-nowrap">@group.Members.Count</td>
-                                <td class="text-nowrap">@GetInternalConnectionWeight(group)</td>
-                                <td class="text-nowrap">@group.Bridges.Count</td>
-                                <td class="text-nowrap">@GetBridgeWeight(group)</td>
-                                <td class="text-end p-2 text-nowrap">
-                                    <button class="btn btn-secondary btn-sm"
-                                            title="Деталі"
-                                            @onclick="() => OpenGroup(group)">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
-                                </td>
-                            </tr>
+                                </div>
+
+                                <div class="small mt-2 text-truncate">
+                                    @(string.IsNullOrWhiteSpace(group.PrimaryAction) ? "Дія не визначена" : group.PrimaryAction)
+                                </div>
+
+                                @if (group.Frequencies.Count > 0)
+                                {
+                                    <div class="small text-muted text-truncate mt-1">
+                                        @string.Join(", ", group.Frequencies.Take(2))
+                                    </div>
+                                }
+                            </button>
                         }
-                    </tbody>
-                </table>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column flex-fill" style="min-width: 0; min-height: 0;">
+                    @if (_selectedGroup is null)
+                    {
+                        <div class="p-3 page-empty small">Оберіть групу зі списку ліворуч.</div>
+                    }
+                    else
+                    {
+                        <div class="px-3 py-2 border-bottom" style="background: rgba(13,110,253,.12); border-left: 3px solid rgba(13,110,253,.8);">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                                <div class="min-w-0">
+                                    <div class="fw-semibold text-truncate">@_selectedGroup.KeyPersonName</div>
+                                    <div class="small text-muted text-truncate">@(_selectedGroup.Division ?? "НВ підрозділ")</div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button"
+                                            class="btn btn-secondary btn-sm rounded-0"
+                                            @onclick="OpenSelectedGroupDrawer">
+                                        Деталі
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-2 mt-2 small">
+                                <span class="badge rounded-0 text-bg-light">@(_selectedGroup.KeyPersonRole ?? "Роль не визначена")</span>
+                                <span class="badge rounded-0 bg-secondary">@(_selectedGroup.PrimaryAction ?? "Дія не визначена")</span>
+                                @foreach (var frequency in _selectedGroup.Frequencies.Take(3))
+                                {
+                                    <span class="badge rounded-0 text-bg-warning">@frequency</span>
+                                }
+                            </div>
+
+                            @if (_selectedGroup.TopActions.Any())
+                            {
+                                <div class="small text-muted mt-2 text-truncate">
+                                    Топ дії: @string.Join(", ", _selectedGroup.TopActions.Take(4))
+                                </div>
+                            }
+                        </div>
+
+                        <div class="panel-scroll p-3">
+                            <div class="row g-2 small mb-3">
+                                <div class="col-sm-4">
+                                    <div class="border rounded-0 p-2 h-100">
+                                        <div class="text-muted">Прямі зв'язки</div>
+                                        <div class="fw-semibold">@_selectedGroup.Bridges.Count</div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-4">
+                                    <div class="border rounded-0 p-2 h-100">
+                                        <div class="text-muted">Учасники</div>
+                                        <div class="fw-semibold">@_selectedGroup.Members.Count</div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-4">
+                                    <div class="border rounded-0 p-2 h-100">
+                                        <div class="text-muted">Частоти</div>
+                                        <div class="fw-semibold">@_selectedGroup.Frequencies.Count</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="small fw-semibold">Прямі взаємодії</div>
+                                <div class="small text-muted">@FocusedLinks.Count</div>
+                            </div>
+
+                            @if (FocusedLinks.Count == 0)
+                            {
+                                <div class="page-empty small">У цієї групи немає прямих взаємодій.</div>
+                            }
+                            else
+                            {
+                                <div class="table-wrap p-0 border rounded-0">
+                                    <table class="table data-table table-sm align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Група</th>
+                                                <th>Підрозділ</th>
+                                                <th>Частота</th>
+                                                <th>Дія</th>
+                                                <th>Контакт</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var item in FocusedLinks)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <div class="fw-semibold">@item.TargetGroup.KeyPersonName</div>
+                                                        <div class="small text-muted">@(item.TargetGroup.PrimaryAction ?? "—")</div>
+                                                    </td>
+                                                    <td class="small">@(item.TargetGroup.Division ?? "НВ підрозділ")</td>
+                                                    <td class="small">@item.Bridge.BridgeFrequency</td>
+                                                    <td class="small">@(item.Bridge.PrimaryAction ?? "—")</td>
+                                                    <td class="small">@item.Bridge.ContactPersonName</td>
+                                                    <td class="text-end">
+                                                        <button type="button"
+                                                                class="btn btn-outline-secondary btn-sm rounded-0"
+                                                                @onclick="() => SelectGroup(item.TargetGroup)">
+                                                            Фокус
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
             </div>
         }
     </div>
-
 </div>
 
-<LinkMapGroupDrawer @bind-IsOpen="_drawerOpen"
-                    Group="_selectedGroup" />
+<LinkMapGroupDrawer IsOpen="@_drawerOpen"
+                    Group="@_drawerGroup"
+                    OnClose="CloseDrawerAsync" />

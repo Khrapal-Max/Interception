@@ -10,6 +10,7 @@ internal sealed class GroupAccumulator
 {
     private readonly Dictionary<string, PersonAccumulator> _people = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, int> _divisionHints = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, int> _actionCounts = new(StringComparer.OrdinalIgnoreCase);
 
     public string? Division { get; private set; }
     public string KeyPersonName { get; private set; } = string.Empty;
@@ -32,6 +33,17 @@ internal sealed class GroupAccumulator
 
         var key = division.Trim();
         _divisionHints[key] = _divisionHints.TryGetValue(key, out var current)
+            ? current + 1
+            : 1;
+    }
+
+    public void AddAction(string? actionName)
+    {
+        if (string.IsNullOrWhiteSpace(actionName))
+            return;
+
+        var key = actionName.Trim();
+        _actionCounts[key] = _actionCounts.TryGetValue(key, out var current)
             ? current + 1
             : 1;
     }
@@ -80,6 +92,13 @@ internal sealed class GroupAccumulator
             _divisionHints[hint.Key] = _divisionHints.TryGetValue(hint.Key, out var current)
                 ? current + hint.Value
                 : hint.Value;
+        }
+
+        foreach (var action in other._actionCounts)
+        {
+            _actionCounts[action.Key] = _actionCounts.TryGetValue(action.Key, out var current)
+                ? current + action.Value
+                : action.Value;
         }
 
         foreach (var person in other._people.Values)
@@ -135,7 +154,9 @@ internal sealed class GroupAccumulator
                 x.TargetDivision,
                 x.ContactPersonName,
                 x.BridgeFrequency,
-                x.Weight))
+                x.Weight,
+                x.PrimaryAction,
+                x.TopActions))
             .ToList();
 
         var orderedMembers = Members
@@ -163,6 +184,13 @@ internal sealed class GroupAccumulator
             })
             .ToList();
 
+        var topActions = _actionCounts
+            .OrderByDescending(x => x.Value)
+            .ThenBy(x => x.Key)
+            .Take(5)
+            .Select(x => x.Key)
+            .ToList();
+
         return new LinkMapGroupModel(
             GroupKey,
             Division,
@@ -174,6 +202,8 @@ internal sealed class GroupAccumulator
             MessageCount,
             InternalConnectionWeight,
             BridgeWeight,
+            topActions.FirstOrDefault(),
+            topActions,
             orderedBridges);
     }
 
