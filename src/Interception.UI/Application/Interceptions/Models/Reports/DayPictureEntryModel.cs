@@ -5,7 +5,7 @@
 namespace Interception.UI.Application.Interceptions.Models.Reports;
 
 /// <summary>
-/// Один рядок спостереження в межах картини дня.
+/// Один запис картини дня.
 /// </summary>
 public sealed record DayPictureEntryModel(
     Guid MessageId,

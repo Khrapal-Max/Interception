@@ -51,9 +51,21 @@ public partial class DayPicturePage : ComponentBase
     private void OnDayChanged(string? value)
         => _day = ConverterDateTimeExtensions.ParseDate(value);
 
+    private async Task OnDayInputChanged(ChangeEventArgs args)
+    {
+        OnDayChanged(args.Value?.ToString());
+        await LoadAsync();
+    }
+
     private async Task ResetDayAsync()
     {
         _day = DateTime.Today;
         await LoadAsync();
     }
+
+    private static List<DayPictureEntryModel> GetOrderedEntries(DayPictureGroupModel group)
+        => group.Conversations
+            .SelectMany(x => x.Entries)
+            .OrderBy(x => x.ObservedDate)
+            .ToList();
 }

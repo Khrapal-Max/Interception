@@ -5,10 +5,11 @@
 namespace Interception.UI.Application.Interceptions.Models.Reports;
 
 /// <summary>
-/// Блок підрозділу в картині дня.
+/// Хронологічний епізод / бесіда всередині підрозділу.
 /// </summary>
-public sealed record DayPictureGroupModel(
-    string GroupKey,
-    string? Division,
+public sealed record DayPictureConversationModel(
+    string ConversationKey,
+    DateTime StartedAtUtc,
+    DateTime EndedAtUtc,
     int MessageCount,
-    IReadOnlyList<DayPictureConversationModel> Conversations);
+    IReadOnlyList<DayPictureEntryModel> Entries);

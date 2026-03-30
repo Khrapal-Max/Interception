@@ -5,7 +5,7 @@
 namespace Interception.UI.Application.Interceptions.Models.Reports;
 
 /// <summary>
-/// Коренева модель картини дня.
+/// Денна картина повідомлень.
 /// </summary>
 public sealed record DayPictureModel(
     DateOnly Day,

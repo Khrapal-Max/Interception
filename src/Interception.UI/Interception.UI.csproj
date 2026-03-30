@@ -26,7 +26,6 @@
 
   <ItemGroup>
     <Folder Include="Application\Interceptions\Abstractions\Reports\" />
-    <Folder Include="Application\Interceptions\Services\Reports\" />
   </ItemGroup>
 
 </Project>
