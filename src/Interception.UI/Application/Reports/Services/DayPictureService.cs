@@ -7,7 +7,7 @@ using Interception.UI.Application.Reports.Models;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace Interception.UI.Application.Interceptions.Services.Reports;
+namespace Interception.UI.Application.Reports.Services;
 
 /// <summary>
 /// Будує картину дня у моделі:
