@@ -2,36 +2,51 @@
 
 <PageTitle>Головна</PageTitle>
 
-<div class="d-flex align-items-center justify-content-between mb-3">
-    <h1 class="h4 mb-0">Головна</h1>
-</div>
-
-<div class="row g-3">
-    <div class="col-12 col-lg-6">
-        <div class="card shadow-sm">
-            <div class="card-header">
-                <strong>Спостереження</strong>
-            </div>
-            <div class="card-body">
-                <div class="text-muted mb-3">
-                    Реєстр перехватів, перегляд деталей та імпорт.
-                </div>
-                <a class="btn btn-primary btn-sm" href="observations">Відкрити реєстр</a>
-            </div>
+<div class="page-shell">
+    <div class="page-panel panel-scroll p-3 p-md-4 d-flex flex-column gap-2">
+        <div class="d-flex align-items-center justify-content-between">
+            <h1 class="h4 mb-0">Меню системи</h1>
         </div>
-    </div>
 
-    <div class="col-12 col-lg-6">
-        <div class="card shadow-sm">
-            <div class="card-header">
-                <strong>Припущення</strong>
-            </div>
-            <div class="card-body">
-                <div class="text-muted mb-3">
-                    Реєстр припущень (гипотез), перегляд деталей.
-                </div>
-                <a class="btn btn-primary btn-sm" href="analytics/clusters">Відкрити реєстр</a>
-            </div>
-        </div>
+        <p class="text-muted small mb-2">Оберіть потрібний розділ із деревоподібного меню.</p>
+
+        <nav class="system-tree" aria-label="Меню системи">
+            <ul>
+                <li>
+                    <span class="tree-group">Спостереження</span>
+                    <ul>
+                        <li><a href="observations">Реєстр спостережень</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <span class="tree-group">Аналітика</span>
+                    <ul>
+                        <li><a href="analytics/candidates">Групи на розгляд</a></li>
+                        <li><a href="analytics/link-map">Карта зв'язків</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <span class="tree-group">Звіти</span>
+                    <ul>
+                        <li><a href="reports/divisions">Звіт по підрозділах</a></li>
+                        <li><a href="reports/day-picture">Картина дня</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <span class="tree-group">Регістри</span>
+                    <ul>
+                        <li><a href="registries/divisions">Реєстр підрозділів</a></li>
+                        <li><a href="registries/persons">Реєстр осіб</a></li>
+                        <li><a href="registries/actions">Довідник дій</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <span class="tree-group">Система</span>
+                    <ul>
+                        <li><a href="system/about">Про систему</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
     </div>
 </div>
