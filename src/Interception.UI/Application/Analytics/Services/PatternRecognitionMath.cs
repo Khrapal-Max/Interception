@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Analytics.Models;
+using Interception.UI.Application.Analytics.Builders;
 using Interception.UI.Domain;
 using Interception.UI.Extensions;
 

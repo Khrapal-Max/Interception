@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Analytics.Models;
+namespace Interception.UI.Application.Analytics.Builders;
 
 /// <summary>
 /// Зведений observation-зріз для аналізу перехресть у групі або контексті.

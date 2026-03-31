@@ -22,10 +22,10 @@ public sealed class InterceptionRegistryTests : BunitContext
     // Helpers
     // -------------------------------------------------------------------------
 
-    private static PagedResult<InterceptionListItemDto> EmptyPage()
+    private static PagedResultDto<InterceptionListItemDto> EmptyPage()
         => new([], 0, 1, 50);
 
-    private static PagedResult<InterceptionListItemDto> MakePage(
+    private static PagedResultDto<InterceptionListItemDto> MakePage(
         params InterceptionListItemDto[] items)
         => new([.. items], items.Length, 1, 50);
 
@@ -48,12 +48,12 @@ public sealed class InterceptionRegistryTests : BunitContext
         };
 
     private (IInterceptionService svc, IInterceptionActionService actionSvc) SetupServices(
-        PagedResult<InterceptionListItemDto>? page = null)
+        PagedResultDto<InterceptionListItemDto>? page = null)
     {
         var svc = Substitute.For<IInterceptionService>();
         var actionSvc = Substitute.For<IInterceptionActionService>();
 
-        svc.GetPagedAsync(Arg.Any<InterceptionFilter>(), Arg.Any<int>(),
+        svc.GetPagedAsync(Arg.Any<InterceptionFilterDto>(), Arg.Any<int>(),
                           Arg.Any<int>(), Arg.Any<CancellationToken>())
            .Returns(page ?? EmptyPage());
 
@@ -212,10 +212,10 @@ public sealed class InterceptionRegistryTests : BunitContext
     public void Render_MultiplePages_ShowsPagination()
     {
         var (svc, _) = SetupServices();
-        var bigPage = new PagedResult<InterceptionListItemDto>(
+        var bigPage = new PagedResultDto<InterceptionListItemDto>(
             [MakeItem()], totalCount: 200, page: 1, pageSize: 50);
 
-        svc.GetPagedAsync(Arg.Any<InterceptionFilter>(), Arg.Any<int>(),
+        svc.GetPagedAsync(Arg.Any<InterceptionFilterDto>(), Arg.Any<int>(),
                           Arg.Any<int>(), Arg.Any<CancellationToken>())
            .Returns(bigPage);
 
@@ -316,7 +316,7 @@ public sealed class InterceptionRegistryTests : BunitContext
                                        .Get(d => d.OnApplied);
 
         cut.InvokeAsync(() => onApplied.InvokeAsync(
-            new InterceptionFilter { Frequency = "157.0250" }));
+            new InterceptionFilterDto { Frequency = "157.0250" }));
 
         cut.Markup.Should().Contain("●");
     }
@@ -325,7 +325,7 @@ public sealed class InterceptionRegistryTests : BunitContext
     public void ActiveFilter_EmptyList_ShowsResetButton()
     {
         var (svc, _) = SetupServices();
-        svc.GetPagedAsync(Arg.Any<InterceptionFilter>(), Arg.Any<int>(),
+        svc.GetPagedAsync(Arg.Any<InterceptionFilterDto>(), Arg.Any<int>(),
                           Arg.Any<int>(), Arg.Any<CancellationToken>())
            .Returns(EmptyPage());
 
@@ -335,7 +335,7 @@ public sealed class InterceptionRegistryTests : BunitContext
         var onApplied = filterDrawer.Instance.Parameters.Get(d => d.OnApplied);
 
         cut.InvokeAsync(() => onApplied.InvokeAsync(
-            new InterceptionFilter { Frequency = "157.0250" }));
+            new InterceptionFilterDto { Frequency = "157.0250" }));
 
         cut.Markup.Should().Contain("Скинути фільтр");
     }
@@ -353,7 +353,7 @@ public sealed class InterceptionRegistryTests : BunitContext
         var cut = Render<InterceptionRegistry>();
 
         // Таблиця завантажилась — тепер перевизначаємо для перезавантаження після видалення
-        svc.GetPagedAsync(Arg.Any<InterceptionFilter>(), Arg.Any<int>(),
+        svc.GetPagedAsync(Arg.Any<InterceptionFilterDto>(), Arg.Any<int>(),
                           Arg.Any<int>(), Arg.Any<CancellationToken>())
            .Returns(EmptyPage());
 
@@ -371,7 +371,7 @@ public sealed class InterceptionRegistryTests : BunitContext
         var cut = Render<InterceptionRegistry>();
 
         // Після видалення сервіс повертає порожній список
-        svc.GetPagedAsync(Arg.Any<InterceptionFilter>(), Arg.Any<int>(),
+        svc.GetPagedAsync(Arg.Any<InterceptionFilterDto>(), Arg.Any<int>(),
                           Arg.Any<int>(), Arg.Any<CancellationToken>())
            .Returns(EmptyPage());
 
@@ -390,7 +390,7 @@ public sealed class InterceptionRegistryTests : BunitContext
         var svc = Substitute.For<IInterceptionService>();
         var actionSvc = Substitute.For<IInterceptionActionService>();
 
-        svc.GetPagedAsync(Arg.Any<InterceptionFilter>(), Arg.Any<int>(),
+        svc.GetPagedAsync(Arg.Any<InterceptionFilterDto>(), Arg.Any<int>(),
                           Arg.Any<int>(), Arg.Any<CancellationToken>())
            .ThrowsAsync(new Exception("DB error"));
 

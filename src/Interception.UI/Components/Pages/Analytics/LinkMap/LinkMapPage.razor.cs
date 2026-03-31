@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Abstractions;
-using Interception.UI.Application.Analytics.Models;
+using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
@@ -19,7 +19,7 @@ public partial class LinkMapPage : ComponentBase
     [Inject] private ILinkMapService LinkMapService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
-    protected LinkMapModel? _map;
+    protected LinkMapDto? _map;
     protected bool _loading;
 
     protected DateTime? _dateFrom = ConverterDateTimeExtensions.Now.Date.AddDays(-6);
@@ -29,16 +29,16 @@ public partial class LinkMapPage : ComponentBase
     protected string _sort = "connections";
     protected bool _strongOnly;
 
-    protected LinkMapGroupModel? _selectedGroup;
-    protected LinkMapGroupModel? _drawerGroup;
+    protected LinkMapGroupDto? _selectedGroup;
+    protected LinkMapGroupDto? _drawerGroup;
     protected bool _drawerOpen;
 
     protected string? DateFromStr => ConverterDateTimeExtensions.FormatDate(_dateFrom);
     protected string? DateToStr => ConverterDateTimeExtensions.FormatDate(_dateTo);
 
-    protected IReadOnlyList<LinkMapGroupModel> VisibleGroups => BuildVisibleGroups(_map, _search, _sort, _strongOnly);
+    protected IReadOnlyList<LinkMapGroupDto> VisibleGroups => BuildVisibleGroups(_map, _search, _sort, _strongOnly);
 
-    internal IReadOnlyList<FocusedLinkModel> FocusedLinks => BuildFocusedLinks(_selectedGroup, _map);
+    internal IReadOnlyList<FocusedLinkDto> FocusedLinks => BuildFocusedLinks(_selectedGroup, _map);
 
     protected override async Task OnInitializedAsync()
         => await LoadAsync();
@@ -122,7 +122,7 @@ public partial class LinkMapPage : ComponentBase
         await LoadAsync();
     }
 
-    protected void SelectGroup(LinkMapGroupModel group)
+    protected void SelectGroup(LinkMapGroupDto group)
         => _selectedGroup = group;
 
     protected void OpenSelectedGroupDrawer()
@@ -141,8 +141,8 @@ public partial class LinkMapPage : ComponentBase
         return Task.CompletedTask;
     }
 
-    private static List<LinkMapGroupModel> BuildVisibleGroups(
-        LinkMapModel? map,
+    private static List<LinkMapGroupDto> BuildVisibleGroups(
+        LinkMapDto? map,
         string? search,
         string sort,
         bool strongOnly)
@@ -150,7 +150,7 @@ public partial class LinkMapPage : ComponentBase
         if (map is null || map.Groups.Count == 0)
             return [];
 
-        IEnumerable<LinkMapGroupModel> query = map.Groups;
+        IEnumerable<LinkMapGroupDto> query = map.Groups;
 
         if (strongOnly)
             query = query.Where(x => x.Bridges.Count > 0);
@@ -185,7 +185,7 @@ public partial class LinkMapPage : ComponentBase
         return [.. query];
     }
 
-    private static List<FocusedLinkModel> BuildFocusedLinks(LinkMapGroupModel? selectedGroup, LinkMapModel? map)
+    private static List<FocusedLinkDto> BuildFocusedLinks(LinkMapGroupDto? selectedGroup, LinkMapDto? map)
     {
         if (selectedGroup is null || map is null)
             return [];
@@ -194,7 +194,7 @@ public partial class LinkMapPage : ComponentBase
 
         return [.. selectedGroup.Bridges
             .Where(x => groupsByKey.ContainsKey(x.TargetGroupKey))
-            .Select(x => new FocusedLinkModel(groupsByKey[x.TargetGroupKey], x))
+            .Select(x => new FocusedLinkDto(groupsByKey[x.TargetGroupKey], x))
             .OrderByDescending(x => x.Bridge.Weight)
             .ThenByDescending(x => !string.IsNullOrWhiteSpace(x.Bridge.PrimaryAction))
             .ThenBy(x => x.TargetGroup.KeyPersonName)];

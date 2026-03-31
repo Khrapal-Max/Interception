@@ -8,7 +8,7 @@ namespace Interception.UI.Application.Interceptions.Dtos;
 // Пагінація
 // ---------------------------------------------------------------------------
 
-public sealed class PagedResult<T>(
+public sealed class PagedResultDto<T>(
     IReadOnlyList<T> items,
     int totalCount,
     int page,

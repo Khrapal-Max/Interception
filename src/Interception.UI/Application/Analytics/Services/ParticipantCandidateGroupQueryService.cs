@@ -3,8 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Abstractions;
-using Interception.UI.Application.Analytics.Dtos;
-using Interception.UI.Application.Analytics.Models;
+using Interception.UI.Application.Analytics.Builders;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain.Enums;
 using Interception.UI.Extensions;
@@ -19,7 +18,7 @@ namespace Interception.UI.Application.Analytics.Services;
 public sealed class ParticipantCandidateGroupQueryService(IDbContextFactory<AppDbContext> dbFactory) : IParticipantCandidateGroupQueryService
 {
     /// <inheritdoc />
-    public async Task<PagedResult<CandidateGroupDto>> GetGroupsByStatusAsync(
+    public async Task<PagedResultDto<CandidateGroupDto>> GetGroupsByStatusAsync(
         CandidateGroupStatus status,
         int page = 1,
         int pageSize = 50,
@@ -38,7 +37,7 @@ public sealed class ParticipantCandidateGroupQueryService(IDbContextFactory<AppD
             .ToListAsync(ct);
 
         var dtos = await EnrichGroupsAsync(db, groups, ct);
-        return new PagedResult<CandidateGroupDto>([.. dtos], total, page, pageSize);
+        return new PagedResultDto<CandidateGroupDto>([.. dtos], total, page, pageSize);
     }
 
     /// <inheritdoc />

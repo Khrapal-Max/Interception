@@ -2,12 +2,12 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Import.Models;
+namespace Interception.UI.Application.Import.Dtos;
 
 /// <summary>
 /// Підсумок операції імпорту — повертається в UI для відображення результату.
 /// </summary>
-public sealed class ImportResult
+public sealed class ImportResultDto
 {
     /// <summary>Кількість успішно створених InterceptionMessage.</summary>
     public int ImportedCount { get; init; }
@@ -16,11 +16,11 @@ public sealed class ImportResult
     public int SkippedCount { get; init; }
 
     /// <summary>Список помилок з номерами рядків.</summary>
-    public IReadOnlyList<ImportRowError> Errors { get; init; } = [];
+    public IReadOnlyList<ImportRowErrorDto> Errors { get; init; } = [];
 
     public bool HasErrors => Errors.Count > 0;
     public int TotalRows => ImportedCount + SkippedCount;
 }
 
 /// <summary>Помилка одного рядка імпорту.</summary>
-public sealed record ImportRowError(int RowNumber, string Message);
+public sealed record ImportRowErrorDto(int RowNumber, string Message);

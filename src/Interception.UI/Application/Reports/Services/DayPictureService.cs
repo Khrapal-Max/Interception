@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Reports.Abstractions;
-using Interception.UI.Application.Reports.Models;
+using Interception.UI.Application.Reports.Dtos;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,7 +20,7 @@ public sealed partial class DayPictureService(IDbContextFactory<AppDbContext> db
     private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
 
     /// <inheritdoc />
-    public async Task<DayPictureModel> BuildAsync(DateOnly day, CancellationToken ct = default)
+    public async Task<DayPictureDto> BuildAsync(DateOnly day, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
@@ -36,7 +36,7 @@ public sealed partial class DayPictureService(IDbContextFactory<AppDbContext> db
             .ToListAsync(ct);
 
         if (messages.Count == 0)
-            return new DayPictureModel(day, 0, []);
+            return new DayPictureDto(day, 0, []);
 
         var frequencyDivisionMap = await BuildFrequencyDivisionMapAsync(db, ct);
 
@@ -58,7 +58,7 @@ public sealed partial class DayPictureService(IDbContextFactory<AppDbContext> db
                 var orderedRows = group.OrderBy(x => x.Message.ObservedDate).ToList();
                 var conversations = BuildConversations(group.Key, orderedRows);
 
-                return new DayPictureGroupModel(
+                return new DayPictureGroupDto(
                     GroupKey: group.Key,
                     Division: group.Key == "—" ? null : group.Key,
                     MessageCount: orderedRows.Count,
@@ -67,12 +67,12 @@ public sealed partial class DayPictureService(IDbContextFactory<AppDbContext> db
             .OrderBy(x => x.Division ?? string.Empty, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        return new DayPictureModel(day, messages.Count, groups);
+        return new DayPictureDto(day, messages.Count, groups);
     }
 
-    private static List<DayPictureConversationModel> BuildConversations(string divisionKey, List<Row> rows)
+    private static List<DayPictureConversationDto> BuildConversations(string divisionKey, List<Row> rows)
     {
-        var result = new List<DayPictureConversationModel>();
+        var result = new List<DayPictureConversationDto>();
         if (rows.Count == 0)
             return result;
 
@@ -123,19 +123,19 @@ public sealed partial class DayPictureService(IDbContextFactory<AppDbContext> db
     private static bool HaveParticipantOverlap(Row left, Row right)
         => left.ParticipantSet.Overlaps(right.ParticipantSet);
 
-    private static DayPictureConversationModel ToConversation(string divisionKey, DateTime startedAtUtc, List<Row> rows)
+    private static DayPictureConversationDto ToConversation(string divisionKey, DateTime startedAtUtc, List<Row> rows)
     {
         var endedAtUtc = rows[^1].Message.ObservedDate;
         var key = $"{divisionKey} | {startedAtUtc:yyyy-MM-dd HH:mm:ss} | {endedAtUtc:yyyy-MM-dd HH:mm:ss}";
 
-        return new DayPictureConversationModel(
+        return new DayPictureConversationDto(
             ConversationKey: key,
             StartedAtUtc: startedAtUtc,
             EndedAtUtc: endedAtUtc,
             MessageCount: rows.Count,
             Entries: [.. rows
                 .OrderBy(x => x.Message.ObservedDate)
-                .Select(x => new DayPictureEntryModel(
+                .Select(x => new DayPictureEntryDto(
                     MessageId: x.Message.Id,
                     ObservedDate: x.Message.ObservedDate,
                     Frequency: NormalizeMeaningfulOrNull(x.Message.Frequency),

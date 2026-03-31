@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Reports.Abstractions;
-using Interception.UI.Application.Reports.Models;
+using Interception.UI.Application.Reports.Dtos;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
@@ -18,7 +18,7 @@ public partial class DayPicturePage : ComponentBase
     [Inject] private IDayPictureService DayPictureService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
-    private DayPictureModel? _picture;
+    private DayPictureDto? _picture;
     private bool _loading;
     private DateTime? _day = DateTime.Today;
 
@@ -63,7 +63,7 @@ public partial class DayPicturePage : ComponentBase
         await LoadAsync();
     }
 
-    private static List<DayPictureEntryModel> GetOrderedEntries(DayPictureGroupModel group)
+    private static List<DayPictureEntryDto> GetOrderedEntries(DayPictureGroupDto group)
         => group.Conversations
             .SelectMany(x => x.Entries)
             .OrderBy(x => x.ObservedDate)

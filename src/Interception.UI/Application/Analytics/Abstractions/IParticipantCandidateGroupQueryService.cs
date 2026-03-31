@@ -16,7 +16,7 @@ public interface IParticipantCandidateGroupQueryService
     /// <summary>
     /// Повертає групи кандидатів за статусом із пагінацією.
     /// </summary>
-    Task<PagedResult<CandidateGroupDto>> GetGroupsByStatusAsync(
+    Task<PagedResultDto<CandidateGroupDto>> GetGroupsByStatusAsync(
         CandidateGroupStatus status,
         int page = 1,
         int pageSize = 50,

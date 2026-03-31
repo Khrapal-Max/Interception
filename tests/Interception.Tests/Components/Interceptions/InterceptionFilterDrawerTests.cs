@@ -42,16 +42,16 @@ public sealed class InterceptionFilterDrawerTests : BunitContext
     }
 
     private IRenderedComponent<InterceptionFilterDrawer> RenderDrawer(
-        InterceptionFilter? filter = null,
+        InterceptionFilterDto? filter = null,
         bool isOpen = true,
-        EventCallback<InterceptionFilter>? onApplied = null,
+        EventCallback<InterceptionFilterDto>? onApplied = null,
         EventCallback? onReset = null,
         EventCallback<bool>? isOpenChanged = null)
     {
         return Render<InterceptionFilterDrawer>(p => p
             .Add(d => d.IsOpen, isOpen)
-            .Add(d => d.Filter, filter ?? new InterceptionFilter())
-            .Add(d => d.OnApplied, onApplied ?? EventCallback<InterceptionFilter>.Empty)
+            .Add(d => d.Filter, filter ?? new InterceptionFilterDto())
+            .Add(d => d.OnApplied, onApplied ?? EventCallback<InterceptionFilterDto>.Empty)
             .Add(d => d.OnReset, onReset ?? EventCallback.Empty)
             .Add(d => d.IsOpenChanged, isOpenChanged ?? EventCallback<bool>.Empty));
     }
@@ -76,7 +76,7 @@ public sealed class InterceptionFilterDrawerTests : BunitContext
     public void Render_OpenWithExistingFilter_PreFillsFrequency()
     {
         SetupService();
-        var filter = new InterceptionFilter { Frequency = "157.0250" };
+        var filter = new InterceptionFilterDto { Frequency = "157.0250" };
 
         var cut = RenderDrawer(filter: filter);
 
@@ -94,9 +94,9 @@ public sealed class InterceptionFilterDrawerTests : BunitContext
     {
         SetupService();
 
-        InterceptionFilter? applied = null;
+        InterceptionFilterDto? applied = null;
         var onApplied = EventCallback.Factory.Create(
-            this, (InterceptionFilter f) => applied = f);
+            this, (InterceptionFilterDto f) => applied = f);
 
         var cut = RenderDrawer(onApplied: onApplied);
 
@@ -193,9 +193,9 @@ public sealed class InterceptionFilterDrawerTests : BunitContext
             new FrequencySuggestionDto { Frequency = "157.0250", Count = 5 }
         ]);
 
-        InterceptionFilter? applied = null;
+        InterceptionFilterDto? applied = null;
         var onApplied = EventCallback.Factory.Create(
-            this, (InterceptionFilter f) => applied = f);
+            this, (InterceptionFilterDto f) => applied = f);
 
         var cut = RenderDrawer(onApplied: onApplied);
 
@@ -220,7 +220,7 @@ public sealed class InterceptionFilterDrawerTests : BunitContext
     public void ClosedDrawer_FieldsNotPreFilled()
     {
         SetupService();
-        var filter = new InterceptionFilter { Frequency = "157.0250" };
+        var filter = new InterceptionFilterDto { Frequency = "157.0250" };
 
         var cut = RenderDrawer(filter: filter, isOpen: false);
 

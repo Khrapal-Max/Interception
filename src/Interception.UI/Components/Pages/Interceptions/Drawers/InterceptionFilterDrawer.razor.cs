@@ -15,11 +15,11 @@ public partial class InterceptionFilterDrawer : ComponentBase
 
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
-    [Parameter] public InterceptionFilter Filter { get; set; } = default!;
-    [Parameter] public EventCallback<InterceptionFilter> OnApplied { get; set; }
+    [Parameter] public InterceptionFilterDto Filter { get; set; } = default!;
+    [Parameter] public EventCallback<InterceptionFilterDto> OnApplied { get; set; }
     [Parameter] public EventCallback OnReset { get; set; }
 
-    private InterceptionFilter _model = new();
+    private InterceptionFilterDto _model = new();
     private IReadOnlyList<string> _frequencySuggestions = [];
     private IReadOnlyList<string> _vectorSuggestions = [];
     private bool _initialized;
@@ -123,7 +123,7 @@ public partial class InterceptionFilterDrawer : ComponentBase
 
     private async Task ResetAsync()
     {
-        _model = new InterceptionFilter();
+        _model = new InterceptionFilterDto();
         await IsOpenChanged.InvokeAsync(false);
         await OnReset.InvokeAsync();
     }
@@ -138,10 +138,10 @@ public partial class InterceptionFilterDrawer : ComponentBase
         return [.. suggestions.Select(s => s.Frequency)];
     }
 
-    private static InterceptionFilter Clone(InterceptionFilter? src)
+    private static InterceptionFilterDto Clone(InterceptionFilterDto? src)
         => src is null
-            ? new InterceptionFilter()
-            : new InterceptionFilter
+            ? new InterceptionFilterDto()
+            : new InterceptionFilterDto
             {
                 DateFrom = src.DateFrom,
                 DateTo = src.DateTo,

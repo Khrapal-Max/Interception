@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Reports.Abstractions;
-using Interception.UI.Application.Reports.Models;
+using Interception.UI.Application.Reports.Dtos;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
@@ -18,7 +18,7 @@ public partial class DivisionReportPage : ComponentBase
     [Inject] private IDivisionReportService DivisionReportService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
-    private DivisionReportModel? _report;
+    private DivisionReportDto? _report;
     private bool _loading;
 
     private DateTime? _dateFrom = DateTime.Today.AddDays(-6);

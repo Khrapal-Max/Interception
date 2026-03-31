@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Reports.Abstractions;
-using Interception.UI.Application.Reports.Models;
+using Interception.UI.Application.Reports.Dtos;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
 using Interception.UI.Infrastructure;
@@ -21,7 +21,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
     private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
 
     /// <inheritdoc />
-    public async Task<DivisionReportModel> BuildAsync(
+    public async Task<DivisionReportDto> BuildAsync(
         DateTime? dateFrom = null,
         DateTime? dateTo = null,
         CancellationToken ct = default)
@@ -42,7 +42,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
         var messages = await messagesQuery.ToListAsync(ct);
 
         if (messages.Count == 0)
-            return new DivisionReportModel([]);
+            return new DivisionReportDto([]);
 
         var frequencyDivisionMap = BuildFrequencyDivisionMap(messages);
 
@@ -54,7 +54,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
             .ToList();
 
         if (messageRows.Count == 0)
-            return new DivisionReportModel([]);
+            return new DivisionReportDto([]);
 
         var messageIds = messageRows
             .Select(x => x.Message.Id)
@@ -100,10 +100,10 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
             .OrderBy(x => x.Division)
             .ToList();
 
-        return new DivisionReportModel(groups);
+        return new DivisionReportDto(groups);
     }
 
-    private static DivisionReportGroupModel BuildGroup(
+    private static DivisionReportGroupDto BuildGroup(
         string division,
         List<InterceptionMessage> messages,
         List<(string Division, string Name, string? Role, DateTime LastSeenAt)> observedPeople,
@@ -128,7 +128,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
 
         var reportPeople = BuildPeople(observedPeople, confirmedPeople);
 
-        return new DivisionReportGroupModel(
+        return new DivisionReportGroupDto(
             Division: division,
             Frequencies: frequencies,
             UnknownMentionsCount: unknownMentionsCount,
@@ -136,7 +136,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
             People: reportPeople);
     }
 
-    private static List<DivisionReportPersonRowModel> BuildPeople(
+    private static List<DivisionReportPersonRowDto> BuildPeople(
         List<(string Division, string Name, string? Role, DateTime LastSeenAt)> observedPeople,
         List<(string Division, string Name, string? Role, DateTime LastSeenAt)> confirmedPeople)
     {
@@ -158,7 +158,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
                     .Select(x => x.Role)
                     .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
 
-                return new DivisionReportPersonRowModel(
+                return new DivisionReportPersonRowDto(
                     PersonKey: latest.Name.Trim().ToUpperInvariant(),
                     Name: latest.Name,
                     Role: lastNonEmptyRole,

@@ -15,8 +15,8 @@ public interface IInterceptionQueryService
     /// <summary>
     /// Повертає сторінку реєстру перехоплень з overlay для НВ.
     /// </summary>
-    Task<PagedResult<InterceptionListItemDto>> GetPagedAsync(
-        InterceptionFilter filter,
+    Task<PagedResultDto<InterceptionListItemDto>> GetPagedAsync(
+        InterceptionFilterDto filter,
         int page = 1,
         int pageSize = 50,
         CancellationToken ct = default);

@@ -95,7 +95,7 @@ public sealed class InterceptionQueryServiceTests
         await command.CreateAsync(MakeForm(action.Id, frequency: "157.0250"), "op", ct);
         await command.CreateAsync(MakeForm(action.Id, frequency: "410.1370"), "op", ct);
 
-        var result = await query.GetPagedAsync(new InterceptionFilter { Frequency = "157.0250" }, ct: ct);
+        var result = await query.GetPagedAsync(new InterceptionFilterDto { Frequency = "157.0250" }, ct: ct);
 
         result.TotalCount.Should().Be(1);
         result.Items.Should().ContainSingle(i => i.Frequency == "157.0250");
@@ -113,7 +113,7 @@ public sealed class InterceptionQueryServiceTests
         await command.CreateAsync(MakeForm(action.Id, vectorSignal: "степове-олексіївка"), "op", ct);
         await command.CreateAsync(MakeForm(action.Id, vectorSignal: "маліївка-північ"), "op", ct);
 
-        var result = await query.GetPagedAsync(new InterceptionFilter { VectorSignal = "олексіївка" }, ct: ct);
+        var result = await query.GetPagedAsync(new InterceptionFilterDto { VectorSignal = "олексіївка" }, ct: ct);
 
         result.TotalCount.Should().Be(1);
         result.Items[0].VectorSignal.Should().Be("степове-олексіївка");
@@ -135,7 +135,7 @@ public sealed class InterceptionQueryServiceTests
                 new ParticipantFormDto { Ordinal = 1, Name = "РУБІКОН", IsUnknown = false }
             ]), "op", ct);
 
-        var result = await query.GetPagedAsync(new InterceptionFilter { ParticipantName = "ШАПКА" }, ct: ct);
+        var result = await query.GetPagedAsync(new InterceptionFilterDto { ParticipantName = "ШАПКА" }, ct: ct);
 
         result.TotalCount.Should().Be(1);
     }
@@ -152,7 +152,7 @@ public sealed class InterceptionQueryServiceTests
         await command.CreateAsync(MakeForm(action.Id, observedDate: new DateTime(2026, 3, 14, 10, 0, 0, DateTimeKind.Utc)), "op", ct);
         await command.CreateAsync(MakeForm(action.Id, observedDate: new DateTime(2026, 3, 14, 18, 0, 0, DateTimeKind.Utc)), "op", ct);
 
-        var result = await query.GetPagedAsync(new InterceptionFilter(), ct: ct);
+        var result = await query.GetPagedAsync(new InterceptionFilterDto(), ct: ct);
 
         result.Items[0].ObservedDate.Should().BeAfter(result.Items[result.Items.Count - 1].ObservedDate);
     }
@@ -169,8 +169,8 @@ public sealed class InterceptionQueryServiceTests
         for (var i = 0; i < 5; i++)
             await command.CreateAsync(MakeForm(action.Id), "op", ct);
 
-        var page1 = await query.GetPagedAsync(new InterceptionFilter(), page: 1, pageSize: 2, ct: ct);
-        var page2 = await query.GetPagedAsync(new InterceptionFilter(), page: 2, pageSize: 2, ct: ct);
+        var page1 = await query.GetPagedAsync(new InterceptionFilterDto(), page: 1, pageSize: 2, ct: ct);
+        var page2 = await query.GetPagedAsync(new InterceptionFilterDto(), page: 2, pageSize: 2, ct: ct);
 
         page1.Items.Should().HaveCount(2);
         page2.Items.Should().HaveCount(2);

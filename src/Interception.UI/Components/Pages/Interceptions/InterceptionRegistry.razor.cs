@@ -22,12 +22,12 @@ public partial class InterceptionRegistry : ComponentBase
     // Стан таблиці
     // -------------------------------------------------------------------------
 
-    private PagedResult<InterceptionListItemDto>? _pagedResult;
+    private PagedResultDto<InterceptionListItemDto>? _pagedResult;
     private bool _loading;
     private int _currentPage = 1;
     private const int PageSize = 50;
 
-    private InterceptionFilter _filter = new();
+    private InterceptionFilterDto _filter = new();
 
     private bool HasActiveFilter =>
         _filter.DateFrom.HasValue ||
@@ -150,7 +150,7 @@ public partial class InterceptionRegistry : ComponentBase
     // Callbacks від драверів
     // -------------------------------------------------------------------------
 
-    private async Task OnFilterApplied(InterceptionFilter filter)
+    private async Task OnFilterApplied(InterceptionFilterDto filter)
     {
         _filter = filter;
         _currentPage = 1;
@@ -159,14 +159,14 @@ public partial class InterceptionRegistry : ComponentBase
 
     private async Task OnFilterReset()
     {
-        _filter = new InterceptionFilter();
+        _filter = new InterceptionFilterDto();
         _currentPage = 1;
         await LoadPageAsync();
     }
 
     private async Task ResetFilter()
     {
-        _filter = new InterceptionFilter();
+        _filter = new InterceptionFilterDto();
         _currentPage = 1;
         await LoadPageAsync();
     }
