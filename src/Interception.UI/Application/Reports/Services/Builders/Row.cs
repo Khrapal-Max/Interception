@@ -4,7 +4,7 @@
 
 using Interception.UI.Domain;
 
-namespace Interception.UI.Application.Interceptions.Services.Reports;
+namespace Interception.UI.Application.Reports.Services;
 
 public sealed partial class DayPictureService
 {

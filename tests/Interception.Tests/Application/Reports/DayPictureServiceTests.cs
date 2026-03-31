@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Application.Interceptions.Services.Reports;
+using Interception.UI.Application.Reports.Services;
 using Interception.UI.Domain;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
