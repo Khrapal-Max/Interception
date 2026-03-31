@@ -5,7 +5,7 @@
 using FluentAssertions;
 using Interception.UI.Application.Interceptions.TextBlock;
 
-namespace Interception.Tests.Application.TextBlock;
+namespace Interception.Tests.Application.Interceptions.TextBlock;
 
 public sealed class TextBlockParserTests
 {
