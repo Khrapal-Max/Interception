@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Analytics.Models;
+using Interception.UI.Application.Analytics.Dtos;
 
 namespace Interception.UI.Application.Analytics.Services.Builders.LinkMap;
 
@@ -141,7 +141,7 @@ internal sealed class GroupAccumulator
         KeyPersonRole = keyPerson.Role;
     }
 
-    public LinkMapGroupModel ToModel(IReadOnlyDictionary<string, int> groupCountByMember)
+    public LinkMapGroupDto ToModel(IReadOnlyDictionary<string, int> groupCountByMember)
     {
         FinalizeCoreProperties();
 
@@ -149,7 +149,7 @@ internal sealed class GroupAccumulator
             .OrderByDescending(x => x.Weight)
             .ThenBy(x => x.TargetDivision ?? string.Empty)
             .ThenBy(x => x.ContactPersonName)
-            .Select(x => new LinkMapBridgeModel(
+            .Select(x => new LinkMapBridgeDto(
                 x.TargetGroupKey,
                 x.TargetDivision,
                 x.ContactPersonName,
@@ -171,7 +171,7 @@ internal sealed class GroupAccumulator
                 var person = _people[name];
                 var groupCount = groupCountByMember.TryGetValue(name, out var count) ? count : 1;
 
-                return new LinkMapMemberModel(
+                return new LinkMapMemberDto(
                     name,
                     person.Role,
                     person.Mentions,
@@ -191,7 +191,7 @@ internal sealed class GroupAccumulator
             .Select(x => x.Key)
             .ToList();
 
-        return new LinkMapGroupModel(
+        return new LinkMapGroupDto(
             GroupKey,
             Division,
             [.. Frequencies.OrderBy(x => x)],

@@ -17,7 +17,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Reports.Models;
+using Interception.UI.Application.Reports.Dtos;
 
 namespace Interception.UI.Application.Reports.Abstractions;
 
@@ -29,5 +29,5 @@ public interface IDayPictureService
     /// <summary>
     /// Повертає денну картину спостережень за вказану дату.
     /// </summary>
-    Task<DayPictureModel> BuildAsync(DateOnly day, CancellationToken ct = default);
+    Task<DayPictureDto> BuildAsync(DateOnly day, CancellationToken ct = default);
 }

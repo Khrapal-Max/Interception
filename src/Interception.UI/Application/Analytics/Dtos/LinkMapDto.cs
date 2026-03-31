@@ -7,12 +7,10 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Reports.Models;
+namespace Interception.UI.Application.Analytics.Dtos;
 
 /// <summary>
-/// Денна картина повідомлень.
+/// Коренева модель карти зв'язків.
 /// </summary>
-public sealed record DayPictureModel(
-    DateOnly Day,
-    int TotalMessages,
-    IReadOnlyList<DayPictureGroupModel> Groups);
+public sealed record LinkMapDto(
+    IReadOnlyList<LinkMapGroupDto> Groups);

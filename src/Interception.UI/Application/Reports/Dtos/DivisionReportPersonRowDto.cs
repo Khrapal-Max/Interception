@@ -2,12 +2,12 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Reports.Models;
+namespace Interception.UI.Application.Reports.Dtos;
 
 /// <summary>
 /// Рядок відомої особи в межах конкретного підрозділу.
 /// </summary>
-public sealed record DivisionReportPersonRowModel(
+public sealed record DivisionReportPersonRowDto(
     string PersonKey,
     string Name,
     string? Role,

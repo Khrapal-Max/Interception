@@ -4,7 +4,6 @@
 
 using ClosedXML.Excel;
 using Interception.UI.Application.Import.Dtos;
-using Interception.UI.Application.Import.Models;
 
 namespace Interception.UI.Application.Import.Services;
 
@@ -35,7 +34,7 @@ public sealed class ExcelImportParser
             "НВ", "нв", "невідома", "невідомий", "unknown", ""
         };
 
-    public IReadOnlyList<(ImportRowDto? Row, ImportRowError? Error)> Parse(Stream stream)
+    public IReadOnlyList<(ImportRowDto? Row, ImportRowErrorDto? Error)> Parse(Stream stream)
     {
         using var wb = new XLWorkbook(stream);
 
@@ -44,7 +43,7 @@ public sealed class ExcelImportParser
             .FirstOrDefault(s => !s.Name.Equals("ДІЇ", StringComparison.OrdinalIgnoreCase))
             ?? wb.Worksheets.First();
 
-        var results = new List<(ImportRowDto?, ImportRowError?)>();
+        var results = new List<(ImportRowDto?, ImportRowErrorDto?)>();
         var lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
 
         for (var r = 2; r <= lastRow; r++)
@@ -58,7 +57,7 @@ public sealed class ExcelImportParser
             }
             catch (Exception ex)
             {
-                results.Add((null, new ImportRowError(r, ex.Message)));
+                results.Add((null, new ImportRowErrorDto(r, ex.Message)));
             }
         }
 

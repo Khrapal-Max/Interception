@@ -4,7 +4,7 @@
 
 namespace Interception.UI.Application.Interceptions.Dtos;
 
-public sealed class InterceptionFilter
+public sealed class InterceptionFilterDto
 {
     public DateTime? DateFrom { get; set; }
     public DateTime? DateTo { get; set; }

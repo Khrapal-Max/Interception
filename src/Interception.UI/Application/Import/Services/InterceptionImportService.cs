@@ -4,7 +4,6 @@
 
 using Interception.UI.Application.Import.Abstractions;
 using Interception.UI.Application.Import.Dtos;
-using Interception.UI.Application.Import.Models;
 using Interception.UI.Domain;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
@@ -15,7 +14,7 @@ namespace Interception.UI.Application.Import.Services;
 public sealed class InterceptionImportService(
     IDbContextFactory<AppDbContext> dbFactory) : IInterceptionImportService
 {
-    public async Task<ImportResult> ImportAsync(
+    public async Task<ImportResultDto> ImportAsync(
         Stream stream,
         string operatorName,
         CancellationToken cancellationToken = default)
@@ -42,7 +41,7 @@ public sealed class InterceptionImportService(
             db.InterceptionActions.Attach(action);
 
         var cache = new ImportContextCache(actions);
-        var errors = new List<ImportRowError>();
+        var errors = new List<ImportRowErrorDto>();
         var imported = 0;
 
         foreach (var (row, parseError) in parsed)
@@ -60,7 +59,7 @@ public sealed class InterceptionImportService(
         if (imported > 0)
             await db.SaveChangesAsync(cancellationToken);
 
-        return new ImportResult
+        return new ImportResultDto
         {
             ImportedCount = imported,
             SkippedCount = errors.Count,
@@ -68,14 +67,14 @@ public sealed class InterceptionImportService(
         };
     }
 
-    private static (InterceptionMessage? Message, ImportRowError? Error) ProcessRow(
+    private static (InterceptionMessage? Message, ImportRowErrorDto? Error) ProcessRow(
         ImportRowDto row,
         ImportContextCache cache,
         string operatorName)
     {
         var action = cache.FindAction(row.ActionName);
         if (action is null)
-            return (null, new ImportRowError(
+            return (null, new ImportRowErrorDto(
                 row.RowNumber,
                 $"Дію '{row.ActionName}' не знайдено в довіднику. Рядок пропущено."));
 
@@ -97,7 +96,7 @@ public sealed class InterceptionImportService(
         }
         catch (Exception ex)
         {
-            return (null, new ImportRowError(row.RowNumber, ex.Message));
+            return (null, new ImportRowErrorDto(row.RowNumber, ex.Message));
         }
 
         var initiatorRole = cache.ResolveParticipantRole(row.InitiatorName, row.InitiatorRole);

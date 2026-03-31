@@ -2,12 +2,12 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Analytics.Models;
+namespace Interception.UI.Application.Analytics.Dtos;
 
 /// <summary>
 /// Детальний вузол-учасник усередині комунікаційної групи.
 /// </summary>
-public sealed record LinkMapMemberModel(
+public sealed record LinkMapMemberDto(
     string Name,
     string? Role,
     int MentionCount,

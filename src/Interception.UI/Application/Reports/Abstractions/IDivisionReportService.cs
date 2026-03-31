@@ -17,7 +17,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Reports.Models;
+using Interception.UI.Application.Reports.Dtos;
 
 namespace Interception.UI.Application.Reports.Abstractions;
 
@@ -31,7 +31,7 @@ public interface IDivisionReportService
     /// <summary>
     /// Формує зведений звіт у вибраному діапазоні дат.
     /// </summary>
-    Task<DivisionReportModel> BuildAsync(
+    Task<DivisionReportDto> BuildAsync(
         DateTime? dateFrom = null,
         DateTime? dateTo = null,
         CancellationToken ct = default);

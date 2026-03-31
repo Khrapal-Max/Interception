@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Abstractions;
-using Interception.UI.Application.Analytics.Models;
+using Interception.UI.Application.Analytics.Builders;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
 using Interception.UI.Domain.Records;

@@ -17,7 +17,7 @@ public partial class CandidatesPage : ComponentBase
     [Inject] private IParticipantCandidateAnalysisService ParticipantCandidateAnalysisService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
-    private PagedResult<CandidateGroupDto>? _pagedResult;
+    private PagedResultDto<CandidateGroupDto>? _pagedResult;
     private bool _loading;
     private bool _running;
     private int _currentPage = 1;

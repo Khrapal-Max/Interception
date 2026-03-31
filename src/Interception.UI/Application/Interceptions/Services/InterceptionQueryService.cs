@@ -5,7 +5,7 @@
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
-using Interception.UI.Application.Registry.Models;
+using Interception.UI.Application.Registry.Builders;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
 using Interception.UI.Infrastructure;
@@ -19,8 +19,8 @@ namespace Interception.UI.Application.Interceptions.Services;
 public sealed class InterceptionQueryService(IDbContextFactory<AppDbContext> dbFactory) : IInterceptionQueryService
 {
     /// <inheritdoc />
-    public async Task<PagedResult<InterceptionListItemDto>> GetPagedAsync(
-        InterceptionFilter filter,
+    public async Task<PagedResultDto<InterceptionListItemDto>> GetPagedAsync(
+        InterceptionFilterDto filter,
         int page = 1,
         int pageSize = 50,
         CancellationToken ct = default)
@@ -121,7 +121,7 @@ public sealed class InterceptionQueryService(IDbContextFactory<AppDbContext> dbF
             Labels = [.. m.Labels],
         }).ToList();
 
-        return new PagedResult<InterceptionListItemDto>(items, total, page, pageSize);
+        return new PagedResultDto<InterceptionListItemDto>(items, total, page, pageSize);
     }
 
     /// <inheritdoc />

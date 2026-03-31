@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Registry.Models;
+namespace Interception.UI.Application.Registry.Builders;
 
 /// <summary>Плоский знімок рядка реєстру перехоплень до мапінгу у DTO.</summary>
 internal sealed record InterceptionRegistryItemSnapshot(

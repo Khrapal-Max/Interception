@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Registry.Models;
+namespace Interception.UI.Application.Registry.Builders;
 
 /// <summary>Плоский знімок учасника для read-side реєстру.</summary>
 internal sealed record InterceptionRegistryParticipantSnapshot(

@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Analytics.Models;
+using Interception.UI.Application.Analytics.Dtos;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.UI.Components.Pages.Analytics.LinkMap.Drawers;
@@ -14,7 +14,7 @@ namespace Interception.UI.Components.Pages.Analytics.LinkMap.Drawers;
 public partial class LinkMapGroupDrawer : ComponentBase
 {
     [Parameter] public bool IsOpen { get; set; }
-    [Parameter] public LinkMapGroupModel? Group { get; set; }
+    [Parameter] public LinkMapGroupDto? Group { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
     protected async Task CloseAsync()

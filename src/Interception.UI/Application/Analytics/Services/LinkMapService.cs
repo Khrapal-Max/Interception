@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Abstractions;
-using Interception.UI.Application.Analytics.Models;
+using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Analytics.Services.Builders.LinkMap;
 using Interception.UI.Domain;
 using Interception.UI.Infrastructure;
@@ -23,7 +23,7 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
     private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
 
     /// <inheritdoc />
-    public async Task<LinkMapModel> BuildAsync(
+    public async Task<LinkMapDto> BuildAsync(
         DateTime? dateFrom = null,
         DateTime? dateTo = null,
         CancellationToken ct = default)
@@ -44,7 +44,7 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
 
         var messages = await query.ToListAsync(ct);
         if (messages.Count == 0)
-            return new LinkMapModel([]);
+            return new LinkMapDto([]);
 
         var frequencyDivisionMap = BuildFrequencyDivisionMap(messages);
 
@@ -57,15 +57,15 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
             .ToList();
 
         if (messageRows.Count == 0)
-            return new LinkMapModel([]);
+            return new LinkMapDto([]);
 
         var groups = BuildGroupsByCommunication(messageRows, frequencyDivisionMap);
         if (groups.Count == 0)
-            return new LinkMapModel([]);
+            return new LinkMapDto([]);
 
         groups = MergeStableGroupsAcrossFrequencies(groups);
         if (groups.Count == 0)
-            return new LinkMapModel([]);
+            return new LinkMapDto([]);
 
         ApplyBridges(groups, messageRows);
 
@@ -82,7 +82,7 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
             .ThenBy(x => x.KeyPersonName)
             .ToList();
 
-        return new LinkMapModel(models);
+        return new LinkMapDto(models);
     }
 
     /// <summary>

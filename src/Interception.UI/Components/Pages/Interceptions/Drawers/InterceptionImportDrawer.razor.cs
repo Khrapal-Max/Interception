@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Import.Abstractions;
-using Interception.UI.Application.Import.Models;
+using Interception.UI.Application.Import.Dtos;
 using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
@@ -29,7 +29,7 @@ public partial class InterceptionImportDrawer : ComponentBase
 
     private IBrowserFile? _file;
     private string? _fileName;
-    private ImportResult? _lastResult;
+    private ImportResultDto? _lastResult;
     private bool _importing;
 
     // -------------------------------------------------------------------------

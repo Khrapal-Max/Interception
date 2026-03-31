@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Analytics.Models;
+namespace Interception.UI.Application.Analytics.Builders;
 
 /// <summary>
 /// Pivot-профіль observation-набору з частотами, ролями, мітками та парами ознак.

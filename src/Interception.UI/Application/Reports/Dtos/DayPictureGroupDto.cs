@@ -7,22 +7,13 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Analytics.Models;
+namespace Interception.UI.Application.Reports.Dtos;
 
 /// <summary>
-/// Комунікаційна група.
+/// Блок підрозділу в картині дня.
 /// </summary>
-public sealed record LinkMapGroupModel(
+public sealed record DayPictureGroupDto(
     string GroupKey,
     string? Division,
-    IReadOnlyList<string> Frequencies,
-    string KeyPersonName,
-    string? KeyPersonRole,
-    IReadOnlyList<string> Members,
-    IReadOnlyList<LinkMapMemberModel> MemberDetails,
-    int MentionCount,
-    int InternalConnectionWeight,
-    int BridgeWeight,
-    string? PrimaryAction,
-    IReadOnlyList<string> TopActions,
-    IReadOnlyList<LinkMapBridgeModel> Bridges);
+    int MessageCount,
+    IReadOnlyList<DayPictureConversationDto> Conversations);

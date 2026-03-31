@@ -7,13 +7,8 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Reports.Models;
+namespace Interception.UI.Application.Analytics.Dtos;
 
-/// <summary>
-/// Блок підрозділу в картині дня.
-/// </summary>
-public sealed record DayPictureGroupModel(
-    string GroupKey,
-    string? Division,
-    int MessageCount,
-    IReadOnlyList<DayPictureConversationModel> Conversations);
+internal sealed record FocusedLinkDto(
+    LinkMapGroupDto TargetGroup,
+    LinkMapBridgeDto Bridge);
