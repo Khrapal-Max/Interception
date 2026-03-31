@@ -1,4 +1,10 @@
 .nav-buttons {
+    --nav-home: #5f7f68;
+    --nav-observations: #44749d;
+    --nav-analytics: #8f63a7;
+    --nav-reports: #ae8a46;
+    --nav-registries: #2f8b7d;
+    --nav-system: #7b8591;
     display: flex;
     flex-direction: column;
     gap: .5rem;
@@ -6,6 +12,7 @@
 }
 
 .nav-btn {
+    --nav-accent: #5f7f68;
     width: 100%;
     height: 44px;
     display: flex;
