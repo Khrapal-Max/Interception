@@ -1,9 +1,13 @@
 @inherits LayoutComponentBase
+@inject NavigationManager Navigation
 
-<div class="page">
-    <aside class="sidebar">
-        <NavMenu />
-    </aside>
+<div class="page @(IsHomePage ? "page-home" : string.Empty)">
+    @if (!IsHomePage)
+    {
+        <aside class="sidebar">
+            <NavMenu />
+        </aside>
+    }
 
     <main>
         <div class="top-row px-3 bg-success">
@@ -16,6 +20,17 @@
         </article>
     </main>
 </div>
+
+@code {
+    private bool IsHomePage
+    {
+        get
+        {
+            var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/');
+            return string.IsNullOrWhiteSpace(relativePath);
+        }
+    }
+}
 
 <ToastContainer />
 

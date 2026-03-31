@@ -24,6 +24,7 @@ html, body {
     --bs-success-rgb: 95, 127, 104;
     --bs-light: #d7dce1;
     --bs-dark: #171b20;
+    --toolbar-height: 4.5rem;
 }
 
 a, .btn-link {
@@ -218,7 +219,9 @@ h1:focus { outline: none; }
     display: flex;
     flex-direction: column;
     min-height: 0;
+    max-height: 100%;
     gap: .5rem;
+    overflow: hidden;
 }
 .page-panel {
     min-height: 0;
@@ -243,18 +246,37 @@ h1:focus { outline: none; }
     display: flex;
     align-items: center;
     justify-content: space-between;
+    min-height: var(--toolbar-height);
     padding: .625rem .75rem;
     background: #171b20;
     border: 1px solid #343c46;
     border-radius: .5rem;
     gap: .5rem;
+    flex-wrap: nowrap;
 }
 .registry-toolbar-meta {
     font-size: .8rem;
     color: #9ba4ae;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .registry-toolbar .btn { white-space: nowrap; }
+
+.registry-toolbar > :last-child {
+    margin-left: auto;
+}
+
+@media (max-width: 992px) {
+    :root {
+        --toolbar-height: 5.25rem;
+    }
+
+    .registry-toolbar {
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
+}
 
 .table-wrap {
     min-height: 0;

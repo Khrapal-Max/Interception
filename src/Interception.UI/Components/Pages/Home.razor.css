@@ -1,0 +1,68 @@
+.system-tree {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: .75rem 1rem;
+    border: 1px solid #3d4650;
+    border-radius: .5rem;
+    background: #1f252b;
+}
+
+.system-tree ul {
+    list-style: none;
+    margin: 0;
+    padding-left: 1.25rem;
+    position: relative;
+}
+
+.system-tree > ul {
+    padding-left: .5rem;
+}
+
+.system-tree li {
+    position: relative;
+    margin: .45rem 0;
+}
+
+.system-tree li::before {
+    content: "";
+    position: absolute;
+    left: -.75rem;
+    top: .85rem;
+    width: .55rem;
+    border-top: 1px solid #4a5662;
+}
+
+.system-tree li::after {
+    content: "";
+    position: absolute;
+    left: -.75rem;
+    top: -0.35rem;
+    bottom: -0.45rem;
+    border-left: 1px solid #4a5662;
+}
+
+.system-tree li:last-child::after {
+    bottom: .85rem;
+}
+
+.tree-group {
+    display: inline-block;
+    font-weight: 600;
+    color: #dfe5ea;
+    background: #293038;
+    border: 1px solid #424c57;
+    border-radius: .35rem;
+    padding: .25rem .5rem;
+}
+
+.system-tree a {
+    color: #c9d2dc;
+    text-decoration: none;
+    border-bottom: 1px dashed transparent;
+}
+
+.system-tree a:hover {
+    color: #f3f6f8;
+    border-bottom-color: #7e93a8;
+}
