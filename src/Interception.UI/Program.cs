@@ -54,6 +54,7 @@ builder.Services.AddScoped<IContextSuggestionService, ContextSuggestionService>(
 builder.Services.AddScoped<IKnownParticipantSuggestionService, KnownParticipantSuggestionService>();
 builder.Services.AddScoped<IParticipantCandidateAnalysisService, ParticipantCandidateAnalysisService>();
 builder.Services.AddScoped<IParticipantCandidateGroupQueryService, ParticipantCandidateGroupQueryService>();
+builder.Services.AddScoped<IParticipantCandidateGroupCommandService, ParticipantCandidateGroupCommandService>();
 
 // Нові reports-сервіси 
 builder.Services.AddScoped<IDayPictureService, DayPictureService>();
