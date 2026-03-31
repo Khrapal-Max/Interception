@@ -15,6 +15,7 @@ public partial class CandidateGroupDrawer : ComponentBase
 {
     [Inject] private IContextSuggestionService ContextSuggestionService { get; set; } = default!;
     [Inject] private IKnownParticipantSuggestionService KnownParticipantSuggestionService { get; set; } = default!;
+    [Inject] private IParticipantCandidateGroupCommandService ParticipantCandidateGroupCommandService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
     [Parameter] public bool IsOpen { get; set; }
@@ -152,8 +153,13 @@ public partial class CandidateGroupDrawer : ComponentBase
         _serverError = null;
         try
         {
-            // TODO: підключити окремий сервіс підтвердження/відхилення груп
-            // з аналітичного контуру після завершення реорганізації Application.
+            await ParticipantCandidateGroupCommandService.ConfirmAsync(
+                Group.Id,
+                _confirmName!,
+                resolvedBy: "operator",
+                role: _confirmRole,
+                division: _confirmDivision);
+
             Toasts.Success("Підтверджено",
                 $"НВ ідентифіковано як «{_confirmName}».");
 
@@ -181,8 +187,7 @@ public partial class CandidateGroupDrawer : ComponentBase
         _saving = true;
         try
         {
-            // TODO: підключити окремий сервіс підтвердження/відхилення груп
-            // з аналітичного контуру після завершення реорганізації Application.
+            await ParticipantCandidateGroupCommandService.DismissAsync(Group.Id, resolvedBy: "operator");
             Toasts.Warning("Відхилено", "Групу кандидатів відхилено.");
             await CloseAsync();
             await OnDismissed.InvokeAsync();
