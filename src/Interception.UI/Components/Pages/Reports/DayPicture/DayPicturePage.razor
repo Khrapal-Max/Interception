@@ -1,28 +1,30 @@
 @page "/reports/day-picture"
+@using Interception.UI.Components.Pages.Reports.Toolbar
 
 <PageTitle>Картина дня</PageTitle>
 
 <div class="page-shell">
-    <div class="registry-toolbar">
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <label class="form-label small text-muted mb-0">День</label>
-            <input class="form-control form-control-sm"
-                   type="date"
-                   style="width: 11rem;"
-                   value="@DayStr"
-                   @onchange="OnDayInputChanged" />
-            <button type="button" class="btn btn-sm btn-primary" @onclick="LoadAsync" disabled="@_loading">
-                Оновити
-            </button>
-            <button type="button" class="btn btn-sm btn-secondary" @onclick="ResetDayAsync" disabled="@_loading">
-                Сьогодні
-            </button>
-        </div>
-
-        <div class="registry-toolbar-meta">
+    <ReportsToolbar ActiveSection="day-picture">
+        <MetaContent>
             Підрозділів: @(_picture?.Groups.Count ?? 0) · Спостережень: @(_picture?.TotalMessages ?? 0)
-        </div>
-    </div>
+        </MetaContent>
+        <ActionsContent>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <label class="form-label small text-muted mb-0">День</label>
+                <input class="form-control form-control-sm"
+                       type="date"
+                       style="width: 11rem;"
+                       value="@DayStr"
+                       @onchange="OnDayInputChanged" />
+                <button type="button" class="btn btn-sm btn-primary" @onclick="LoadAsync" disabled="@_loading">
+                    Оновити
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" @onclick="ResetDayAsync" disabled="@_loading">
+                    Сьогодні
+                </button>
+            </div>
+        </ActionsContent>
+    </ReportsToolbar>
 
     <div class="page-panel">
         @if (_loading)
