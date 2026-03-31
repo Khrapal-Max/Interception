@@ -2,36 +2,59 @@
 
 <PageTitle>Головна</PageTitle>
 
-<div class="d-flex align-items-center justify-content-between mb-3">
-    <h1 class="h4 mb-0">Головна</h1>
-</div>
-
-<div class="row g-3">
-    <div class="col-12 col-lg-6">
-        <div class="card shadow-sm">
-            <div class="card-header">
-                <strong>Спостереження</strong>
-            </div>
-            <div class="card-body">
-                <div class="text-muted mb-3">
-                    Реєстр перехватів, перегляд деталей та імпорт.
-                </div>
-                <a class="btn btn-primary btn-sm" href="observations">Відкрити реєстр</a>
-            </div>
+<div class="page-shell">
+    <div class="page-panel panel-scroll p-3 p-md-4 d-flex flex-column gap-2">
+        <div class="d-flex align-items-center justify-content-between">
+            <h1 class="h4 mb-0">Меню системи</h1>
         </div>
-    </div>
 
-    <div class="col-12 col-lg-6">
-        <div class="card shadow-sm">
-            <div class="card-header">
-                <strong>Припущення</strong>
-            </div>
-            <div class="card-body">
-                <div class="text-muted mb-3">
-                    Реєстр припущень (гипотез), перегляд деталей.
-                </div>
-                <a class="btn btn-primary btn-sm" href="analytics/clusters">Відкрити реєстр</a>
-            </div>
-        </div>
+        <p class="text-muted small mb-2">Оберіть потрібний модуль. Блоки мають різні розміри для швидкої візуальної орієнтації.</p>
+
+        <nav class="system-blocks" aria-label="Меню системи">
+            <a class="menu-block size-lg tone-observations" href="observations">
+                <span class="menu-title">Спостереження</span>
+                <small>Реєстр спостережень</small>
+            </a>
+
+            <a class="menu-block size-md tone-candidates" href="analytics/candidates">
+                <span class="menu-title">Групи на розгляд</span>
+                <small>Аналітика</small>
+            </a>
+
+            <a class="menu-block size-sm tone-linkmap" href="analytics/link-map">
+                <span class="menu-title">Карта зв'язків</span>
+                <small>Аналітика</small>
+            </a>
+
+            <a class="menu-block size-md tone-divisions" href="reports/divisions">
+                <span class="menu-title">Звіт по підрозділах</span>
+                <small>Звіти</small>
+            </a>
+
+            <a class="menu-block size-sm tone-day" href="reports/day-picture">
+                <span class="menu-title">Картина дня</span>
+                <small>Звіти</small>
+            </a>
+
+            <a class="menu-block size-sm tone-registry" href="registries/divisions">
+                <span class="menu-title">Підрозділи</span>
+                <small>Регістри</small>
+            </a>
+
+            <a class="menu-block size-sm tone-registry" href="registries/persons">
+                <span class="menu-title">Особи</span>
+                <small>Регістри</small>
+            </a>
+
+            <a class="menu-block size-sm tone-registry" href="registries/actions">
+                <span class="menu-title">Довідник дій</span>
+                <small>Регістри</small>
+            </a>
+
+            <a class="menu-block size-sm tone-system" href="system/about">
+                <span class="menu-title">Про систему</span>
+                <small>Система</small>
+            </a>
+        </nav>
     </div>
 </div>
