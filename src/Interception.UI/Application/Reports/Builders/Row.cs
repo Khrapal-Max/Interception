@@ -4,12 +4,9 @@
 
 using Interception.UI.Domain;
 
-namespace Interception.UI.Application.Reports.Services;
+namespace Interception.UI.Application.Reports.Builders;
 
-public sealed partial class DayPictureService
-{
-    internal sealed record Row(
+internal sealed record Row(
         InterceptionMessage Message,
         string? EffectiveDivision,
         HashSet<string> ParticipantSet);
-}

@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Reports.Abstractions;
+using Interception.UI.Application.Reports.Builders;
 using Interception.UI.Application.Reports.Dtos;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
