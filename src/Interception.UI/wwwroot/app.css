@@ -24,7 +24,7 @@ html, body {
     --bs-success-rgb: 95, 127, 104;
     --bs-light: #d7dce1;
     --bs-dark: #171b20;
-    --toolbar-height: 4.5rem;
+    --toolbar-height: 4.75rem;
 }
 
 a, .btn-link {
@@ -247,12 +247,40 @@ h1:focus { outline: none; }
     align-items: center;
     justify-content: space-between;
     min-height: var(--toolbar-height);
+    max-height: var(--toolbar-height);
     padding: .625rem .75rem;
     background: #171b20;
     border: 1px solid #343c46;
     border-radius: .5rem;
     gap: .5rem;
     flex-wrap: nowrap;
+    overflow: hidden;
+}
+.toolbar-start,
+.toolbar-actions,
+.toolbar-meta {
+    min-width: 0;
+}
+
+.toolbar-start,
+.toolbar-actions {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+}
+
+.toolbar-start {
+    flex: 0 1 auto;
+}
+
+.toolbar-meta {
+    flex: 1 1 auto;
+    text-align: center;
+}
+
+.toolbar-actions {
+    flex: 0 1 auto;
 }
 .registry-toolbar-meta {
     font-size: .8rem;
@@ -269,12 +297,11 @@ h1:focus { outline: none; }
 
 @media (max-width: 992px) {
     :root {
-        --toolbar-height: 5.25rem;
+        --toolbar-height: 4.75rem;
     }
 
     .registry-toolbar {
-        flex-wrap: wrap;
-        align-items: flex-start;
+        align-items: center;
     }
 }
 

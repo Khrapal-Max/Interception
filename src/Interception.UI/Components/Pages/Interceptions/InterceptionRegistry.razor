@@ -6,7 +6,7 @@
 <div class="page-shell">
 
     <div class="registry-toolbar flex-shrink-0">
-        <div class="registry-toolbar-meta d-flex align-items-center gap-2 flex-wrap">
+        <div class="registry-toolbar-meta toolbar-meta d-flex align-items-center gap-2">
             @if (_pagedResult is not null)
             {
                 <span>Записів: <strong>@_pagedResult.TotalCount</strong></span>
@@ -16,7 +16,7 @@
                 <span class="badge text-bg-warning">Фільтр активний</span>
             }
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+        <div class="toolbar-actions d-flex align-items-center gap-2 justify-content-end">
             <button class="btn btn-secondary btn-sm" @onclick="OpenTextBlock">
                 <i class="bi bi-text-paragraph me-1"></i>З тексту
             </button>

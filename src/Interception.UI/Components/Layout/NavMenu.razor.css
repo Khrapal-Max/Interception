@@ -21,7 +21,7 @@
     text-decoration: none;
     user-select: none;
     border-radius: .45rem;
-    border: 1px solid color-mix(in srgb, var(--nav-accent) 38%, #343c46);
+    border: 1px solid #3f4a55;
     background: #20252b;
     color: #cfd6dd;
 }
@@ -33,21 +33,21 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: color-mix(in srgb, var(--nav-accent) 30%, #2a3036);
-    border: 1px solid color-mix(in srgb, var(--nav-accent) 55%, #3d4650);
+    background: #2a3036;
+    border: 1px solid #46515d;
     color: #dfe5ea;
 }
 
-.nav-btn-home { --nav-accent: var(--nav-home); }
-.nav-btn-observations { --nav-accent: var(--nav-observations); }
-.nav-btn-analytics { --nav-accent: var(--nav-analytics); }
-.nav-btn-reports { --nav-accent: var(--nav-reports); }
-.nav-btn-registries { --nav-accent: var(--nav-registries); }
-.nav-btn-system { --nav-accent: var(--nav-system); }
+.nav-btn-home .nav-icon { background: #425949; border-color: #5f7f68; }
+.nav-btn-observations .nav-icon { background: #2f4f6b; border-color: #44749d; }
+.nav-btn-analytics .nav-icon { background: #573d67; border-color: #8f63a7; }
+.nav-btn-reports .nav-icon { background: #69552f; border-color: #ae8a46; }
+.nav-btn-registries .nav-icon { background: #245f56; border-color: #2f8b7d; }
+.nav-btn-system .nav-icon { background: #4f5862; border-color: #7b8591; }
 
 .nav-btn:hover {
-    background: color-mix(in srgb, var(--nav-accent) 22%, #2a3036);
-    border-color: color-mix(in srgb, var(--nav-accent) 62%, #48535f);
+    background: #2a3036;
+    border-color: #586573;
     color: #f2f5f8;
 }
 
@@ -57,12 +57,14 @@
 }
 
 .nav-btn.active {
-    background: color-mix(in srgb, var(--nav-accent) 36%, #2b3239);
-    border-color: color-mix(in srgb, var(--nav-accent) 74%, #586573);
+    background: #313941;
+    border-color: #6a7785;
     color: #f2f5f8;
 }
 
-.nav-btn.active .nav-icon {
-    background: color-mix(in srgb, var(--nav-accent) 48%, #36404a);
-    border-color: color-mix(in srgb, var(--nav-accent) 82%, #6d7d4d);
-}
+.nav-btn-home.active .nav-icon { background: #5f7f68; border-color: #89aa92; }
+.nav-btn-observations.active .nav-icon { background: #44749d; border-color: #70a3cf; }
+.nav-btn-analytics.active .nav-icon { background: #8f63a7; border-color: #ba8fd0; }
+.nav-btn-reports.active .nav-icon { background: #ae8a46; border-color: #d0ae6b; }
+.nav-btn-registries.active .nav-icon { background: #2f8b7d; border-color: #53b3a4; }
+.nav-btn-system.active .nav-icon { background: #7b8591; border-color: #a7b0ba; }
