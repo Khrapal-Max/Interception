@@ -2,9 +2,10 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Abstractions.Interceptions;
-using Interception.UI.Application.Interceptions.Abstractions.Registry;
+using Interception.UI.Application.Analytics.Dtos;
+using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
+using Interception.UI.Application.Registry.Abstractions;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Domain;
 using Interception.UI.Extensions;

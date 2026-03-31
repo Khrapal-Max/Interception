@@ -2,8 +2,8 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Abstractions.Reports;
-using Interception.UI.Application.Interceptions.Models.Reports;
+using Interception.UI.Application.Reports.Abstractions;
+using Interception.UI.Application.Reports.Models;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;

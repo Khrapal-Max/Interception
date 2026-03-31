@@ -2,16 +2,17 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Abstractions.Candidates;
-using Interception.UI.Application.Interceptions.Abstractions.Import;
-using Interception.UI.Application.Interceptions.Abstractions.Interceptions;
-using Interception.UI.Application.Interceptions.Abstractions.Registry;
-using Interception.UI.Application.Interceptions.Abstractions.Reports;
-using Interception.UI.Application.Interceptions.Services.Candidates;
-using Interception.UI.Application.Interceptions.Services.Import;
-using Interception.UI.Application.Interceptions.Services.Interceptions;
-using Interception.UI.Application.Interceptions.Services.Registry;
+using Interception.UI.Application.Analytics.Abstractions;
+using Interception.UI.Application.Analytics.Services;
+using Interception.UI.Application.Import.Abstractions;
+using Interception.UI.Application.Import.Services;
+using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Interceptions.Services;
 using Interception.UI.Application.Interceptions.Services.Reports;
+using Interception.UI.Application.Registry.Abstractions;
+using Interception.UI.Application.Registry.Services;
+using Interception.UI.Application.Reports.Abstractions;
+using Interception.UI.Application.Reports.Services;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Components;
 using Interception.UI.Extensions;

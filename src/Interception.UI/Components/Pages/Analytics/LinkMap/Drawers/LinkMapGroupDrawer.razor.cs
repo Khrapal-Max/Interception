@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Models.Candidates;
+using Interception.UI.Application.Analytics.Models;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.UI.Components.Pages.Analytics.LinkMap.Drawers;

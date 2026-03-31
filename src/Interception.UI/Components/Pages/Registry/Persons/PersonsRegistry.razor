@@ -1,0 +1,101 @@
+@page "/registries/persons"
+@using Interception.UI.Components.Pages.Registry.Persons.Drawers
+@using Interception.UI.Components.Pages.Registry.Toolbar
+
+<PageTitle>Регістри — Особи</PageTitle>
+
+<div class="page-shell">
+
+    <RegistriesToolbar ActiveSection="persons">
+        <MetaContent>
+            @if (_participants is not null)
+            {
+                <span>Всього: <strong>@_participants.Count</strong></span>
+                <span>Підтверджені: <strong>@ConfirmedCount</strong></span>
+                <span>Зі спостережень: <strong>@ObservedCount</strong></span>
+            }
+        </MetaContent>
+        <ActionsContent>
+            <button class="btn btn-success btn-sm" @onclick="LoadAsync" disabled="@_loading">
+                <i class="bi bi-arrow-repeat me-1"></i>Оновити
+            </button>
+        </ActionsContent>
+    </RegistriesToolbar>
+
+    <div class="page-panel">
+        @if (_loading)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-sm me-2"></div>Завантаження...
+                </div>
+            </div>
+        }
+        else if (_participants is null || _participants.Count == 0)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <i class="bi bi-people fs-1 d-block mb-2 opacity-25"></i>
+                    <div>Осіб у реєстрі ще немає</div>
+                    <div class="small mt-1">У реєстр потрапляють відомі особи зі спостережень і підтверджені особи.</div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="table table-hover table-sm align-middle data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 28%">Позивний</th>
+                            <th style="width: 18%">Статус</th>
+                            <th style="width: 22%">Роль</th>
+                            <th style="width: 24%">Підрозділ</th>
+                            <th style="width: 8%"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var person in _participants)
+                        {
+                            <tr>
+                                <td class="fw-medium">@person.Name</td>
+                                <td>
+                                    @if (person.IsConfirmed)
+                                    {
+                                        <span class="badge text-bg-success">Підтверджено</span>
+                                    }
+                                    else if (string.IsNullOrWhiteSpace(person.Role) || string.IsNullOrWhiteSpace(person.Division))
+                                    {
+                                        <span class="badge text-bg-secondary">Частково відома</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge text-bg-secondary">Зі спостережень</span>
+                                    }
+                                </td>
+                                <td class="small text-muted">@(string.IsNullOrWhiteSpace(person.Role) ? "—" : person.Role)</td>
+                                <td class="small text-muted">
+                                    <span class="text-truncate d-block" style="max-width: 220px" title="@person.Division">
+                                        @(string.IsNullOrWhiteSpace(person.Division) ? "—" : person.Division)
+                                    </span>
+                                </td>
+                                <td class="text-end pe-2 text-nowrap">
+                                    <button class="btn btn-secondary btn-sm"
+                                            title="Редагувати"
+                                            @onclick="() => OpenEdit(person)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+</div>
+
+<PersonRegistryDrawer @bind-IsOpen="_drawerOpen"
+                      Participant="_editingParticipant"
+                      OnSaved="LoadAsync" />

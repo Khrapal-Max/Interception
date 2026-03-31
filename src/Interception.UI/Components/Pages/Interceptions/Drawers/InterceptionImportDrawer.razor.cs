@@ -2,8 +2,8 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Abstractions.Import;
-using Interception.UI.Application.Interceptions.Models.Import;
+using Interception.UI.Application.Import.Abstractions;
+using Interception.UI.Application.Import.Models;
 using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
