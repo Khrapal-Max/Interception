@@ -3,3 +3,4 @@
 //-----------------------------------------------------------------------------
 
 global using Microsoft.EntityFrameworkCore;
+global using Interception.Infrastructure;

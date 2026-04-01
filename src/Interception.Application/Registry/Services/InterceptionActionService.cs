@@ -2,7 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.Application.Abstractions;
 using Interception.Application.Registry.Abstractions;
 using Interception.Domain.Entities;
 
@@ -17,7 +16,7 @@ namespace Interception.Application.Registry.Services;
 ///   — Домен відповідає за валідацію через Create() / Update().
 /// </summary>
 public sealed class InterceptionActionService(
-    IAppDbContextFactory dbFactory) : IInterceptionActionService
+    IDbContextFactory<AppDbContext> dbFactory) : IInterceptionActionService
 {
     // -------------------------------------------------------------------------
     // Read

@@ -2,7 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.Application.Abstractions;
 using Interception.Application.Analytics.Abstractions;
 using Interception.Application.Analytics.Builders;
 using Interception.Domain.Entities;
@@ -17,7 +16,7 @@ namespace Interception.Application.Analytics.Services;
 /// Основний сервіс аналізу невідомих учасників і побудови / збагачення open-груп.
 /// </summary>
 public sealed partial class ParticipantCandidateAnalysisService(
-    IAppDbContextFactory dbFactory,
+    IDbContextFactory<AppDbContext> dbFactory,
     IKnownParticipantSuggestionService knownParticipantSuggestionService,
     IOptions<PatternRecognitionOptions> options) : IParticipantCandidateAnalysisService
 {

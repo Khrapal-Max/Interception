@@ -56,29 +56,13 @@ public static class MigrationExtensions
                 .GetRequiredService<ILoggerFactory>()
                 .CreateLogger("Startup");
 
-            // Support both AddDbContextFactory<AppDbContext>() and AddDbContext<AppDbContext>()
-            var factory = scope.ServiceProvider.GetService<IDbContextFactory<AppDbContext>>();
-
-            AppDbContext db;
-            IAsyncDisposable? dbToDispose = null;
-
             try
             {
-                db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-                // If DB doesn't exist, this may throw 3D000; handle below
-                var pending = await db.Database.GetPendingMigrationsAsync(ct);
-
-                if (pending.Any())
-                {
-                    logger.LogInformation("Pending migrations: {Migrations}", string.Join(", ", pending));
-                    await db.Database.MigrateAsync(ct);
-                    logger.LogInformation("✅ Database migrated successfully.");
-                }
-                else
-                {
-                    logger.LogInformation("✅ No pending migrations.");
-                }
+                await using var db = await scope.ServiceProvider
+                    .GetRequiredService<IDbContextFactory<AppDbContext>>()
+                    .CreateDbContextAsync(ct);
+                await db.Database.MigrateAsync(ct);
+                logger.LogInformation("✅ Database migrated successfully.");
 
                 // Сід довідника дій — виконується після кожного старту,
                 // SeedActionsAsync пропускає вже існуючі назви
@@ -117,11 +101,6 @@ public static class MigrationExtensions
                 logger.LogWarning(ex, "Unexpected migrate error (attempt {Attempt}/{Max}). Retrying in {Delay}s...",
                     attempt, maxRetries, delay.TotalSeconds);
             }
-            finally
-            {
-                if (dbToDispose is not null)
-                    await dbToDispose.DisposeAsync();
-            }
 
             if (attempt < maxRetries)
             {
@@ -144,11 +123,9 @@ public static class MigrationExtensions
         ILogger logger,
         CancellationToken ct)
     {
-        var factory = scope.ServiceProvider.GetService<IDbContextFactory<AppDbContext>>();
-
-        await using var db = factory is not null
-            ? await factory.CreateDbContextAsync(ct)
-            : scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await using var db = await scope.ServiceProvider
+            .GetRequiredService<IDbContextFactory<AppDbContext>>()
+            .CreateDbContextAsync(ct);
 
         var existingNames = await db.InterceptionActions
             .Select(a => a.Name)
@@ -189,20 +166,10 @@ public static class MigrationExtensions
         string maintenanceDatabase,
         CancellationToken ct)
     {
-        // Read connection string from the context registration
-        var factory = scope.ServiceProvider.GetService<IDbContextFactory<AppDbContext>>();
-        string? connStr;
-
-        if (factory is not null)
-        {
-            await using var db = await factory.CreateDbContextAsync(ct);
-            connStr = db.Database.GetDbConnection().ConnectionString;
-        }
-        else
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            connStr = db.Database.GetDbConnection().ConnectionString;
-        }
+        await using var db = await scope.ServiceProvider
+            .GetRequiredService<IDbContextFactory<AppDbContext>>()
+            .CreateDbContextAsync(ct);
+        var connStr = db.Database.GetDbConnection().ConnectionString;
 
         if (string.IsNullOrWhiteSpace(connStr))
             throw new InvalidOperationException("Connection string is empty.");

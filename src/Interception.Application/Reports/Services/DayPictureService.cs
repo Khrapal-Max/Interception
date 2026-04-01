@@ -2,7 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.Application.Abstractions;
 using Interception.Application.Reports.Abstractions;
 using Interception.Application.Reports.Builders;
 using Interception.Application.Reports.Dtos;
@@ -13,11 +12,11 @@ namespace Interception.Application.Reports.Services;
 /// Будує картину дня у моделі:
 /// підрозділ → епізоди дня → хронологічні записи.
 /// </summary>
-public sealed partial class DayPictureService(IAppDbContextFactory dbFactory) : IDayPictureService
+public sealed partial class DayPictureService(IDbContextFactory<AppDbContext> dbFactory) : IDayPictureService
 {
     private const string UnknownDivision = "НВ підрозділ";
     private static readonly TimeSpan ConversationGap = TimeSpan.FromMinutes(10);
-    private readonly IAppDbContextFactory _dbFactory = dbFactory;
+    private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
 
     /// <inheritdoc />
     public async Task<DayPictureDto> BuildAsync(DateOnly day, CancellationToken ct = default)
@@ -154,7 +153,7 @@ public sealed partial class DayPictureService(IAppDbContextFactory dbFactory) : 
     /// Будує карту частота → домінуючий підрозділ за всіма наявними спостереженнями.
     /// </summary>
     private static async Task<Dictionary<string, string>> BuildFrequencyDivisionMapAsync(
-        IAppDbContext db,
+        AppDbContext db,
         CancellationToken ct)
     {
         var rows = await db.InterceptionMessages

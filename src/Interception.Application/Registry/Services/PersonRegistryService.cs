@@ -2,7 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.Application.Abstractions;
 using Interception.Application.Registry.Abstractions;
 using Interception.Application.Registry.Dtos;
 using Interception.Common.Extensions;
@@ -14,7 +13,7 @@ namespace Interception.Application.Registry.Services;
 /// Сервіс реєстру осіб.
 /// </summary>
 public sealed class PersonRegistryService(
-    IAppDbContextFactory dbFactory) : IPersonRegistryService
+    IDbContextFactory<AppDbContext> dbFactory) : IPersonRegistryService
 {
     /// <inheritdoc />
     public async Task<IReadOnlyList<PersonRegistryItemDto>> GetAllAsync(CancellationToken ct = default)

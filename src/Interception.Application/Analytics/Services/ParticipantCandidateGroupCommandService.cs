@@ -2,7 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.Application.Abstractions;
 using Interception.Application.Analytics.Abstractions;
 using Interception.Common.Extensions;
 using Interception.Domain.Entities;
@@ -13,7 +12,7 @@ namespace Interception.Application.Analytics.Services;
 /// <summary>
 /// Реалізація write-side сценаріїв для життєвого циклу груп кандидатів.
 /// </summary>
-public sealed class ParticipantCandidateGroupCommandService(IAppDbContextFactory dbFactory)
+public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<AppDbContext> dbFactory)
     : IParticipantCandidateGroupCommandService
 {
     /// <inheritdoc />

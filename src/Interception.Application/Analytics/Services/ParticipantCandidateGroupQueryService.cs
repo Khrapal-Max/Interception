@@ -2,7 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.Application.Abstractions;
 using Interception.Application.Analytics.Abstractions;
 using Interception.Application.Analytics.Builders;
 using Interception.Application.Analytics.Dtos;
@@ -16,7 +15,7 @@ namespace Interception.Application.Analytics.Services;
 /// <summary>
 /// Read-side сервіс для реєстру й деталей груп кандидатів.
 /// </summary>
-public sealed class ParticipantCandidateGroupQueryService(IAppDbContextFactory dbFactory) : IParticipantCandidateGroupQueryService
+public sealed class ParticipantCandidateGroupQueryService(IDbContextFactory<AppDbContext> dbFactory) : IParticipantCandidateGroupQueryService
 {
     /// <inheritdoc />
     public async Task<PagedResultDto<CandidateGroupDto>> GetGroupsByStatusAsync(
@@ -61,7 +60,7 @@ public sealed class ParticipantCandidateGroupQueryService(IAppDbContextFactory d
     /// Збагачує доменні групи observation-знімками для read-side.
     /// </summary>
     private static async Task<IReadOnlyList<CandidateGroupDto>> EnrichGroupsAsync(
-        IAppDbContext db,
+        AppDbContext db,
         List<ParticipantCandidateGroup> groups,
         CancellationToken ct)
     {
