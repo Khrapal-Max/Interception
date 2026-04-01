@@ -9,7 +9,7 @@ using Npgsql;
 
 namespace Interception.Infrastructure;
 
-public static class MigrationExtension
+public static class MigrationExtensions
 {
     // -------------------------------------------------------------------------
     // Еталонний довідник дій
