@@ -3,7 +3,6 @@
 //-----------------------------------------------------------------------------
 
 using Interception.Domain.Enums;
-using Interception.Common.Extensions;
 using Interception.Domain.Records;
 
 namespace Interception.Domain.Entities;

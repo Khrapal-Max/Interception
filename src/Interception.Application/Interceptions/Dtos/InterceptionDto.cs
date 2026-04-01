@@ -3,7 +3,6 @@
 //-----------------------------------------------------------------------------
 
 using Interception.Application.Analytics.Dtos;
-using Interception.Common.Extensions;
 
 namespace Interception.Application.Interceptions.Dtos;
 

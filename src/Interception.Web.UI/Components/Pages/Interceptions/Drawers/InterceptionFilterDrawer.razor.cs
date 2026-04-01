@@ -4,7 +4,6 @@
 
 using Interception.Application.Interceptions.Abstractions;
 using Interception.Application.Interceptions.Dtos;
-using Interception.Common.Extensions;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.Web.UI.Components.Pages.Interceptions.Drawers;

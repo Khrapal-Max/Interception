@@ -2,11 +2,11 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
+using Interception.Application.Abstractions;
 using Interception.Application.Analytics.Abstractions;
 using Interception.Application.Analytics.Dtos;
 using Interception.Application.Analytics.Services.Builders.LinkMap;
 using Interception.Domain.Entities;
-using Interception.Application.Abstractions;
 
 namespace Interception.Application.Analytics.Services;
 

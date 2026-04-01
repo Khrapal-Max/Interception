@@ -2,8 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.Common.Extensions;
-
 namespace Interception.Domain.Entities;
 
 public class InterceptionMessage
