@@ -1,0 +1,9 @@
+namespace Interception.Desktop.Wpf.Views;
+
+public partial class ProjectsView : System.Windows.Controls.UserControl
+{
+    public ProjectsView()
+    {
+        InitializeComponent();
+    }
+}
