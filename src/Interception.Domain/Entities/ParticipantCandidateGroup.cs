@@ -156,5 +156,5 @@ public class ParticipantCandidateGroup
     }
 
     private static string? NormalizeOptional(string? value)
-        => SemanticValueExtensions.NormalizeMeaningfulOrNull(value);
+        => StringSemanticValueExtensions.NormalizeMeaningfulOrNull(value);
 }

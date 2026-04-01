@@ -133,5 +133,5 @@ public class InterceptionMessage
     }
 
     private static string? NormalizeOptional(string? value)
-        => SemanticValueExtensions.NormalizeMeaningfulOrNull(value);
+        => StringSemanticValueExtensions.NormalizeMeaningfulOrNull(value);
 }

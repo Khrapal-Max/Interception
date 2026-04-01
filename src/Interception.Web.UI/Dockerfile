@@ -2,8 +2,7 @@
 
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
-ARG APP_UID=64198
-USER ${APP_UID}
+USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
@@ -15,8 +14,9 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["src/Interception.Web.UI/Interception.Web.UI.csproj", "src/Interception.Web.UI/"]
 COPY ["src/Interception.Application/Interception.Application.csproj", "src/Interception.Application/"]
-COPY ["src/Interception.Infrastructure/Interception.Infrastructure.csproj", "src/Interception.Infrastructure/"]
+COPY ["src/Interception.Common/Interception.Common.csproj", "src/Interception.Common/"]
 COPY ["src/Interception.Domain/Interception.Domain.csproj", "src/Interception.Domain/"]
+COPY ["src/Interception.Infrastructure/Interception.Infrastructure.csproj", "src/Interception.Infrastructure/"]
 RUN dotnet restore "./src/Interception.Web.UI/Interception.Web.UI.csproj"
 COPY . .
 WORKDIR "/src/src/Interception.Web.UI"

@@ -9,6 +9,6 @@
 
 namespace Interception.Application.Analytics.Dtos;
 
-internal sealed record FocusedLinkDto(
+public sealed record FocusedLinkDto(
     LinkMapGroupDto TargetGroup,
     LinkMapBridgeDto Bridge);
