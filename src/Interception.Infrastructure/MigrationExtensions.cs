@@ -5,12 +5,19 @@
 //-----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
 namespace Interception.Infrastructure;
 
 public static class MigrationExtensions
 {
+    public static IServiceCollection AddDatabaseStartupMigration(this IServiceCollection services)
+    {
+        services.AddHostedService<DatabaseMigrationHostedService>();
+        return services;
+    }
+
     // -------------------------------------------------------------------------
     // Еталонний довідник дій
     // -------------------------------------------------------------------------
@@ -42,7 +49,7 @@ public static class MigrationExtensions
     // Міграція + сід
     // -------------------------------------------------------------------------
 
-    public static async Task AddMigrationDb(this WebApplication app, CancellationToken ct = default)
+    public static async Task AddMigrationDb(this IServiceProvider services, CancellationToken ct = default)
     {
         const int maxRetries = 10;
         var delay = TimeSpan.FromSeconds(2);
@@ -51,7 +58,7 @@ public static class MigrationExtensions
 
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            using var scope = app.Services.CreateScope();
+            using var scope = services.CreateScope();
             var logger = scope.ServiceProvider
                 .GetRequiredService<ILoggerFactory>()
                 .CreateLogger("Startup");
