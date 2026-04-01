@@ -8,6 +8,7 @@ using Interception.Domain.Entities;
 using Interception.Domain.Enums;
 using Interception.Domain.Extensions;
 using Interception.Domain.Records;
+using Interception.Application.Abstractions;
 
 namespace Interception.Application.Analytics.Services;
 
@@ -15,7 +16,7 @@ namespace Interception.Application.Analytics.Services;
 /// Основний сервіс аналізу невідомих учасників і побудови / збагачення open-груп.
 /// </summary>
 public sealed class ParticipantCandidateAnalysisService(
-    IDbContextFactory<AppDbContext> dbFactory,
+    IAppDbContextFactory dbFactory,
     IKnownParticipantSuggestionService knownParticipantSuggestionService,
     IOptions<PatternRecognitionOptions> options) : IParticipantCandidateAnalysisService
 {

@@ -4,6 +4,7 @@
 
 using Interception.Application.Registry.Abstractions;
 using Interception.Domain.Entities;
+using Interception.Application.Abstractions;
 
 namespace Interception.Application.Registry.Services;
 
@@ -16,7 +17,7 @@ namespace Interception.Application.Registry.Services;
 ///   — Домен відповідає за валідацію через Create() / Update().
 /// </summary>
 public sealed class InterceptionActionService(
-    IDbContextFactory<AppDbContext> dbFactory) : IInterceptionActionService
+    IAppDbContextFactory dbFactory) : IInterceptionActionService
 {
     // -------------------------------------------------------------------------
     // Read

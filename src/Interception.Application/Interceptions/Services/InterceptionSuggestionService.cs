@@ -4,13 +4,14 @@
 
 using Interception.Application.Analytics.Dtos;
 using Interception.Application.Interceptions.Abstractions;
+using Interception.Application.Abstractions;
 
 namespace Interception.Application.Interceptions.Services;
 
 /// <summary>
 /// Реалізація контекстних підказок для операторського вводу перехоплень.
 /// </summary>
-public sealed class InterceptionSuggestionService(IDbContextFactory<AppDbContext> dbFactory) : IInterceptionSuggestionService
+public sealed class InterceptionSuggestionService(IAppDbContextFactory dbFactory) : IInterceptionSuggestionService
 {
     /// <inheritdoc />
     public async Task<IReadOnlyList<FrequencySuggestionDto>> GetFrequencyWithDivisionAsync(

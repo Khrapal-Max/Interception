@@ -9,13 +9,14 @@ using Interception.Application.Interceptions.Dtos;
 using Interception.Domain.Entities;
 using Interception.Domain.Enums;
 using Interception.Domain.Extensions;
+using Interception.Application.Abstractions;
 
 namespace Interception.Application.Analytics.Services;
 
 /// <summary>
 /// Read-side сервіс для реєстру й деталей груп кандидатів.
 /// </summary>
-public sealed class ParticipantCandidateGroupQueryService(IDbContextFactory<AppDbContext> dbFactory) : IParticipantCandidateGroupQueryService
+public sealed class ParticipantCandidateGroupQueryService(IAppDbContextFactory dbFactory) : IParticipantCandidateGroupQueryService
 {
     /// <inheritdoc />
     public async Task<PagedResultDto<CandidateGroupDto>> GetGroupsByStatusAsync(
@@ -60,7 +61,7 @@ public sealed class ParticipantCandidateGroupQueryService(IDbContextFactory<AppD
     /// Збагачує доменні групи observation-знімками для read-side.
     /// </summary>
     private static async Task<IReadOnlyList<CandidateGroupDto>> EnrichGroupsAsync(
-        AppDbContext db,
+        IAppDbContext db,
         List<ParticipantCandidateGroup> groups,
         CancellationToken ct)
     {

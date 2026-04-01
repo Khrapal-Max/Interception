@@ -6,6 +6,7 @@ using Interception.Application.Analytics.Abstractions;
 using Interception.Application.Analytics.Builders;
 using Interception.Application.Analytics.Dtos;
 using Interception.Domain.Entities;
+using Interception.Application.Abstractions;
 
 namespace Interception.Application.Analytics.Services;
 
@@ -13,7 +14,7 @@ namespace Interception.Application.Analytics.Services;
 /// Реалізація top-N підказок по конкретних відомих особах для групи НВ.
 /// </summary>
 public sealed class KnownParticipantSuggestionService(
-    IDbContextFactory<AppDbContext> dbFactory,
+    IAppDbContextFactory dbFactory,
     IOptions<PatternRecognitionOptions> options) : IKnownParticipantSuggestionService
 {
     private readonly PatternRecognitionOptions _options = options.Value;
@@ -41,7 +42,7 @@ public sealed class KnownParticipantSuggestionService(
     /// Будує підказки по відомих особах безпосередньо з контексту групи та історії.
     /// </summary>
     internal async Task<IReadOnlyList<KnownParticipantSuggestionDto>> BuildKnownSuggestionsAsync(
-        AppDbContext db,
+        IAppDbContext db,
         ParticipantCandidateGroup group,
         int take,
         CancellationToken ct)

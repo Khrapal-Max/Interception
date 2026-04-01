@@ -6,6 +6,7 @@ using Interception.Application.Registry.Abstractions;
 using Interception.Application.Registry.Dtos;
 using Interception.Domain.Entities;
 using Interception.Domain.Extensions;
+using Interception.Application.Abstractions;
 
 namespace Interception.Application.Registry.Services;
 
@@ -13,7 +14,7 @@ namespace Interception.Application.Registry.Services;
 /// Сервіс реєстру осіб.
 /// </summary>
 public sealed class PersonRegistryService(
-    IDbContextFactory<AppDbContext> dbFactory) : IPersonRegistryService
+    IAppDbContextFactory dbFactory) : IPersonRegistryService
 {
     /// <inheritdoc />
     public async Task<IReadOnlyList<PersonRegistryItemDto>> GetAllAsync(CancellationToken ct = default)

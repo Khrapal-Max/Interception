@@ -5,13 +5,14 @@
 using Interception.Application.Interceptions.Abstractions;
 using Interception.Application.Interceptions.Dtos;
 using Interception.Domain.Entities;
+using Interception.Application.Abstractions;
 
 namespace Interception.Application.Interceptions.Services;
 
 /// <summary>
 /// Реалізація write-side сценаріїв для повідомлень перехоплення.
 /// </summary>
-public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> dbFactory) : IInterceptionCommandService
+public sealed class InterceptionCommandService(IAppDbContextFactory dbFactory) : IInterceptionCommandService
 {
     /// <inheritdoc />
     public async Task<InterceptionMessage> CreateAsync(
