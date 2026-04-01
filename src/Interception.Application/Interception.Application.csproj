@@ -6,7 +6,7 @@
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Interception.Common\Interception.Common\Interception.Common.csproj" />
+    <ProjectReference Include="..\Interception.Common\Interception.Common.csproj" />
     <ProjectReference Include="..\Interception.Domain\Interception.Domain.csproj" />
   </ItemGroup>
   <ItemGroup>

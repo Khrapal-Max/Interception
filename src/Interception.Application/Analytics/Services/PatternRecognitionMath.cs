@@ -4,7 +4,7 @@
 
 using Interception.Application.Analytics.Builders;
 using Interception.Domain.Entities;
-using Interception.Domain.Extensions;
+using Interception.Common.Extensions;
 
 namespace Interception.Application.Analytics.Services;
 
