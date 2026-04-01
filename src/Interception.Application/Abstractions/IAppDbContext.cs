@@ -3,7 +3,6 @@
 //-----------------------------------------------------------------------------
 
 using Interception.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Abstractions;
 

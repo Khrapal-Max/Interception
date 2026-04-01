@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.Domain.Extensions;
+namespace Interception.Common.Extensions;
 
 /// <summary>
 /// Нормалізація значень для аналітики.

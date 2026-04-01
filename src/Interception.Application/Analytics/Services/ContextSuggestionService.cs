@@ -7,6 +7,7 @@ using Interception.Application.Analytics.Builders;
 using Interception.Application.Analytics.Dtos;
 using Interception.Domain.Entities;
 using Interception.Application.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Interception.Application.Analytics.Services;
 
@@ -205,8 +206,8 @@ public sealed class ContextSuggestionService(
 
         foreach (var row in knownRows)
         {
-            var normalizedDivision = Extensions.SemanticValue.NormalizeMeaningfulOrNull(row.Division);
-            var key = Extensions.SemanticValue.NormalizeKeyOrNull(row.Division);
+            var normalizedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(row.Division);
+            var key = SemanticValueExtensions.NormalizeKeyOrNull(row.Division);
             if (key is null || normalizedDivision is null)
                 continue;
 
@@ -217,8 +218,8 @@ public sealed class ContextSuggestionService(
 
         foreach (var group in confirmedGroups)
         {
-            var normalizedDivision = Extensions.SemanticValue.NormalizeMeaningfulOrNull(group.SuggestedDivision);
-            var key = Extensions.SemanticValue.NormalizeKeyOrNull(group.SuggestedDivision);
+            var normalizedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(group.SuggestedDivision);
+            var key = SemanticValueExtensions.NormalizeKeyOrNull(group.SuggestedDivision);
             if (key is null || normalizedDivision is null)
                 continue;
 

@@ -4,7 +4,7 @@
 
 using System.Globalization;
 
-namespace Interception.Domain.Extensions;
+namespace Interception.Common.Extensions;
 
 /// <summary>
 /// Хелпер для роботи з DateTime на рівні UI.

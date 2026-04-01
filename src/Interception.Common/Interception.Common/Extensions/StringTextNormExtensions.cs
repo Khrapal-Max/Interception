@@ -4,7 +4,7 @@
 
 using System.Text.RegularExpressions;
 
-namespace Interception.Domain.Extensions;
+namespace Interception.Common.Extensions;
 
 public static partial class StringTextNormExtensions
 {

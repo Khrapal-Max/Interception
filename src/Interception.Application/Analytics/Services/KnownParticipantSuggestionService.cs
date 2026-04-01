@@ -7,6 +7,7 @@ using Interception.Application.Analytics.Builders;
 using Interception.Application.Analytics.Dtos;
 using Interception.Domain.Entities;
 using Interception.Application.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Interception.Application.Analytics.Services;
 
@@ -87,7 +88,7 @@ public sealed class KnownParticipantSuggestionService(
 
         var blockedKnownNames = groupRows
             .SelectMany(x => x.KnownParticipants)
-            .Select(Extensions.SemanticValue.NormalizeMeaningfulOrNull)
+            .Select(SemanticValueExtensions.NormalizeMeaningfulOrNull)
             .Where(x => x is not null)
             .Cast<string>()
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
