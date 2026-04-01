@@ -13,7 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
-namespace Interception.Tests.Components.InterceptionActions;
+namespace Interception.Tests.Components.Registry.InterceptionActions;
 
 public sealed class ActionFormDrawerTests : BunitContext
 {
