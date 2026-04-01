@@ -4,6 +4,7 @@
 
 using FluentAssertions;
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
 
 namespace Interception.Tests.Domain;
 
@@ -23,6 +24,8 @@ public sealed class InterceptionMessageTests
             frequency: "149.500",
             division: "1st Battalion",
             vectorSignal: "NE",
+            locationDetails: null,
+            locationClass: LocationClass.NoInfo,
             interceptionAction: action ?? MakeAction(),
             note: "test note",
             createdBy: "operator1",
@@ -56,6 +59,8 @@ public sealed class InterceptionMessageTests
     {
         var act = () => InterceptionMessage.Create(
             DateTime.UtcNow, "149.500", "div", "NE",
+            locationDetails: null,
+            locationClass: LocationClass.NoInfo,
             interceptionAction: null!,
             note: null, createdBy: null);
 
@@ -71,7 +76,11 @@ public sealed class InterceptionMessageTests
     {
         var message = InterceptionMessage.Create(
             DateTime.UtcNow, input, input, input,
-            MakeAction(), input, "op");
+            locationDetails: input,
+            locationClass: LocationClass.NoInfo,
+            interceptionAction: MakeAction(),
+            note: input,
+            createdBy: "op");
 
         message.Frequency.Should().Be(expected);
         message.Division.Should().Be(expected);
@@ -90,7 +99,11 @@ public sealed class InterceptionMessageTests
         var newAction = MakeAction();
         var newDate = DateTime.UtcNow.AddHours(-2);
 
-        message.Update(newDate, "156.000", "2nd Battalion", "SW", newAction, "updated note");
+        message.Update(newDate, "156.000", "2nd Battalion", "SW",
+            locationDetails: null,
+            locationClass: LocationClass.NoInfo,
+            interceptionAction: newAction,
+            note: "updated note");
 
         message.ObservedDate.Should().Be(newDate);
         message.Frequency.Should().Be("156.000");
@@ -109,7 +122,11 @@ public sealed class InterceptionMessageTests
         var createdBy = message.CreatedBy;
         var createdAt = message.CreatedAt;
 
-        message.Update(DateTime.UtcNow, "156.000", null, null, MakeAction(), null);
+        message.Update(DateTime.UtcNow, "156.000", null, null,
+            locationDetails: null,
+            locationClass: LocationClass.NoInfo,
+            interceptionAction: MakeAction(),
+            note: null);
 
         message.CreatedBy.Should().Be(createdBy);
         message.CreatedAt.Should().Be(createdAt);
@@ -119,7 +136,11 @@ public sealed class InterceptionMessageTests
     public void Update_WithNullAction_ShouldThrowArgumentNullException()
     {
         var message = MakeMessage();
-        var act = () => message.Update(DateTime.UtcNow, null, null, null, null!, null);
+        var act = () => message.Update(DateTime.UtcNow, null, null, null,
+            locationDetails: null,
+            locationClass: LocationClass.NoInfo,
+            interceptionAction: null!,
+            note: null);
 
         act.Should().Throw<ArgumentNullException>();
     }

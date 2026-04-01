@@ -9,6 +9,7 @@ using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Components.Pages.Interceptions.Drawers;
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -126,7 +127,12 @@ public sealed class InterceptionFormDrawerTests : BunitContext
         var action = InterceptionAction.Create("координація дій", "");
         var message = InterceptionMessage.Create(
             DateTime.UtcNow, "157.0250", "1 мсб", "вектор",
-            action, "нотатка", "operator", null);
+            locationDetails: null,
+            locationClass: LocationClass.NoInfo,
+            interceptionAction: action,
+            note: "нотатка",
+            createdBy: "operator",
+            pointSignal: null);
 
         var (svc, _) = SetupServices(editMessage: message);
 
@@ -149,7 +155,13 @@ public sealed class InterceptionFormDrawerTests : BunitContext
         svc.CreateAsync(Arg.Any<InterceptionFormDto>(), Arg.Any<string>(),
                         Arg.Any<CancellationToken>())
            .Returns(InterceptionMessage.Create(
-               DateTime.UtcNow, null, null, null, action, null, "op", null));
+               DateTime.UtcNow, null, null, null,
+               locationDetails: null,
+               locationClass: LocationClass.NoInfo,
+               interceptionAction: action,
+               note: null,
+               createdBy: "op",
+               pointSignal: null));
 
         var cut = RenderDrawer();
 
@@ -175,7 +187,13 @@ public sealed class InterceptionFormDrawerTests : BunitContext
         svc.CreateAsync(Arg.Any<InterceptionFormDto>(), Arg.Any<string>(),
                         Arg.Any<CancellationToken>())
            .Returns(InterceptionMessage.Create(
-               DateTime.UtcNow, null, null, null, action, null, "op", null));
+               DateTime.UtcNow, null, null, null,
+               locationDetails: null,
+               locationClass: LocationClass.NoInfo,
+               interceptionAction: action,
+               note: null,
+               createdBy: "op",
+               pointSignal: null));
 
         var onSavedCalled = false;
         var onSaved = EventCallback.Factory.Create(this, () => onSavedCalled = true);

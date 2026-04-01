@@ -5,6 +5,7 @@
 using FluentAssertions;
 using Interception.UI.Application.Reports.Services;
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -290,7 +291,9 @@ public sealed class DayPictureServiceTests
             frequency,
             division,
             vectorSignal,
-            action,
+            locationDetails: null,
+            locationClass: LocationClass.NoInfo,
+            interceptionAction: action,
             note,
             createdBy: "seed");
 }

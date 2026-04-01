@@ -24,7 +24,9 @@ public sealed class DailyReportTests
     {
         var msg = InterceptionMessage.Create(
             DateTime.UtcNow, frequency, division, vector,
-            new InterceptionActionBuilder().Build(),
+            locationDetails: null,
+            locationClass: LocationClass.NoInfo,
+            interceptionAction: new InterceptionActionBuilder().Build(),
             note: null, createdBy: "op");
 
         foreach (var name in participantNames)
@@ -144,8 +146,11 @@ public sealed class ParticipantMatrixTests
     {
         var msg = InterceptionMessage.Create(
             DateTime.UtcNow, "149.500", "div", "NE",
-            new InterceptionActionBuilder().Build(),
-            null, "op");
+            locationDetails: null,
+            locationClass: LocationClass.NoInfo,
+            interceptionAction: new InterceptionActionBuilder().Build(),
+            note: null,
+            createdBy: "op");
 
         foreach (var name in names)
             msg.AddParticipant(name, isUnknown: false);
@@ -209,7 +214,11 @@ public sealed class ParticipantMatrixTests
     {
         var msg = InterceptionMessage.Create(
             DateTime.UtcNow, "149.500", "div", "NE",
-            new InterceptionActionBuilder().Build(), null, "op");
+            locationDetails: null,
+            locationClass: LocationClass.NoInfo,
+            interceptionAction: new InterceptionActionBuilder().Build(),
+            note: null,
+            createdBy: "op");
 
         var matrix = ParticipantMatrix.Build(Guid.NewGuid(), [msg]);
 
