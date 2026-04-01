@@ -34,7 +34,7 @@ public sealed class ExcelImportParser
             "НВ", "нв", "невідома", "невідомий", "unknown", ""
         };
 
-    public IReadOnlyList<(ImportRowDto? Row, ImportRowErrorDto? Error)> Parse(Stream stream)
+    public static IReadOnlyList<(ImportRowDto? Row, ImportRowErrorDto? Error)> Parse(Stream stream)
     {
         using var wb = new XLWorkbook(stream);
 

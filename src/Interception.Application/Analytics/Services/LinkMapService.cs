@@ -478,7 +478,7 @@ public sealed partial class LinkMapService(IAppDbContextFactory dbFactory) : ILi
         return sharedMembers * 2 >= smallerGroupSize;
     }
 
-    private static GroupAccumulator MergeGroupComponent(IReadOnlyList<GroupAccumulator> componentGroups)
+    private static GroupAccumulator MergeGroupComponent(List<GroupAccumulator> componentGroups)
     {
         if (componentGroups.Count == 1)
             return componentGroups[0];

@@ -5,9 +5,8 @@
 using Interception.Application.Abstractions;
 using Interception.Application.Import.Abstractions;
 using Interception.Application.Import.Dtos;
-using Interception.Domain.Entities;
 using Interception.Common.Extensions;
-using Interception.Application.Abstractions;
+using Interception.Domain.Entities;
 
 namespace Interception.Application.Import.Services;
 
@@ -25,7 +24,7 @@ public sealed class InterceptionImportService(
         memoryStream.Position = 0;
 
         var parser = new ExcelImportParser();
-        var parsed = parser.Parse(memoryStream);
+        var parsed = ExcelImportParser.Parse(memoryStream);
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 

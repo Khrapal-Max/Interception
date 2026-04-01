@@ -30,7 +30,7 @@ public sealed class ExcelImportParserTests
             ws.Cell(2, 12).Value = " test note ";
         });
 
-        var result = parser.Parse(stream);
+        var result = ExcelImportParser.Parse(stream);
 
         result.Should().ContainSingle();
         var (row, error) = result.Single();
@@ -57,7 +57,7 @@ public sealed class ExcelImportParserTests
             ws.Cell(2, 11).Value = "координація дій";
         });
 
-        var result = parser.Parse(stream);
+        var result = ExcelImportParser.Parse(stream);
 
         result.Should().ContainSingle();
         var (row, error) = result.Single();
@@ -74,7 +74,7 @@ public sealed class ExcelImportParserTests
         var parser = new ExcelImportParser();
         using var stream = BuildWorkbookWithActionsSheet();
 
-        var result = parser.Parse(stream);
+        var result = ExcelImportParser.Parse(stream);
 
         var (row, error) = result.Should().ContainSingle().Subject;
         error.Should().BeNull();

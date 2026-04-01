@@ -9,13 +9,14 @@ using Interception.Domain.Entities;
 using Interception.Domain.Enums;
 using Interception.Common.Extensions;
 using Interception.Domain.Records;
+using Microsoft.Extensions.Options;
 
 namespace Interception.Application.Analytics.Services;
 
 /// <summary>
 /// Основний сервіс аналізу невідомих учасників і побудови / збагачення open-груп.
 /// </summary>
-public sealed class ParticipantCandidateAnalysisService(
+public sealed partial class ParticipantCandidateAnalysisService(
     IAppDbContextFactory dbFactory,
     IKnownParticipantSuggestionService knownParticipantSuggestionService,
     IOptions<PatternRecognitionOptions> options) : IParticipantCandidateAnalysisService
@@ -63,11 +64,11 @@ public sealed class ParticipantCandidateAnalysisService(
                     ParticipantId: p.Id,
                     Ordinal: p.Ordinal,
                     MessageId: p.InterceptionMessageId,
-                    Frequency: SemanticValueExtensions.NormalizeMeaningfulOrNull(m.Frequency),
-                    VectorSignal: SemanticValueExtensions.NormalizeMeaningfulOrNull(m.VectorSignal),
-                    PointSignal: SemanticValueExtensions.NormalizeMeaningfulOrNull(m.PointSignal),
-                    Division: SemanticValueExtensions.NormalizeMeaningfulOrNull(m.Division),
-                    Role: SemanticValueExtensions.NormalizeMeaningfulOrNull(p.Role),
+                    Frequency: StringSemanticValueExtensions.NormalizeMeaningfulOrNull(m.Frequency),
+                    VectorSignal: StringSemanticValueExtensions.NormalizeMeaningfulOrNull(m.VectorSignal),
+                    PointSignal: StringSemanticValueExtensions.NormalizeMeaningfulOrNull(m.PointSignal),
+                    Division: StringSemanticValueExtensions.NormalizeMeaningfulOrNull(m.Division),
+                    Role: StringSemanticValueExtensions.NormalizeMeaningfulOrNull(p.Role),
                     ObservedDate: m.ObservedDate,
                     KnownPartnerNames: PatternRecognitionMath.ToNormalizedSet(m.KnownPartners),
                     Labels: PatternRecognitionMath.ToNormalizedSet(m.Labels));
@@ -109,11 +110,11 @@ public sealed class ParticipantCandidateAnalysisService(
                             ParticipantId: p.Id,
                             Ordinal: p.Ordinal,
                             MessageId: p.InterceptionMessageId,
-                            Frequency: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.Frequency),
-                            VectorSignal: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.VectorSignal),
-                            PointSignal: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.PointSignal),
-                            Division: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.Division),
-                            Role: Extensions.SemanticValue.NormalizeMeaningfulOrNull(p.Role),
+                            Frequency: StringSemanticValueExtensions.NormalizeMeaningfulOrNull(m.Frequency),
+                            VectorSignal: StringSemanticValueExtensions.NormalizeMeaningfulOrNull(m.VectorSignal),
+                            PointSignal: StringSemanticValueExtensions.NormalizeMeaningfulOrNull(m.PointSignal),
+                            Division: StringSemanticValueExtensions.NormalizeMeaningfulOrNull(m.Division),
+                            Role: StringSemanticValueExtensions.NormalizeMeaningfulOrNull(p.Role),
                             ObservedDate: m.ObservedDate,
                             KnownPartnerNames: PatternRecognitionMath.ToNormalizedSet(m.KnownPartners),
                             Labels: PatternRecognitionMath.ToNormalizedSet(m.Labels));
@@ -264,11 +265,11 @@ public sealed class ParticipantCandidateAnalysisService(
 
         group.UpdateScore(update.Score, update.Reasons);
 
-        var suggestedRole = SemanticValueExtensions.NormalizeMeaningfulOrNull(update.SuggestedRole);
+        var suggestedRole = StringSemanticValueExtensions.NormalizeMeaningfulOrNull(update.SuggestedRole);
         if (!string.IsNullOrWhiteSpace(suggestedRole) && group.SuggestedRole != suggestedRole)
             group.UpdateSuggestedRole(suggestedRole);
 
-        var suggestedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(update.SuggestedDivision);
+        var suggestedDivision = StringSemanticValueExtensions.NormalizeMeaningfulOrNull(update.SuggestedDivision);
         if (!string.IsNullOrWhiteSpace(suggestedDivision) && group.SuggestedDivision != suggestedDivision)
             group.UpdateSuggestedDivision(suggestedDivision);
 
@@ -296,21 +297,21 @@ public sealed class ParticipantCandidateAnalysisService(
 
         var changed = false;
 
-        var suggestedName = SemanticValueExtensions.NormalizeMeaningfulOrNull(best?.Name);
+        var suggestedName = StringSemanticValueExtensions.NormalizeMeaningfulOrNull(best?.Name);
         if (group.SuggestedName != suggestedName)
         {
             group.UpdateSuggestedName(suggestedName);
             changed = true;
         }
 
-        var suggestedRole = SemanticValueExtensions.NormalizeMeaningfulOrNull(best?.Role);
+        var suggestedRole = StringSemanticValueExtensions.NormalizeMeaningfulOrNull(best?.Role);
         if (!string.IsNullOrWhiteSpace(suggestedRole) && group.SuggestedRole != suggestedRole)
         {
             group.UpdateSuggestedRole(suggestedRole);
             changed = true;
         }
 
-        var suggestedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(best?.Division);
+        var suggestedDivision = StringSemanticValueExtensions.NormalizeMeaningfulOrNull(best?.Division);
         if (!string.IsNullOrWhiteSpace(suggestedDivision) && group.SuggestedDivision != suggestedDivision)
         {
             group.UpdateSuggestedDivision(suggestedDivision);
@@ -320,16 +321,4 @@ public sealed class ParticipantCandidateAnalysisService(
         if (changed)
             await db.SaveChangesAsync(ct);
     }
-
-
-    /// <summary>
-    /// Описує набір змін, які треба застосувати до open-групи після аналізу.
-    /// </summary>
-    private sealed record OpenGroupUpdate(
-        Guid GroupId,
-        IReadOnlyList<ParticipantRef> NewRefs,
-        double Score,
-        PatternMatchReasons Reasons,
-        string? SuggestedRole,
-        string? SuggestedDivision);
 }

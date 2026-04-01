@@ -4,10 +4,9 @@
 
 using Interception.Application.Abstractions;
 using Interception.Application.Analytics.Abstractions;
+using Interception.Common.Extensions;
 using Interception.Domain.Entities;
 using Interception.Domain.Enums;
-using Interception.Common.Extensions;
-using Interception.Application.Abstractions;
 
 namespace Interception.Application.Analytics.Services;
 
@@ -32,11 +31,11 @@ public sealed class ParticipantCandidateGroupCommandService(IAppDbContextFactory
             .FirstOrDefaultAsync(g => g.Id == groupId && g.Status == CandidateGroupStatus.Open, ct)
             ?? throw new InvalidOperationException($"Open-групу '{groupId}' не знайдено.");
 
-        var normalizedName = SemanticValueExtensions.NormalizeMeaningfulOrNull(resolvedName)
+        var normalizedName = StringSemanticValueExtensions.NormalizeMeaningfulOrNull(resolvedName)
             ?? throw new ArgumentException("Ім'я для підтвердження обов'язкове.", nameof(resolvedName));
 
-        var normalizedRole = SemanticValueExtensions.NormalizeMeaningfulOrNull(role);
-        var normalizedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(division);
+        var normalizedRole = StringSemanticValueExtensions.NormalizeMeaningfulOrNull(role);
+        var normalizedDivision = StringSemanticValueExtensions.NormalizeMeaningfulOrNull(division);
 
         ResolvedParticipant resolvedParticipant;
 

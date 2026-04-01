@@ -7,7 +7,7 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
-namespace Interception.Infrastructure.Extensions;
+namespace Interception.Infrastructure;
 
 public static class MigrationExtension
 {

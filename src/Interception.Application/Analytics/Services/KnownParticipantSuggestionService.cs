@@ -6,6 +6,7 @@ using Interception.Application.Abstractions;
 using Interception.Application.Analytics.Abstractions;
 using Interception.Application.Analytics.Builders;
 using Interception.Application.Analytics.Dtos;
+using Interception.Common.Extensions;
 using Interception.Domain.Entities;
 using Microsoft.Extensions.Options;
 
@@ -88,7 +89,7 @@ public sealed class KnownParticipantSuggestionService(
 
         var blockedKnownNames = groupRows
             .SelectMany(x => x.KnownParticipants)
-            .Select(SemanticValueExtensions.NormalizeMeaningfulOrNull)
+            .Select(StringSemanticValueExtensions.NormalizeMeaningfulOrNull)
             .Where(x => x is not null)
             .Cast<string>()
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -114,7 +115,7 @@ public sealed class KnownParticipantSuggestionService(
         return [.. knownRows
             .Where(x =>
             {
-                var normalized = Extensions.SemanticValue.NormalizeMeaningfulOrNull(x.Name);
+                var normalized = StringSemanticValueExtensions.NormalizeMeaningfulOrNull(x.Name);
                 return normalized is not null && !blockedKnownNames.Contains(normalized);
             })
             .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)

@@ -7,10 +7,9 @@ using Interception.Application.Analytics.Abstractions;
 using Interception.Application.Analytics.Builders;
 using Interception.Application.Analytics.Dtos;
 using Interception.Application.Interceptions.Dtos;
+using Interception.Common.Extensions;
 using Interception.Domain.Entities;
 using Interception.Domain.Enums;
-using Interception.Common.Extensions;
-using Interception.Application.Abstractions;
 
 namespace Interception.Application.Analytics.Services;
 
@@ -96,9 +95,9 @@ public sealed class ParticipantCandidateGroupQueryService(IAppDbContextFactory d
                 ParticipantId = r.ParticipantId,
                 Ordinal = r.Ordinal,
                 ObservedDate = msg?.ObservedDate ?? default,
-                Frequency = SemanticValueExtensions.NormalizeMeaningfulOrNull(msg?.Frequency),
-                VectorSignal = SemanticValueExtensions.NormalizeMeaningfulOrNull(msg?.VectorSignal),
-                Division = SemanticValueExtensions.NormalizeMeaningfulOrNull(msg?.Division),
+                Frequency = StringSemanticValueExtensions.NormalizeMeaningfulOrNull(msg?.Frequency),
+                VectorSignal = StringSemanticValueExtensions.NormalizeMeaningfulOrNull(msg?.VectorSignal),
+                Division = StringSemanticValueExtensions.NormalizeMeaningfulOrNull(msg?.Division),
             };
         }).ToList();
 
