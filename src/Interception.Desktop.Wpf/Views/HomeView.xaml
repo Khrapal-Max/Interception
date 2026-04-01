@@ -12,64 +12,126 @@
             <TextBlock Margin="0,8,0,14" Text="{Binding Description}" Style="{StaticResource PageDescriptionTextStyle}" />
         </StackPanel>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <WrapPanel>
-                <Button Style="{StaticResource HomeMenuBlockLargeStyle}" Command="{Binding DataContext.NavigateObservationsCommand, RelativeSource={RelativeSource AncestorType=Window}}">
-                    <StackPanel>
-                        <TextBlock Text="Спостереження" Style="{StaticResource MenuBlockTitleStyle}" />
-                        <TextBlock Text="Реєстр спостережень" Style="{StaticResource MenuBlockSubtitleStyle}" />
-                    </StackPanel>
-                </Button>
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
-                <Button Style="{StaticResource HomeMenuBlockMediumStyle}" Command="{Binding DataContext.NavigateAnalyticsCommand, RelativeSource={RelativeSource AncestorType=Window}}">
-                    <StackPanel>
-                        <TextBlock Text="Групи на розгляд" Style="{StaticResource MenuBlockTitleStyle}" />
-                        <TextBlock Text="Аналітика" Style="{StaticResource MenuBlockSubtitleStyle}" />
-                    </StackPanel>
-                </Button>
+            <Button Grid.Row="0"
+                    Grid.Column="0"
+                    Grid.RowSpan="2"
+                    Grid.ColumnSpan="5"
+                    Margin="0,0,10,10"
+                    Style="{StaticResource HomeTileObservationsStyle}"
+                    Command="{Binding DataContext.NavigateObservationsCommand, RelativeSource={RelativeSource AncestorType=Window}}">
+                <StackPanel>
+                    <TextBlock Text="Спостереження" Style="{StaticResource MenuBlockTitleStyle}" />
+                    <TextBlock Text="Реєстр спостережень" Style="{StaticResource MenuBlockSubtitleStyle}" />
+                </StackPanel>
+            </Button>
 
-                <Button Style="{StaticResource HomeMenuBlockSmallStyle}" Command="{Binding DataContext.NavigateAnalyticsCommand, RelativeSource={RelativeSource AncestorType=Window}}">
-                    <StackPanel>
-                        <TextBlock Text="Карта зв'язків" Style="{StaticResource MenuBlockTitleStyle}" />
-                        <TextBlock Text="Аналітика" Style="{StaticResource MenuBlockSubtitleStyle}" />
-                    </StackPanel>
-                </Button>
+            <Button Grid.Row="0"
+                    Grid.Column="5"
+                    Grid.ColumnSpan="4"
+                    Margin="0,0,10,10"
+                    Style="{StaticResource HomeTileCandidatesStyle}"
+                    Command="{Binding DataContext.NavigateAnalyticsCommand, RelativeSource={RelativeSource AncestorType=Window}}">
+                <StackPanel>
+                    <TextBlock Text="Групи на розгляд" Style="{StaticResource MenuBlockTitleStyle}" />
+                    <TextBlock Text="Аналітика" Style="{StaticResource MenuBlockSubtitleStyle}" />
+                </StackPanel>
+            </Button>
 
-                <Button Style="{StaticResource HomeMenuBlockMediumStyle}" Command="{Binding DataContext.NavigateReportsCommand, RelativeSource={RelativeSource AncestorType=Window}}">
-                    <StackPanel>
-                        <TextBlock Text="Звіт по підрозділах" Style="{StaticResource MenuBlockTitleStyle}" />
-                        <TextBlock Text="Звіти" Style="{StaticResource MenuBlockSubtitleStyle}" />
-                    </StackPanel>
-                </Button>
+            <Button Grid.Row="0"
+                    Grid.Column="9"
+                    Grid.ColumnSpan="3"
+                    Margin="0,0,0,10"
+                    Style="{StaticResource HomeTileLinkMapStyle}"
+                    Command="{Binding DataContext.NavigateAnalyticsCommand, RelativeSource={RelativeSource AncestorType=Window}}">
+                <StackPanel>
+                    <TextBlock Text="Карта зв'язків" Style="{StaticResource MenuBlockTitleStyle}" />
+                    <TextBlock Text="Аналітика" Style="{StaticResource MenuBlockSubtitleStyle}" />
+                </StackPanel>
+            </Button>
 
-                <Button Style="{StaticResource HomeMenuBlockSmallStyle}" Command="{Binding DataContext.NavigateReportsCommand, RelativeSource={RelativeSource AncestorType=Window}}">
-                    <StackPanel>
-                        <TextBlock Text="Картина дня" Style="{StaticResource MenuBlockTitleStyle}" />
-                        <TextBlock Text="Звіти" Style="{StaticResource MenuBlockSubtitleStyle}" />
-                    </StackPanel>
-                </Button>
+            <Button Grid.Row="1"
+                    Grid.Column="5"
+                    Grid.ColumnSpan="5"
+                    Margin="0,0,10,10"
+                    Style="{StaticResource HomeTileReportsStyle}"
+                    Command="{Binding DataContext.NavigateReportsCommand, RelativeSource={RelativeSource AncestorType=Window}}">
+                <StackPanel>
+                    <TextBlock Text="Звіт по підрозділах" Style="{StaticResource MenuBlockTitleStyle}" />
+                    <TextBlock Text="Звіти" Style="{StaticResource MenuBlockSubtitleStyle}" />
+                </StackPanel>
+            </Button>
 
-                <Button Style="{StaticResource HomeMenuBlockSmallStyle}" Command="{Binding DataContext.NavigateRegistriesCommand, RelativeSource={RelativeSource AncestorType=Window}}">
-                    <StackPanel>
-                        <TextBlock Text="Підрозділи" Style="{StaticResource MenuBlockTitleStyle}" />
-                        <TextBlock Text="Регістри" Style="{StaticResource MenuBlockSubtitleStyle}" />
-                    </StackPanel>
-                </Button>
+            <Button Grid.Row="1"
+                    Grid.Column="10"
+                    Grid.ColumnSpan="2"
+                    Margin="0,0,0,10"
+                    Style="{StaticResource HomeTileDayStyle}"
+                    Command="{Binding DataContext.NavigateReportsCommand, RelativeSource={RelativeSource AncestorType=Window}}">
+                <StackPanel>
+                    <TextBlock Text="Картина дня" Style="{StaticResource MenuBlockTitleStyle}" />
+                    <TextBlock Text="Звіти" Style="{StaticResource MenuBlockSubtitleStyle}" />
+                </StackPanel>
+            </Button>
 
-                <Button Style="{StaticResource HomeMenuBlockSmallStyle}" Command="{Binding DataContext.NavigateRegistriesCommand, RelativeSource={RelativeSource AncestorType=Window}}">
-                    <StackPanel>
-                        <TextBlock Text="Особи" Style="{StaticResource MenuBlockTitleStyle}" />
-                        <TextBlock Text="Регістри" Style="{StaticResource MenuBlockSubtitleStyle}" />
-                    </StackPanel>
-                </Button>
+            <Button Grid.Row="2"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="4"
+                    Grid.RowSpan="2"
+                    Margin="0,0,10,0"
+                    Style="{StaticResource HomeTileRegistryStyle}"
+                    Command="{Binding DataContext.NavigateRegistriesCommand, RelativeSource={RelativeSource AncestorType=Window}}">
+                <StackPanel>
+                    <TextBlock Text="Підрозділи" Style="{StaticResource MenuBlockTitleStyle}" />
+                    <TextBlock Text="Регістри" Style="{StaticResource MenuBlockSubtitleStyle}" />
+                </StackPanel>
+            </Button>
 
-                <Button Style="{StaticResource HomeMenuBlockSmallStyle}" Command="{Binding DataContext.NavigateRegistriesCommand, RelativeSource={RelativeSource AncestorType=Window}}">
-                    <StackPanel>
-                        <TextBlock Text="Довідник дій" Style="{StaticResource MenuBlockTitleStyle}" />
-                        <TextBlock Text="Регістри" Style="{StaticResource MenuBlockSubtitleStyle}" />
-                    </StackPanel>
-                </Button>
-            </WrapPanel>
-        </ScrollViewer>
+            <Button Grid.Row="2"
+                    Grid.Column="4"
+                    Grid.ColumnSpan="4"
+                    Margin="0,0,10,10"
+                    Style="{StaticResource HomeTileRegistryStyle}"
+                    Command="{Binding DataContext.NavigateRegistriesCommand, RelativeSource={RelativeSource AncestorType=Window}}">
+                <StackPanel>
+                    <TextBlock Text="Особи" Style="{StaticResource MenuBlockTitleStyle}" />
+                    <TextBlock Text="Регістри" Style="{StaticResource MenuBlockSubtitleStyle}" />
+                </StackPanel>
+            </Button>
+
+            <Button Grid.Row="2"
+                    Grid.Column="8"
+                    Grid.ColumnSpan="4"
+                    Grid.RowSpan="2"
+                    Margin="0,0,0,0"
+                    Style="{StaticResource HomeTileRegistryStyle}"
+                    Command="{Binding DataContext.NavigateRegistriesCommand, RelativeSource={RelativeSource AncestorType=Window}}">
+                <StackPanel>
+                    <TextBlock Text="Довідник дій" Style="{StaticResource MenuBlockTitleStyle}" />
+                    <TextBlock Text="Регістри" Style="{StaticResource MenuBlockSubtitleStyle}" />
+                </StackPanel>
+            </Button>
+        </Grid>
     </Grid>
 </UserControl>

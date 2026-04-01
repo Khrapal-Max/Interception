@@ -47,9 +47,17 @@
                 BorderBrush="#263449"
                 BorderThickness="0,0,0,1">
             <DockPanel Margin="16,0">
-                <TextBlock Text="Interception"
-                           Style="{StaticResource AppTitleTextStyle}"
-                           DockPanel.Dock="Left" />
+                <StackPanel Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            DockPanel.Dock="Left">
+                    <TextBlock Text="🐦"
+                               Margin="0,0,8,0"
+                               FontSize="18"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="Interception"
+                               Style="{StaticResource AppTitleTextStyle}"
+                               VerticalAlignment="Center" />
+                </StackPanel>
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
                     <Button Content="Налаштування" Style="{StaticResource TopBarButtonStyle}" Command="{Binding NavigateSettingsCommand}" />
                 </StackPanel>
