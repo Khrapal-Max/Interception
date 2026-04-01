@@ -8,7 +8,8 @@
         Height="800"
         MinWidth="1100"
         MinHeight="700"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        Icon="Icons/favicon.ico">
     <Window.Resources>
         <DataTemplate DataType="{x:Type viewModels:HomeViewModel}">
             <views:HomeView />
@@ -43,23 +44,22 @@
 
         <Border Grid.Row="0"
                 Grid.ColumnSpan="2"
-                Background="{StaticResource Brush.TopBar}"
+                Background="#6DA67E"
                 BorderBrush="#263449"
                 BorderThickness="0,0,0,1">
             <DockPanel Margin="16,0">
                 <StackPanel Orientation="Horizontal"
                             VerticalAlignment="Center"
-                            DockPanel.Dock="Left">
-                    <TextBlock Text="🐦"
-                               Margin="0,0,8,0"
-                               FontSize="18"
-                               VerticalAlignment="Center" />
+                            DockPanel.Dock="Left" 
+                            Background="#6DA67E">
+                    <Image Width="18"
+                           Height="18"
+                           Margin="0,0,8,0"
+                           VerticalAlignment="Center"
+                           Source="/icons/favicon.ico"/>
                     <TextBlock Text="Interception"
                                Style="{StaticResource AppTitleTextStyle}"
                                VerticalAlignment="Center" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                    <Button Content="Налаштування" Style="{StaticResource TopBarButtonStyle}" Command="{Binding NavigateSettingsCommand}" />
                 </StackPanel>
             </DockPanel>
         </Border>

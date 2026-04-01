@@ -8,6 +8,40 @@
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Resource Include="Icons\android-chrome-192x192.png">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Resource>
+    <Resource Include="Icons\android-chrome-512x512.png">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Resource>
+    <Resource Include="Icons\apple-touch-icon.png">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Resource>
+    <Resource Include="Icons\favicon-16x16.png">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Resource>
+    <Resource Include="Icons\favicon-32x32.png">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Resource>
+    <Resource Include="Icons\favicon-48x48.png">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Resource>
+    <Resource Include="Icons\favicon-64x64.png">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Resource>
+    <Resource Include="Icons\favicon.ico">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Resource>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Interception.Application\Interception.Application.csproj" />
     <ProjectReference Include="..\Interception.Infrastructure\Interception.Infrastructure.csproj" />
   </ItemGroup>
