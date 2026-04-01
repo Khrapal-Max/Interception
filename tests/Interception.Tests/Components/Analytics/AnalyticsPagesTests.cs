@@ -21,49 +21,64 @@ namespace Interception.Tests.Components.Analytics;
 
 public sealed class CandidatesPageTests : BunitContext
 {
+    private readonly IParticipantCandidateGroupQueryService _queryService;
+    private readonly IParticipantCandidateAnalysisService _analysisService;
+
+    public CandidatesPageTests()
+    {
+        _queryService = Substitute.For<IParticipantCandidateGroupQueryService>();
+        _analysisService = Substitute.For<IParticipantCandidateAnalysisService>();
+
+        Services.AddSingleton(_queryService);
+        Services.AddSingleton(_analysisService);
+        Services.AddSingleton<ToastService>();
+
+        ComponentFactories.AddStub<CandidateGroupDrawer>();
+    }
+
     [Fact]
     public void Render_EmptyData_ShowsEmptyStateAndLoadsData()
     {
-        var query = Substitute.For<IParticipantCandidateGroupQueryService>();
-        query.GetGroupsByStatusAsync(Arg.Any<CandidateGroupStatus>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-             .Returns(new PagedResultDto<CandidateGroupDto>([], 0, 1, 50));
+        _queryService.GetGroupsByStatusAsync(Arg.Any<CandidateGroupStatus>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new PagedResultDto<CandidateGroupDto>([], 0, 1, 50));
 
-        var analysis = Substitute.For<IParticipantCandidateAnalysisService>();
-        analysis.RunAsync(Arg.Any<CancellationToken>()).Returns(0);
+        _analysisService.RunAsync(Arg.Any<CancellationToken>()).Returns(0);
 
-        Services.AddSingleton(query);
-        Services.AddSingleton(analysis);
-        Services.AddSingleton<ToastService>();
-        ComponentFactories.AddStub<CandidateGroupDrawer>();
-
-        var cut = Render<CandidatesPage>();
+        var cut = RenderComponent<CandidatesPage>();
 
         cut.Markup.Should().Contain("Груп для розгляду немає");
         cut.Markup.Should().Contain("Запустити аналіз");
 
-        query.Received(1).GetGroupsByStatusAsync(CandidateGroupStatus.Open, 1, 1, Arg.Any<CancellationToken>());
-        query.Received(1).GetGroupsByStatusAsync(CandidateGroupStatus.Open, 1, 50, Arg.Any<CancellationToken>());
+        _queryService.Received(1).GetGroupsByStatusAsync(CandidateGroupStatus.Open, 1, 1, Arg.Any<CancellationToken>());
+        _queryService.Received(1).GetGroupsByStatusAsync(CandidateGroupStatus.Open, 1, 50, Arg.Any<CancellationToken>());
     }
 }
 
 public sealed class LinkMapPageTests : BunitContext
 {
+    private readonly ILinkMapService _linkMapService;
+
+    public LinkMapPageTests()
+    {
+        _linkMapService = Substitute.For<ILinkMapService>();
+
+        Services.AddSingleton(_linkMapService);
+        Services.AddSingleton<ToastService>();
+
+        ComponentFactories.AddStub<LinkMapGroupDrawer>();
+    }
+
     [Fact]
     public void Render_EmptyMap_ShowsEmptyStateAndLoadsMap()
     {
-        var service = Substitute.For<ILinkMapService>();
-        service.BuildAsync(Arg.Any<DateTime?>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+        _linkMapService.BuildAsync(Arg.Any<DateTime?>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
             .Returns(new LinkMapDto([]));
 
-        Services.AddSingleton(service);
-        Services.AddSingleton<ToastService>();
-        ComponentFactories.AddStub<LinkMapGroupDrawer>();
-
-        var cut = Render<LinkMapPage>();
+        var cut = RenderComponent<LinkMapPage>();
 
         cut.Markup.Should().Contain("За поточним періодом груп не знайдено.");
         cut.Find("button.btn.btn-primary").TextContent.Should().Contain("Оновити");
 
-        service.Received(1).BuildAsync(Arg.Any<DateTime?>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>());
+        _linkMapService.Received(1).BuildAsync(Arg.Any<DateTime?>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>());
     }
 }

@@ -14,7 +14,7 @@ public sealed class ReportsToolbarTests : BunitContext
     [Fact]
     public void Render_Default_RendersTwoNavigationButtons()
     {
-        var cut = Render<ReportsToolbar>();
+        var cut = RenderComponent<ReportsToolbar>();
 
         var links = cut.FindAll(".toolbar-start a");
         links.Should().HaveCount(2);
@@ -23,7 +23,7 @@ public sealed class ReportsToolbarTests : BunitContext
     [Fact]
     public void ActiveSection_Divisions_MarksDivisionsButtonAsPrimary()
     {
-        var cut = Render<ReportsToolbar>(p => p
+        var cut = RenderComponent<ReportsToolbar>(p => p
             .Add(x => x.ActiveSection, "divisions"));
 
         var divisions = cut.Find("a[href='/reports/divisions']");
@@ -33,7 +33,7 @@ public sealed class ReportsToolbarTests : BunitContext
         dayPicture.ClassList.Should().Contain("btn-outline-secondary");
     }
 
-  /*  [Fact]
+    [Fact]
     public void Render_WithMetaAndActions_RendersBothFragments()
     {
         var cut = RenderComponent<ReportsToolbar>(p => p
@@ -43,4 +43,4 @@ public sealed class ReportsToolbarTests : BunitContext
         cut.Markup.Should().Contain("META");
         cut.Markup.Should().Contain("ACTION");
     }
-}*/
+}

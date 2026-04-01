@@ -20,42 +20,56 @@ namespace Interception.Tests.Components.Registry;
 
 public sealed class FrequencyDivisionRegistryTests : BunitContext
 {
+    private readonly IFrequencyDivisionService _frequencyDivisionService;
+
+    public FrequencyDivisionRegistryTests()
+    {
+        _frequencyDivisionService = Substitute.For<IFrequencyDivisionService>();
+
+        Services.AddSingleton(_frequencyDivisionService);
+        Services.AddSingleton<ToastService>();
+
+        ComponentFactories.AddStub<FrequencyDivisionDrawer>();
+    }
+
     [Fact]
     public void Render_EmptyData_ShowsEmptyStateAndLoadsData()
     {
-        var service = Substitute.For<IFrequencyDivisionService>();
-        service.GetAllAsync(Arg.Any<CancellationToken>()).Returns(Array.Empty<FrequencySuggestionDto>());
+        _frequencyDivisionService.GetAllAsync(Arg.Any<CancellationToken>()).Returns(Array.Empty<FrequencySuggestionDto>());
 
-        Services.AddSingleton(service);
-        Services.AddSingleton<ToastService>();
-        ComponentFactories.AddStub<FrequencyDivisionDrawer>();
-
-        var cut = Render<FrequencyDivisionRegistry>();
+        var cut = RenderComponent<FrequencyDivisionRegistry>();
 
         cut.Markup.Should().Contain("Частот ще немає");
         cut.Markup.Should().Contain("Оновити");
 
-        service.Received(1).GetAllAsync(Arg.Any<CancellationToken>());
+        _frequencyDivisionService.Received(1).GetAllAsync(Arg.Any<CancellationToken>());
     }
 }
 
 public sealed class PersonsRegistryTests : BunitContext
 {
+    private readonly IPersonRegistryService _personRegistryService;
+
+    public PersonsRegistryTests()
+    {
+        _personRegistryService = Substitute.For<IPersonRegistryService>();
+
+        Services.AddSingleton(_personRegistryService);
+        Services.AddSingleton<ToastService>();
+
+        ComponentFactories.AddStub<PersonRegistryDrawer>();
+    }
+
     [Fact]
     public void Render_EmptyData_ShowsEmptyStateAndLoadsData()
     {
-        var service = Substitute.For<IPersonRegistryService>();
-        service.GetAllAsync(Arg.Any<CancellationToken>()).Returns(Array.Empty<PersonRegistryItemDto>());
-
-        Services.AddSingleton(service);
-        Services.AddSingleton<ToastService>();
-        ComponentFactories.AddStub<PersonRegistryDrawer>();
+        _personRegistryService.GetAllAsync(Arg.Any<CancellationToken>()).Returns(Array.Empty<PersonRegistryItemDto>());
 
         var cut = RenderComponent<PersonsRegistry>();
 
         cut.Markup.Should().Contain("Осіб у реєстрі ще немає");
         cut.Markup.Should().Contain("Оновити");
 
-        service.Received(1).GetAllAsync(Arg.Any<CancellationToken>());
+        _personRegistryService.Received(1).GetAllAsync(Arg.Any<CancellationToken>());
     }
 }
