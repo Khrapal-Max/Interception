@@ -5,6 +5,8 @@
 using Interception.Application.Interceptions.Abstractions;
 using Interception.Application.Interceptions.Dtos;
 using Interception.Domain.Entities;
+using Interception.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Interceptions.Services;
 

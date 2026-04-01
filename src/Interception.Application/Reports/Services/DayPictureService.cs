@@ -5,6 +5,8 @@
 using Interception.Application.Reports.Abstractions;
 using Interception.Application.Reports.Builders;
 using Interception.Application.Reports.Dtos;
+using Interception.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Reports.Services;
 

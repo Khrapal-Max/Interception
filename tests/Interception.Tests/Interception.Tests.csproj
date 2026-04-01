@@ -26,6 +26,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Interception.Application\Interception.Application.csproj" />
+    <ProjectReference Include="..\..\src\Interception.Common\Interception.Common.csproj" />
+    <ProjectReference Include="..\..\src\Interception.Domain\Interception.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Interception.Infrastructure\Interception.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Interception.Web.UI\Interception.Web.UI.csproj" />
   </ItemGroup>
 

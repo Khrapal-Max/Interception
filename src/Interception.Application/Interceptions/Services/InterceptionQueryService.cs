@@ -8,6 +8,8 @@ using Interception.Application.Interceptions.Dtos;
 using Interception.Application.Registry.Builders;
 using Interception.Domain.Entities;
 using Interception.Domain.Enums;
+using Interception.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Interceptions.Services;
 

@@ -6,6 +6,8 @@ using Interception.Application.Reports.Abstractions;
 using Interception.Application.Reports.Dtos;
 using Interception.Domain.Entities;
 using Interception.Domain.Enums;
+using Interception.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Reports.Services;
 

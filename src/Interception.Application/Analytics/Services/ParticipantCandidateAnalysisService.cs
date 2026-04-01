@@ -9,6 +9,9 @@ using Interception.Domain.Enums;
 using Interception.Common.Extensions;
 using Interception.Domain.Records;
 using Microsoft.Extensions.Options;
+using Interception.Infrastructure;
+using Interception.Application.Analytics.Services.Builders;
+using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Analytics.Services;
 

@@ -6,7 +6,7 @@ using Interception.Application.Analytics.Builders;
 using Interception.Common.Extensions;
 using Interception.Domain.Entities;
 
-namespace Interception.Application.Analytics.Services;
+namespace Interception.Application.Analytics.Services.Builders;
 
 /// <summary>
 /// Спільні helper-методи для pivot/scoring сценаріїв pattern recognition.

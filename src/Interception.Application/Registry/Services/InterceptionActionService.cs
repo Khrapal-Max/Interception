@@ -4,6 +4,8 @@
 
 using Interception.Application.Registry.Abstractions;
 using Interception.Domain.Entities;
+using Interception.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Registry.Services;
 

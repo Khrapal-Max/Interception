@@ -6,6 +6,8 @@ using Interception.Application.Registry.Abstractions;
 using Interception.Application.Registry.Dtos;
 using Interception.Common.Extensions;
 using Interception.Domain.Entities;
+using Interception.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Registry.Services;
 
