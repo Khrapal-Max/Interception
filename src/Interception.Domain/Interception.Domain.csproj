@@ -5,7 +5,4 @@
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Interception.Common\Interception.Common.csproj" />
-  </ItemGroup>
 </Project>
