@@ -2,10 +2,10 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
+using Interception.Application.Abstractions;
 using Interception.Application.Interceptions.Abstractions;
 using Interception.Application.Interceptions.Dtos;
 using Interception.Domain.Entities;
-using Interception.Application.Abstractions;
 
 namespace Interception.Application.Interceptions.Services;
 

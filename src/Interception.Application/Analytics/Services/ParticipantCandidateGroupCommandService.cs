@@ -2,6 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
+using Interception.Application.Abstractions;
 using Interception.Application.Analytics.Abstractions;
 using Interception.Domain.Entities;
 using Interception.Domain.Enums;

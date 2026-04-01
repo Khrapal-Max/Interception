@@ -2,9 +2,9 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
+using Interception.Application.Abstractions;
 using Interception.Application.Analytics.Dtos;
 using Interception.Application.Registry.Abstractions;
-using Interception.Application.Abstractions;
 
 namespace Interception.Application.Registry.Services;
 
