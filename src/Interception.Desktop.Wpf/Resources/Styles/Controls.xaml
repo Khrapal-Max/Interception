@@ -50,13 +50,13 @@
         <Setter Property="Padding" Value="20" />
     </Style>
 
-    <Style x:Key="HomeMenuBlockBaseStyle" TargetType="Button">
+    <Style x:Key="HomeTileBaseStyle" TargetType="Button">
         <Setter Property="Foreground" Value="#E8EDF2" />
         <Setter Property="BorderBrush" Value="#45515D" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Background" Value="#2B3239" />
-        <Setter Property="Padding" Value="12" />
-        <Setter Property="Margin" Value="0,0,12,12" />
+        <Setter Property="Padding" Value="14" />
+        <Setter Property="Margin" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="VerticalContentAlignment" Value="Bottom" />
         <Setter Property="Cursor" Value="Hand" />
@@ -76,25 +76,34 @@
         </Style.Triggers>
     </Style>
 
-    <Style x:Key="HomeMenuBlockLargeStyle" TargetType="Button" BasedOn="{StaticResource HomeMenuBlockBaseStyle}">
-        <Setter Property="Width" Value="520" />
-        <Setter Property="Height" Value="180" />
+    <Style x:Key="HomeTileObservationsStyle" TargetType="Button" BasedOn="{StaticResource HomeTileBaseStyle}">
         <Setter Property="Background" Value="#325067" />
         <Setter Property="BorderBrush" Value="#44749D" />
     </Style>
 
-    <Style x:Key="HomeMenuBlockMediumStyle" TargetType="Button" BasedOn="{StaticResource HomeMenuBlockBaseStyle}">
-        <Setter Property="Width" Value="340" />
-        <Setter Property="Height" Value="180" />
+    <Style x:Key="HomeTileCandidatesStyle" TargetType="Button" BasedOn="{StaticResource HomeTileBaseStyle}">
         <Setter Property="Background" Value="#5A4769" />
         <Setter Property="BorderBrush" Value="#8F63A7" />
     </Style>
 
-    <Style x:Key="HomeMenuBlockSmallStyle" TargetType="Button" BasedOn="{StaticResource HomeMenuBlockBaseStyle}">
-        <Setter Property="Width" Value="250" />
-        <Setter Property="Height" Value="84" />
-        <Setter Property="Background" Value="#2E5A52" />
-        <Setter Property="BorderBrush" Value="#2F8B7D" />
+    <Style x:Key="HomeTileLinkMapStyle" TargetType="Button" BasedOn="{StaticResource HomeTileBaseStyle}">
+        <Setter Property="Background" Value="#2F5D66" />
+        <Setter Property="BorderBrush" Value="#4A94A1" />
+    </Style>
+
+    <Style x:Key="HomeTileReportsStyle" TargetType="Button" BasedOn="{StaticResource HomeTileBaseStyle}">
+        <Setter Property="Background" Value="#66522F" />
+        <Setter Property="BorderBrush" Value="#9F7A34" />
+    </Style>
+
+    <Style x:Key="HomeTileDayStyle" TargetType="Button" BasedOn="{StaticResource HomeTileBaseStyle}">
+        <Setter Property="Background" Value="#4E5B2C" />
+        <Setter Property="BorderBrush" Value="#7FA03B" />
+    </Style>
+
+    <Style x:Key="HomeTileRegistryStyle" TargetType="Button" BasedOn="{StaticResource HomeTileBaseStyle}">
+        <Setter Property="Background" Value="#3A415B" />
+        <Setter Property="BorderBrush" Value="#6679B2" />
     </Style>
 
     <Style x:Key="MenuBlockTitleStyle" TargetType="TextBlock">

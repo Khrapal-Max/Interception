@@ -11,4 +11,5 @@
     <ProjectReference Include="..\Interception.Application\Interception.Application.csproj" />
     <ProjectReference Include="..\Interception.Infrastructure\Interception.Infrastructure.csproj" />
   </ItemGroup>
+
 </Project>

@@ -5,6 +5,6 @@ namespace Interception.Desktop.Wpf.ViewModels;
 /// </summary>
 public sealed class ReportsViewModel
 {
-    public string Title => "Reports";
+    public string Title => "Звіти";
     public string Description => "Формування та перегляд звітів з поточних даних.";
 }
