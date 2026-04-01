@@ -37,7 +37,7 @@ public sealed class FrequencyDivisionRegistryTests : BunitContext
     {
         _frequencyDivisionService.GetAllAsync(Arg.Any<CancellationToken>()).Returns(Array.Empty<FrequencySuggestionDto>());
 
-        var cut = RenderComponent<FrequencyDivisionRegistry>();
+        var cut = Render<FrequencyDivisionRegistry>();
 
         cut.Markup.Should().Contain("Частот ще немає");
         cut.Markup.Should().Contain("Оновити");
@@ -65,7 +65,7 @@ public sealed class PersonsRegistryTests : BunitContext
     {
         _personRegistryService.GetAllAsync(Arg.Any<CancellationToken>()).Returns(Array.Empty<PersonRegistryItemDto>());
 
-        var cut = RenderComponent<PersonsRegistry>();
+        var cut = Render<PersonsRegistry>();
 
         cut.Markup.Should().Contain("Осіб у реєстрі ще немає");
         cut.Markup.Should().Contain("Оновити");

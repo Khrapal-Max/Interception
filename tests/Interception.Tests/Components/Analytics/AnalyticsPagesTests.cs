@@ -44,7 +44,7 @@ public sealed class CandidatesPageTests : BunitContext
 
         _analysisService.RunAsync(Arg.Any<CancellationToken>()).Returns(0);
 
-        var cut = RenderComponent<CandidatesPage>();
+        var cut = Render<CandidatesPage>();
 
         cut.Markup.Should().Contain("Груп для розгляду немає");
         cut.Markup.Should().Contain("Запустити аналіз");
@@ -74,7 +74,7 @@ public sealed class LinkMapPageTests : BunitContext
         _linkMapService.BuildAsync(Arg.Any<DateTime?>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
             .Returns(new LinkMapDto([]));
 
-        var cut = RenderComponent<LinkMapPage>();
+        var cut = Render<LinkMapPage>();
 
         cut.Markup.Should().Contain("За поточним періодом груп не знайдено.");
         cut.Find("button.btn.btn-primary").TextContent.Should().Contain("Оновити");

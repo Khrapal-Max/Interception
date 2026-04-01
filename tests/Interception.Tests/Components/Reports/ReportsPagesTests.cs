@@ -32,7 +32,7 @@ public sealed class DivisionReportPageTests : BunitContext
         _divisionReportService.BuildAsync(Arg.Any<DateTime?>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
             .Returns(new DivisionReportDto([]));
 
-        var cut = RenderComponent<DivisionReportPage>();
+        var cut = Render<DivisionReportPage>();
 
         cut.Markup.Should().Contain("Даних для звіту немає");
         cut.Markup.Should().Contain("Останні 7 днів");
@@ -59,7 +59,7 @@ public sealed class DayPicturePageTests : BunitContext
         _dayPictureService.BuildAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
             .Returns(new DayPictureDto(DateOnly.FromDateTime(DateTime.Today), 0, []));
 
-        var cut = RenderComponent<DayPicturePage>();
+        var cut = Render<DayPicturePage>();
 
         cut.Markup.Should().Contain("За вибраний день спостережень не знайдено.");
         cut.Markup.Should().Contain("Сьогодні");
