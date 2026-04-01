@@ -27,7 +27,6 @@ public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<Ap
         CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
 
         var group = await db.ParticipantCandidateGroups
             .FirstOrDefaultAsync(g => g.Id == groupId && g.Status == CandidateGroupStatus.Open, ct)
@@ -69,7 +68,6 @@ public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<Ap
         group.Confirm(normalizedName, resolvedBy, resolvedParticipant.Id);
 
         await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
     }
 
     /// <inheritdoc />
