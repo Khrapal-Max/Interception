@@ -3,10 +3,10 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Application.Analytics.Services;
-using Interception.UI.Domain;
-using Interception.UI.Domain.Enums;
-using Interception.UI.Domain.Records;
+using Interception.Application.Analytics.Services;
+using Interception.Domain;
+using Interception.Domain.Enums;
+using Interception.Domain.Records;
 
 namespace Interception.Tests.Application.Analytics;
 

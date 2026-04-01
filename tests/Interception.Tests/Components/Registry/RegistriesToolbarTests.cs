@@ -4,7 +4,7 @@
 
 using Bunit;
 using FluentAssertions;
-using Interception.UI.Components.Pages.Registry.Toolbar;
+using Interception.Web.UI.Components.Pages.Registry.Toolbar;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 

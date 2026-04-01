@@ -3,8 +3,8 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Application.Analytics.Services;
-using Interception.UI.Domain;
+using Interception.Application.Analytics.Services;
+using Interception.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 

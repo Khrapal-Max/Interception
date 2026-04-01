@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Interception.UI.Domain;
+using Interception.Domain;
 
 namespace Interception.Tests.Domain;
 

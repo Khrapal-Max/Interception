@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Application.Interceptions.TextBlock;
+using Interception.Application.Interceptions.TextBlock;
 
 namespace Interception.Tests.Application.Interceptions.TextBlock;
 

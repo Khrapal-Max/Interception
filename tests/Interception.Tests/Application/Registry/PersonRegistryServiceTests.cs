@@ -3,11 +3,11 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Application.Registry.Dtos;
-using Interception.UI.Application.Registry.Services;
-using Interception.UI.Domain;
-using Interception.UI.Domain.Records;
-using Interception.UI.Infrastructure;
+using Interception.Application.Registry.Dtos;
+using Interception.Application.Registry.Services;
+using Interception.Domain;
+using Interception.Domain.Records;
+using Interception.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests.Application.Registry;

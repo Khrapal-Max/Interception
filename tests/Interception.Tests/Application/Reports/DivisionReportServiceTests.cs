@@ -3,10 +3,10 @@
 //----------------------------------------------------------------------------- 
 
 using FluentAssertions;
-using Interception.UI.Application.Reports.Services;
-using Interception.UI.Domain;
-using Interception.UI.Domain.Records;
-using Interception.UI.Infrastructure;
+using Interception.Application.Reports.Services;
+using Interception.Domain;
+using Interception.Domain.Records;
+using Interception.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests.Application.Reports;

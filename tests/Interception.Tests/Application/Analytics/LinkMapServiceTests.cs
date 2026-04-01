@@ -3,9 +3,9 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Application.Analytics.Services;
-using Interception.UI.Domain;
-using Interception.UI.Infrastructure;
+using Interception.Application.Analytics.Services;
+using Interception.Domain;
+using Interception.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests.Application.Analytics;

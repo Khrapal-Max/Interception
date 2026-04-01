@@ -4,10 +4,10 @@
 
 using Bunit;
 using FluentAssertions;
-using Interception.UI.Application.Interceptions.Abstractions;
-using Interception.UI.Application.Interceptions.Dtos;
-using Interception.UI.Application.Toasts;
-using Interception.UI.Components.Pages.Interceptions.Drawers;
+using Interception.Application.Interceptions.Abstractions;
+using Interception.Application.Interceptions.Dtos;
+using Interception.Application.Toasts;
+using Interception.Web.UI.Components.Pages.Interceptions.Drawers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;

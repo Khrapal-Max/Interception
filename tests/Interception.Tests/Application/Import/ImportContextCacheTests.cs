@@ -3,8 +3,8 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Application.Import.Services;
-using Interception.UI.Domain;
+using Interception.Application.Import.Services;
+using Interception.Domain;
 
 namespace Interception.Tests.Application.Import;
 
