@@ -1,6 +1,9 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Interception.UI/Interception.UI.csproj" />
+    <Project Path="src/Interception.Domain/Interception.Domain.csproj" />
+    <Project Path="src/Interception.Application/Interception.Application.csproj" />
+    <Project Path="src/Interception.Infrastructure/Interception.Infrastructure.csproj" />
     <Project Path="src/Interception.Services.DomainApi/Interception.Services.DomainApi.csproj" />
     <Project Path="src/Interception.Services.ApplicationApi/Interception.Services.ApplicationApi.csproj" />
     <Project Path="src/Interception.Services.InfrastructureApi/Interception.Services.InfrastructureApi.csproj" />

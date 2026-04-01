@@ -5,4 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Interception.Services.ApplicationApi</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Interception.Application\Interception.Application.csproj" />
+  </ItemGroup>
 </Project>
