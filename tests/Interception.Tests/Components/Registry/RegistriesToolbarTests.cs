@@ -42,8 +42,8 @@ public sealed class RegistriesToolbarTests : BunitContext
     public void Render_WithMetaAndActions_RendersBothFragments()
     {
         var cut = Render<RegistriesToolbar>(p => p
-            .Add(x => x.MetaContent, (RenderFragment)(b => b.AddContent(0, "META")))
-            .Add(x => x.ActionsContent, (RenderFragment)(b => b.AddContent(0, "ACTION"))));
+            .Add(x => x.MetaContent, b => b.AddContent(0, "META"))
+            .Add(x => x.ActionsContent, b => b.AddContent(0, "ACTION")));
 
         cut.Markup.Should().Contain("META");
         cut.Markup.Should().Contain("ACTION");
