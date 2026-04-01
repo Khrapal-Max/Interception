@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.Application.Interceptions.Dtos;
-using Interception.Domain;
+using Interception.Domain.Entities;
 
 namespace Interception.Application.Interceptions.Abstractions;
 

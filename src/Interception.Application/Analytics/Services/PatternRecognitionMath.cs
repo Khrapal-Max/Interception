@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.Application.Analytics.Builders;
-using Interception.Domain;
+using Interception.Domain.Entities;
 using Interception.Domain.Extensions;
 
 namespace Interception.Application.Analytics.Services;
@@ -250,9 +250,9 @@ internal static class PatternRecognitionMath
         int take)
     {
         return [.. originalValues
-            .Select(x => SemanticValue.NormalizeMeaningfulOrNull(x))
+            .Select(x => SemanticValueExtensions.NormalizeMeaningfulOrNull(x))
             .Where(x => x is not null)
-            .Select(x => new { Original = x!, Key = SemanticValue.NormalizeKeyOrNull(x) })
+            .Select(x => new { Original = x!, Key = SemanticValueExtensions.NormalizeKeyOrNull(x) })
             .Where(x => x.Key is not null && pivotLeft.ContainsKey(x.Key))
             .Select(x => x.Original)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -269,7 +269,7 @@ internal static class PatternRecognitionMath
 
         foreach (var value in values)
         {
-            var key = SemanticValue.NormalizeKeyOrNull(value);
+            var key = SemanticValueExtensions.NormalizeKeyOrNull(value);
             if (key is null)
                 continue;
 
@@ -311,13 +311,13 @@ internal static class PatternRecognitionMath
 
         foreach (var observation in observations)
         {
-            var division = SemanticValue.NormalizeKeyOrNull(observation.Division);
+            var division = SemanticValueExtensions.NormalizeKeyOrNull(observation.Division);
             if (division is null)
                 continue;
 
             foreach (var label in observation.Labels)
             {
-                var labelKey = SemanticValue.NormalizeKeyOrNull(label);
+                var labelKey = SemanticValueExtensions.NormalizeKeyOrNull(label);
                 if (labelKey is null)
                     continue;
 
@@ -336,8 +336,8 @@ internal static class PatternRecognitionMath
     /// </summary>
     public static string? BuildPairKey(string? left, string? right)
     {
-        var leftKey = SemanticValue.NormalizeKeyOrNull(left);
-        var rightKey = SemanticValue.NormalizeKeyOrNull(right);
+        var leftKey = SemanticValueExtensions.NormalizeKeyOrNull(left);
+        var rightKey = SemanticValueExtensions.NormalizeKeyOrNull(right);
 
         return leftKey is null || rightKey is null
             ? null
@@ -353,7 +353,7 @@ internal static class PatternRecognitionMath
 
         foreach (var value in values)
         {
-            var key = SemanticValue.NormalizeKeyOrNull(value);
+            var key = SemanticValueExtensions.NormalizeKeyOrNull(value);
             if (key is not null)
                 set.Add(key);
         }
@@ -366,8 +366,8 @@ internal static class PatternRecognitionMath
     /// </summary>
     public static bool EqualsNormalized(string? left, string? right)
     {
-        var leftKey = SemanticValue.NormalizeKeyOrNull(left);
-        var rightKey = SemanticValue.NormalizeKeyOrNull(right);
+        var leftKey = SemanticValueExtensions.NormalizeKeyOrNull(left);
+        var rightKey = SemanticValueExtensions.NormalizeKeyOrNull(right);
 
         return leftKey is not null &&
                rightKey is not null &&
@@ -380,7 +380,7 @@ internal static class PatternRecognitionMath
     public static string? GetDominantValue(IEnumerable<string?> values)
     {
         var groups = values
-            .Select(SemanticValue.NormalizeMeaningfulOrNull)
+            .Select(SemanticValueExtensions.NormalizeMeaningfulOrNull)
             .Where(v => v is not null)
             .Select(v => v!)
             .GroupBy(v => v, StringComparer.OrdinalIgnoreCase)

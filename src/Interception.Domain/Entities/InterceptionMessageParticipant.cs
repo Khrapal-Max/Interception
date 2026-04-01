@@ -4,7 +4,7 @@
 
 using Interception.Domain.Extensions;
 
-namespace Interception.Domain;
+namespace Interception.Domain.Entities;
 
 public class InterceptionMessageParticipant
 {
@@ -78,5 +78,5 @@ public class InterceptionMessageParticipant
     }
 
     private static string? NormalizeOptional(string? value)
-        => SemanticValue.NormalizeMeaningfulOrNull(value);
+        => SemanticValueExtensions.NormalizeMeaningfulOrNull(value);
 }

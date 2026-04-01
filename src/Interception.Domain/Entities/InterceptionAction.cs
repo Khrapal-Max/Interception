@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.Domain;
+namespace Interception.Domain.Entities;
 
 public class InterceptionAction
 {

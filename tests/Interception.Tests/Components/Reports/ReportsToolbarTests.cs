@@ -5,7 +5,6 @@
 using Bunit;
 using FluentAssertions;
 using Interception.Web.UI.Components.Pages.Reports.Toolbar;
-using Microsoft.AspNetCore.Components;
 
 namespace Interception.Tests.Components.Reports;
 

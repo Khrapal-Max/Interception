@@ -5,9 +5,7 @@
 using Interception.Application.Analytics.Abstractions;
 using Interception.Application.Analytics.Dtos;
 using Interception.Application.Analytics.Services.Builders.LinkMap;
-using Interception.Domain;
-using Interception.Infrastructure;
-using Microsoft.EntityFrameworkCore;
+using Interception.Domain.Entities;
 
 namespace Interception.Application.Analytics.Services;
 

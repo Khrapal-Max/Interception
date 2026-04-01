@@ -4,7 +4,7 @@
 
 using Interception.Domain.Extensions;
 
-namespace Interception.Domain;
+namespace Interception.Domain.Entities;
 
 /// <summary>
 /// Встановлена особа — аналітичний висновок про те хто ховається за НВ.
@@ -74,5 +74,5 @@ public sealed class ResolvedParticipant
     // -------------------------------------------------------------------------
 
     private static string? NormalizeOptional(string? value)
-        => SemanticValue.NormalizeMeaningfulOrNull(value);
+        => SemanticValueExtensions.NormalizeMeaningfulOrNull(value);
 }

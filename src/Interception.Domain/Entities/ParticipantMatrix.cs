@@ -4,7 +4,7 @@
 
 using Interception.Domain.Records;
 
-namespace Interception.Domain;
+namespace Interception.Domain.Entities;
 
 /// <summary>
 /// Матриця взаємодій між учасниками в межах одного DailyReport.

@@ -9,7 +9,7 @@ namespace Interception.Domain.Extensions;
 /// "НВ підрозділ", "невідома", "unknown" тощо не повинні попадати в pivot-логіку
 /// як справжні роль / підрозділ / значення ознаки.
 /// </summary>
-public static class SemanticValue
+public static class SemanticValueExtensions
 {
     private static readonly HashSet<string> UnknownTokens =
     [

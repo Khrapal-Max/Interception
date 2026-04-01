@@ -5,7 +5,7 @@
 using Interception.Domain.Enums;
 using Interception.Domain.Extensions;
 
-namespace Interception.Domain;
+namespace Interception.Domain.Entities;
 
 public class DailyReport
 {

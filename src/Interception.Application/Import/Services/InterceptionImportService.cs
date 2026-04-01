@@ -4,10 +4,8 @@
 
 using Interception.Application.Import.Abstractions;
 using Interception.Application.Import.Dtos;
-using Interception.Domain;
+using Interception.Domain.Entities;
 using Interception.Domain.Extensions;
-using Interception.Infrastructure;
-using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Import.Services;
 

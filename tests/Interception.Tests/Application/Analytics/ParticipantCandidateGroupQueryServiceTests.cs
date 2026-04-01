@@ -4,7 +4,7 @@
 
 using FluentAssertions;
 using Interception.Application.Analytics.Services;
-using Interception.Domain;
+using Interception.Domain.Entities;
 using Interception.Domain.Enums;
 using Interception.Domain.Records;
 

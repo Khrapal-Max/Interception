@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace Interception.Domain.Extensions;
 
-public static partial class TextNorm
+public static partial class StringTextNormExtensions
 {
     private static readonly Regex MultiWs = MyRegex();
 

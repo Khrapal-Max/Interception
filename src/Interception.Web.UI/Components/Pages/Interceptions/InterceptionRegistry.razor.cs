@@ -6,7 +6,7 @@ using Interception.Application.Interceptions.Abstractions;
 using Interception.Application.Interceptions.Dtos;
 using Interception.Application.Registry.Abstractions;
 using Interception.Application.Toasts;
-using Interception.Domain;
+using Interception.Domain.Entities;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.Web.UI.Components.Pages.Interceptions;

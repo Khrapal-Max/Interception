@@ -13,9 +13,9 @@ using Interception.Application.Registry.Services;
 using Interception.Application.Reports.Abstractions;
 using Interception.Application.Reports.Services;
 using Interception.Application.Toasts;
-using Interception.Web.UI.Components;
-using Interception.Infrastructure.Extensions;
 using Interception.Infrastructure;
+using Interception.Infrastructure.Extensions;
+using Interception.Web.UI.Components;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 

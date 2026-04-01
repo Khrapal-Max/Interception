@@ -3,9 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.Application.Registry.Abstractions;
-using Interception.Domain;
-using Interception.Infrastructure;
-using Microsoft.EntityFrameworkCore;
+using Interception.Domain.Entities;
 
 namespace Interception.Application.Registry.Services;
 

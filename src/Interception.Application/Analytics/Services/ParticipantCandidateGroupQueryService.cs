@@ -6,10 +6,9 @@ using Interception.Application.Analytics.Abstractions;
 using Interception.Application.Analytics.Builders;
 using Interception.Application.Analytics.Dtos;
 using Interception.Application.Interceptions.Dtos;
+using Interception.Domain.Entities;
 using Interception.Domain.Enums;
 using Interception.Domain.Extensions;
-using Interception.Infrastructure;
-using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Analytics.Services;
 
@@ -62,7 +61,7 @@ public sealed class ParticipantCandidateGroupQueryService(IDbContextFactory<AppD
     /// </summary>
     private static async Task<IReadOnlyList<CandidateGroupDto>> EnrichGroupsAsync(
         AppDbContext db,
-        List<Domain.ParticipantCandidateGroup> groups,
+        List<ParticipantCandidateGroup> groups,
         CancellationToken ct)
     {
         if (groups.Count == 0)
@@ -84,7 +83,7 @@ public sealed class ParticipantCandidateGroupQueryService(IDbContextFactory<AppD
     /// <summary>
     /// Мапить доменну групу в DTO для сторінки.
     /// </summary>
-    private static CandidateGroupDto MapToDto(Domain.ParticipantCandidateGroup group, Dictionary<Guid, MessageSnapshot> messages)
+    private static CandidateGroupDto MapToDto(ParticipantCandidateGroup group, Dictionary<Guid, MessageSnapshot> messages)
     {
         var refs = group.ParticipantRefs.Select(r =>
         {
@@ -95,9 +94,9 @@ public sealed class ParticipantCandidateGroupQueryService(IDbContextFactory<AppD
                 ParticipantId = r.ParticipantId,
                 Ordinal = r.Ordinal,
                 ObservedDate = msg?.ObservedDate ?? default,
-                Frequency = SemanticValue.NormalizeMeaningfulOrNull(msg?.Frequency),
-                VectorSignal = SemanticValue.NormalizeMeaningfulOrNull(msg?.VectorSignal),
-                Division = SemanticValue.NormalizeMeaningfulOrNull(msg?.Division),
+                Frequency = SemanticValueExtensions.NormalizeMeaningfulOrNull(msg?.Frequency),
+                VectorSignal = SemanticValueExtensions.NormalizeMeaningfulOrNull(msg?.VectorSignal),
+                Division = SemanticValueExtensions.NormalizeMeaningfulOrNull(msg?.Division),
             };
         }).ToList();
 

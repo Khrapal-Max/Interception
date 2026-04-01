@@ -4,7 +4,7 @@
 
 using FluentAssertions;
 using Interception.Application.Analytics.Services;
-using Interception.Domain;
+using Interception.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 

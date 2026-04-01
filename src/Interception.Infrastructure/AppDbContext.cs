@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.Domain;
+using Interception.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Infrastructure;

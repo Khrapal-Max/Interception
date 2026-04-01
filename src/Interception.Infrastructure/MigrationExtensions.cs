@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------------
 
 using Interception.Application.Registry.Abstractions;
-using Interception.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 

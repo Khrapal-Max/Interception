@@ -1,10 +1,20 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/Interception.Domain/Interception.Domain.csproj" />
-    <Project Path="src/Interception.Application/Interception.Application.csproj" />
-    <Project Path="src/Interception.Infrastructure/Interception.Infrastructure.csproj" />
-    <Project Path="src/Interception.Web.UI/Interception.Web.UI.csproj" />
-    <Project Path="src/Interception.Desktop.Wpf/Interception.Desktop.Wpf.csproj" />
+    <Project Path="src/Interception.Application/Interception.Application.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="src/Interception.Desktop.Wpf/Interception.Desktop.Wpf.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="src/Interception.Domain/Interception.Domain.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="src/Interception.Infrastructure/Interception.Infrastructure.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="src/Interception.Web.UI/Interception.Web.UI.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Interception.Tests/Interception.Tests.csproj" />

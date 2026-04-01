@@ -5,7 +5,7 @@
 using ClosedXML.Excel;
 using FluentAssertions;
 using Interception.Application.Import.Services;
-using Interception.Domain;
+using Interception.Domain.Entities;
 using Interception.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 

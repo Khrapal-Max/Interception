@@ -5,10 +5,7 @@
 using Interception.Application.Analytics.Abstractions;
 using Interception.Application.Analytics.Builders;
 using Interception.Application.Analytics.Dtos;
-using Interception.Domain;
-using Interception.Infrastructure;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+using Interception.Domain.Entities;
 
 namespace Interception.Application.Analytics.Services;
 

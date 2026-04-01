@@ -6,7 +6,7 @@ using FluentAssertions;
 using Interception.Application.Analytics.Dtos;
 using Interception.Application.Interceptions.Dtos;
 using Interception.Application.Interceptions.Services;
-using Interception.Domain;
+using Interception.Domain.Entities;
 using Interception.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 

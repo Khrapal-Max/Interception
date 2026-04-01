@@ -3,10 +3,10 @@
 //-----------------------------------------------------------------------------
 
 using Interception.Domain.Enums;
-using Interception.Domain.Records;
 using Interception.Domain.Extensions;
+using Interception.Domain.Records;
 
-namespace Interception.Domain;
+namespace Interception.Domain.Entities;
 
 public class ParticipantCandidateGroup
 {
@@ -156,5 +156,5 @@ public class ParticipantCandidateGroup
     }
 
     private static string? NormalizeOptional(string? value)
-        => SemanticValue.NormalizeMeaningfulOrNull(value);
+        => SemanticValueExtensions.NormalizeMeaningfulOrNull(value);
 }

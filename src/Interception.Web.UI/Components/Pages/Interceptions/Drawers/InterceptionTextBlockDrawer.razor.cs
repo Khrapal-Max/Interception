@@ -7,7 +7,7 @@ using Interception.Application.Interceptions.Abstractions;
 using Interception.Application.Interceptions.Dtos;
 using Interception.Application.Interceptions.TextBlock;
 using Interception.Application.Toasts;
-using Interception.Domain;
+using Interception.Domain.Entities;
 using Interception.Domain.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;

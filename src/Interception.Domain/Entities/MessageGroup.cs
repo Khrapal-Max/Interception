@@ -4,7 +4,7 @@
 
 using Interception.Domain.Records;
 
-namespace Interception.Domain;
+namespace Interception.Domain.Entities;
 
 /// <summary>
 /// Група повідомлень, які DailyReportService вважає пов'язаними між собою
