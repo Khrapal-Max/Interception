@@ -205,6 +205,50 @@ public sealed class ParticipantCandidateAnalysisServiceTests
         group.ConfidenceScore.Should().BeGreaterThan(0.0);
     }
 
+    [Fact]
+    public async Task RunAsync_ForGroupWithMultipleMentions_UsesDominantDivisionAsSuggestedDivision()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var options = new PatternRecognitionOptions { MinConfidenceScore = 0.45 };
+        var service = CreateService(factory, options);
+
+        await using var db = await factory.CreateDbContextAsync(ct);
+        var action = InterceptionAction.Create("доповідь 500", string.Empty);
+        db.InterceptionActions.Add(action);
+
+        var baseDate = new DateTime(2026, 03, 25, 18, 00, 00, DateTimeKind.Utc);
+
+        var m1 = CreateMessage(action, baseDate, "142.4500", "336 мсп", "МИРОНОВКА");
+        m1.AddLabel("МИРОНОВКА");
+        _ = m1.AddParticipant("НВ 1", true, "оператор", ordinal: 1);
+
+        var m2 = CreateMessage(action, baseDate.AddMinutes(6), "142.4500", "336 мсп", "МИРОНОВКА");
+        m2.AddLabel("МИРОНОВКА");
+        _ = m2.AddParticipant("НВ 2", true, "оператор", ordinal: 1);
+
+        var m3 = CreateMessage(action, baseDate.AddMinutes(10), "142.4500", "186 мсп", "МИРОНОВКА");
+        m3.AddLabel("МИРОНОВКА");
+        _ = m3.AddParticipant("НВ 3", true, "оператор", ordinal: 1);
+
+        var known = CreateMessage(action, baseDate.AddMinutes(14), "142.4500", "336 мсп", "МИРОНОВКА");
+        known.AddLabel("МИРОНОВКА");
+        _ = known.AddParticipant("ГРОМ", false, "оператор", ordinal: 1);
+
+        db.InterceptionMessages.AddRange(m1, m2, m3, known);
+        await db.SaveChangesAsync(ct);
+
+        var changed = await service.RunAsync(ct);
+        changed.Should().Be(1);
+
+        await using var verifyDb = await factory.CreateDbContextAsync(ct);
+        var group = await verifyDb.ParticipantCandidateGroups.SingleAsync(ct);
+
+        group.ParticipantRefs.Should().HaveCount(3);
+        group.SuggestedDivision.Should().Be("336 мсп");
+        group.SuggestedRole.Should().Be("оператор");
+    }
+
     private static InterceptionMessage CreateMessage(
         InterceptionAction action,
         DateTime observedDate,
