@@ -4,8 +4,10 @@
 // MigrationExtension
 //-----------------------------------------------------------------------------
 
+using Interception.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace Interception.Infrastructure;
@@ -140,7 +142,7 @@ public static class MigrationExtensions
 
         var toAdd = ActionSeed
             .Where(a => !existingNames.Contains(a.Name))
-            .Select(a => new Domain.Entities.InterceptionAction
+            .Select(a => new InterceptionAction
             {
                 Name = a.Name,
                 Description = a.Description

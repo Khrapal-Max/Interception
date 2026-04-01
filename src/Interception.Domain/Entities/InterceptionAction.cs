@@ -8,9 +8,9 @@ public class InterceptionAction
 {
     public Guid Id { get; private set; } = Guid.NewGuid();
 
-    public string Name { get; private set; } = default!;
+    public string Name { get; set; } = default!;
 
-    public string Description { get; private set; } = default!;
+    public string Description { get; set; } = default!;
 
     // -------------------------------------------------------------------------
     // Factory
