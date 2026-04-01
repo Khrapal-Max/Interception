@@ -39,6 +39,7 @@ builder.Services.AddScoped<ToastService>();
 // --- Application services ---
 // Поточні контракти, які ще використовує фронт.
 builder.Services.AddScoped<IInterceptionImportService, InterceptionImportService>();
+builder.Services.AddScoped<IDatabaseImportExportService, DatabaseImportExportService>();
 builder.Services.AddScoped<IInterceptionActionService, InterceptionActionService>();
 builder.Services.AddScoped<IPersonRegistryService, PersonRegistryService>();
 
