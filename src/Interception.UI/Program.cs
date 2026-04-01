@@ -8,10 +8,10 @@ using Interception.UI.Application.Import.Abstractions;
 using Interception.UI.Application.Import.Services;
 using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Services;
-using Interception.UI.Application.Reports.Services;
 using Interception.UI.Application.Registry.Abstractions;
 using Interception.UI.Application.Registry.Services;
 using Interception.UI.Application.Reports.Abstractions;
+using Interception.UI.Application.Reports.Services;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Components;
 using Interception.UI.Extensions;
@@ -50,7 +50,6 @@ builder.Services.AddScoped<IFrequencyDivisionService, FrequencyDivisionService>(
 
 // Нові candidate-сервіси
 builder.Services.AddScoped<ILinkMapService, LinkMapService>();
-builder.Services.AddScoped<ILinkMapSliceService, LinkMapSliceService>();
 builder.Services.AddScoped<IContextSuggestionService, ContextSuggestionService>();
 builder.Services.AddScoped<IKnownParticipantSuggestionService, KnownParticipantSuggestionService>();
 builder.Services.AddScoped<IParticipantCandidateAnalysisService, ParticipantCandidateAnalysisService>();
