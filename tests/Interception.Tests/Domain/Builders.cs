@@ -11,35 +11,18 @@ namespace Interception.Tests.Domain;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Builder для InterceptionAction в тестах.
-/// InterceptionAction не має публічного конструктора з параметрами —
-/// використовуємо рефлексію для встановлення приватних властивостей.
+/// Builder для InterceptionAction в тестах без використання рефлексії.
 /// </summary>
 internal sealed class InterceptionActionBuilder
 {
-    private Guid _id = Guid.NewGuid();
     private string _name = "Test Action";
     private string _description = "Test Description";
 
-    public InterceptionActionBuilder WithId(Guid id) { _id = id; return this; }
     public InterceptionActionBuilder WithName(string name) { _name = name; return this; }
     public InterceptionActionBuilder WithDescription(string d) { _description = d; return this; }
 
     public InterceptionAction Build()
-    {
-        var action = new InterceptionAction();
-        SetPrivate(action, nameof(InterceptionAction.Id), _id);
-        SetPrivate(action, nameof(InterceptionAction.Name), _name);
-        SetPrivate(action, nameof(InterceptionAction.Description), _description);
-        return action;
-    }
-
-    private static void SetPrivate<T>(object obj, string propName, T value)
-    {
-        var prop = obj.GetType().GetProperty(propName)
-            ?? throw new InvalidOperationException($"Property '{propName}' not found.");
-        prop.SetValue(obj, value);
-    }
+        => InterceptionAction.Create(_name, _description);
 }
 
 // ---------------------------------------------------------------------------
