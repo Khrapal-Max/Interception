@@ -4,11 +4,11 @@
 
 using Bunit;
 using FluentAssertions;
-using Interception.UI.Application.Reports.Abstractions;
-using Interception.UI.Application.Reports.Dtos;
-using Interception.UI.Application.Toasts;
-using Interception.UI.Components.Pages.Reports.DayPicture;
-using Interception.UI.Components.Pages.Reports.Divisions;
+using Interception.Application.Reports.Abstractions;
+using Interception.Application.Reports.Dtos;
+using Interception.Application.Toasts;
+using Interception.Web.UI.Components.Pages.Reports.DayPicture;
+using Interception.Web.UI.Components.Pages.Reports.Divisions;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 

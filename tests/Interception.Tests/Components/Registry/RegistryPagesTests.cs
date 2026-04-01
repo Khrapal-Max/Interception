@@ -5,14 +5,14 @@
 using Bunit;
 using Bunit.TestDoubles;
 using FluentAssertions;
-using Interception.UI.Application.Analytics.Dtos;
-using Interception.UI.Application.Registry.Abstractions;
-using Interception.UI.Application.Registry.Dtos;
-using Interception.UI.Application.Toasts;
-using Interception.UI.Components.Pages.Registry.Divisions;
-using Interception.UI.Components.Pages.Registry.Divisions.Drawers;
-using Interception.UI.Components.Pages.Registry.Persons;
-using Interception.UI.Components.Pages.Registry.Persons.Drawers;
+using Interception.Application.Analytics.Dtos;
+using Interception.Application.Registry.Abstractions;
+using Interception.Application.Registry.Dtos;
+using Interception.Application.Toasts;
+using Interception.Web.UI.Components.Pages.Registry.Divisions;
+using Interception.Web.UI.Components.Pages.Registry.Divisions.Drawers;
+using Interception.Web.UI.Components.Pages.Registry.Persons;
+using Interception.Web.UI.Components.Pages.Registry.Persons.Drawers;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 

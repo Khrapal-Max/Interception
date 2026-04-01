@@ -1,0 +1,111 @@
+@page "/reports/day-picture"
+@using Interception.Web.UI.Components.Pages.Reports.Toolbar
+
+<PageTitle>Картина дня</PageTitle>
+
+<div class="page-shell">
+    <ReportsToolbar ActiveSection="day-picture">
+        <MetaContent>
+            Підрозділів: @(_picture?.Groups.Count ?? 0) · Спостережень: @(_picture?.TotalMessages ?? 0)
+        </MetaContent>
+        <ActionsContent>
+            <div class="d-flex align-items-center gap-2 flex-nowrap">
+                <label class="form-label small text-muted mb-0">День</label>
+                <input class="form-control form-control-sm"
+                       type="date"
+                       style="width: 11rem;"
+                       value="@DayStr"
+                       @onchange="OnDayInputChanged" />
+                <button type="button" class="btn btn-sm btn-primary" @onclick="LoadAsync" disabled="@_loading">
+                    Оновити
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" @onclick="ResetDayAsync" disabled="@_loading">
+                    Сьогодні
+                </button>
+            </div>
+        </ActionsContent>
+    </ReportsToolbar>
+
+    <div class="page-panel">
+        @if (_loading)
+        {
+            <div class="panel-scroll p-3">
+                <div class="page-empty">Завантаження...</div>
+            </div>
+        }
+        else if (_picture is null || _picture.Groups.Count == 0)
+        {
+            <div class="panel-scroll p-3">
+                <div class="page-empty">За вибраний день спостережень не знайдено.</div>
+            </div>
+        }
+        else
+        {
+            <div class="panel-scroll p-2 d-flex flex-column gap-2">
+                @foreach (var group in _picture.Groups.OrderBy(x => x.Division))
+                {
+                    var entries = GetOrderedEntries(group);
+
+                    <div class="card rounded-0 border-0 shadow-sm">
+                        <div class="card-header py-2 px-3 d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                            <div>
+                                <div class="fw-semibold">@(group.Division ?? "—")</div>
+                                <div class="small text-muted">
+                                    Спостережень: @entries.Count
+                                </div>
+                            </div>
+                            @if (group.Conversations.Count > 1)
+                            {
+                                <span class="badge text-bg-secondary rounded-0">Епізодів: @group.Conversations.Count</span>
+                            }
+                        </div>
+
+                        <div class="table-wrap px-0">
+                            <table class="table data-table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Час</th>
+                                        <th>Частота</th>
+                                        <th>Дія</th>
+                                        <th>Особи</th>
+                                        <th>Примітка</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var entry in entries)
+                                    {
+                                        <tr>
+                                            <td class="text-nowrap">@entry.ObservedDate.ToLocalTime().ToString("HH:mm")</td>
+                                            <td class="text-nowrap">@(entry.Frequency ?? "—")</td>
+                                            <td>@(entry.ActionName ?? "—")</td>
+                                            <td>
+                                                @if (entry.Participants.Count == 0)
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                                else
+                                                {
+                                                    @string.Join(", ", entry.Participants)
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (string.IsNullOrWhiteSpace(entry.Note))
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                                else
+                                                {
+                                                    <div class="small">@entry.Note</div>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

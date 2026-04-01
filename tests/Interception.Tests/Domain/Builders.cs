@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Domain;
+using Interception.Domain;
 
 namespace Interception.Tests.Domain;
 

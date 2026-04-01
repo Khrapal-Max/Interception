@@ -5,15 +5,15 @@
 using Bunit;
 using Bunit.TestDoubles;
 using FluentAssertions;
-using Interception.UI.Application.Analytics.Abstractions;
-using Interception.UI.Application.Analytics.Dtos;
-using Interception.UI.Application.Interceptions.Dtos;
-using Interception.UI.Application.Toasts;
-using Interception.UI.Components.Pages.Analytics.Candidates;
-using Interception.UI.Components.Pages.Analytics.Candidates.Drawers;
-using Interception.UI.Components.Pages.Analytics.LinkMap;
-using Interception.UI.Components.Pages.Analytics.LinkMap.Drawers;
-using Interception.UI.Domain.Enums;
+using Interception.Application.Analytics.Abstractions;
+using Interception.Application.Analytics.Dtos;
+using Interception.Application.Interceptions.Dtos;
+using Interception.Application.Toasts;
+using Interception.Web.UI.Components.Pages.Analytics.Candidates;
+using Interception.Web.UI.Components.Pages.Analytics.Candidates.Drawers;
+using Interception.Web.UI.Components.Pages.Analytics.LinkMap;
+using Interception.Web.UI.Components.Pages.Analytics.LinkMap.Drawers;
+using Interception.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 

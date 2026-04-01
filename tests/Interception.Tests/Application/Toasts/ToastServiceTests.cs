@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Application.Toasts;
+using Interception.Application.Toasts;
 
 namespace Interception.Tests.Application.Toasts;
 

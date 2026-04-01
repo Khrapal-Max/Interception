@@ -4,7 +4,7 @@
 
 using ClosedXML.Excel;
 using FluentAssertions;
-using Interception.UI.Application.Import.Services;
+using Interception.Application.Import.Services;
 
 namespace Interception.Tests.Application.Import;
 

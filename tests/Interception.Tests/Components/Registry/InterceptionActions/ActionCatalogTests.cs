@@ -5,11 +5,11 @@
 using Bunit;
 using Bunit.TestDoubles;
 using FluentAssertions;
-using Interception.UI.Application.Registry.Abstractions;
-using Interception.UI.Application.Toasts;
-using Interception.UI.Components.Pages.Registry.InterceptionActions;
-using Interception.UI.Components.Pages.Registry.InterceptionActions.Drawers;
-using Interception.UI.Domain;
+using Interception.Application.Registry.Abstractions;
+using Interception.Application.Toasts;
+using Interception.Web.UI.Components.Pages.Registry.InterceptionActions;
+using Interception.Web.UI.Components.Pages.Registry.InterceptionActions.Drawers;
+using Interception.Domain;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;

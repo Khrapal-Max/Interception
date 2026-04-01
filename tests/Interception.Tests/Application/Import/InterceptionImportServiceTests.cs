@@ -4,9 +4,9 @@
 
 using ClosedXML.Excel;
 using FluentAssertions;
-using Interception.UI.Application.Import.Services;
-using Interception.UI.Domain;
-using Interception.UI.Infrastructure;
+using Interception.Application.Import.Services;
+using Interception.Domain;
+using Interception.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests.Application.Import;

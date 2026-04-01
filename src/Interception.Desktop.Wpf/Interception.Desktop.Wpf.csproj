@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>preview</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Interception.Application\Interception.Application.csproj" />
+    <ProjectReference Include="..\Interception.Infrastructure\Interception.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

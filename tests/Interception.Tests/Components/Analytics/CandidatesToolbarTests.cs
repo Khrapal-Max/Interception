@@ -4,7 +4,7 @@
 
 using Bunit;
 using FluentAssertions;
-using Interception.UI.Components.Pages.Analytics.Toolbar;
+using Interception.Web.UI.Components.Pages.Analytics.Toolbar;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 

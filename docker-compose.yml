@@ -5,7 +5,7 @@ services:
     image: ${DOCKER_REGISTRY-}interceptionui
     build:
       context: .
-      dockerfile: src/Interception.UI/Dockerfile
+      dockerfile: src/Interception.Web.UI/Dockerfile
       args:
         BUILD_CONFIGURATION: Release
     restart: unless-stopped
