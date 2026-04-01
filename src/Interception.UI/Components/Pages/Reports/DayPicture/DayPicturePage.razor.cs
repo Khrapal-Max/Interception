@@ -5,6 +5,7 @@
 using Interception.UI.Application.Reports.Abstractions;
 using Interception.UI.Application.Reports.Dtos;
 using Interception.UI.Application.Toasts;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 
@@ -21,6 +22,7 @@ public partial class DayPicturePage : ComponentBase
     private DayPictureDto? _picture;
     private bool _loading;
     private DateTime? _day = DateTime.Today;
+    private string? _locationClassFilter;
 
     private string? DayStr => ConverterDateTimeExtensions.FormatDate(_day);
 
@@ -68,4 +70,26 @@ public partial class DayPicturePage : ComponentBase
             .SelectMany(x => x.Entries)
             .OrderBy(x => x.ObservedDate)
             .ToList();
+
+    private static IReadOnlyList<DayPictureEntryDto> ApplyLocationClassFilter(
+        IReadOnlyList<DayPictureEntryDto> entries,
+        string? locationClassFilter)
+    {
+        if (string.IsNullOrWhiteSpace(locationClassFilter))
+            return entries;
+
+        return [.. entries.Where(x => string.Equals(x.LocationClass, locationClassFilter, StringComparison.OrdinalIgnoreCase))];
+    }
+
+    private IEnumerable<(string Key, int Count)> BuildActionLocationGroups(IReadOnlyList<DayPictureEntryDto> entries)
+        => entries
+            .GroupBy(
+                x => $"{(string.IsNullOrWhiteSpace(x.ActionName) ? "—" : x.ActionName)} × {x.LocationClass}",
+                StringComparer.OrdinalIgnoreCase)
+            .Select(g => (g.Key, g.Count()))
+            .OrderByDescending(x => x.Item2)
+            .ThenBy(x => x.Key, StringComparer.OrdinalIgnoreCase);
+
+    private static IReadOnlyList<string> GetLocationClassOptions()
+        => [.. Enum.GetNames<LocationClass>()];
 }

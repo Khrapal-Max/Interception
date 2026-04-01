@@ -5,6 +5,7 @@
 using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,11 +27,14 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
         var action = await db.InterceptionActions.FindAsync([form.InterceptionActionId], ct)
             ?? throw new InvalidOperationException($"InterceptionAction '{form.InterceptionActionId}' не знайдено.");
 
+        var locationClass = ResolveLocationClass(form);
         var message = InterceptionMessage.Create(
             form.ObservedDate,
             form.Frequency,
             form.Division,
             form.VectorSignal,
+            form.LocationDetails,
+            locationClass,
             action,
             form.Note,
             operatorName,
@@ -61,7 +65,8 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
         var action = await db.InterceptionActions.FindAsync([form.InterceptionActionId], ct)
             ?? throw new InvalidOperationException($"InterceptionAction '{form.InterceptionActionId}' не знайдено.");
 
-        message.Update(form.ObservedDate, form.Frequency, form.Division, form.VectorSignal, action, form.Note, form.PointSignal);
+        var locationClass = ResolveLocationClass(form);
+        message.Update(form.ObservedDate, form.Frequency, form.Division, form.VectorSignal, form.LocationDetails, locationClass, action, form.Note, form.PointSignal);
 
         foreach (var p in message.Participants.ToList())
             message.RemoveParticipant(p.Id);
@@ -84,5 +89,35 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
             ?? throw new InvalidOperationException($"InterceptionMessage '{id}' не знайдено.");
         db.InterceptionMessages.Remove(message);
         await db.SaveChangesAsync(ct);
+    }
+
+    private static LocationClass ResolveLocationClass(InterceptionFormDto form)
+    {
+        if (form.LocationClass != LocationClass.NoInfo)
+            return form.LocationClass;
+
+        var locationDetails = form.LocationDetails?.Trim();
+        if (string.IsNullOrWhiteSpace(locationDetails))
+            return LocationClass.NoInfo;
+
+        if (locationDetails.Contains("->", StringComparison.OrdinalIgnoreCase)
+            || locationDetails.Contains("→", StringComparison.OrdinalIgnoreCase)
+            || locationDetails.Contains('-', StringComparison.OrdinalIgnoreCase)
+            || locationDetails.Contains("маршрут", StringComparison.OrdinalIgnoreCase)
+            || locationDetails.Contains("напрям", StringComparison.OrdinalIgnoreCase)
+            || locationDetails.Contains("курс", StringComparison.OrdinalIgnoreCase))
+        {
+            return LocationClass.Route;
+        }
+
+        if (locationDetails.Contains("район", StringComparison.OrdinalIgnoreCase)
+            || locationDetails.Contains("сектор", StringComparison.OrdinalIgnoreCase)
+            || locationDetails.Contains("зона", StringComparison.OrdinalIgnoreCase))
+        {
+            return LocationClass.Zone;
+        }
+
+        return LocationClass.Point;
+
     }
 }

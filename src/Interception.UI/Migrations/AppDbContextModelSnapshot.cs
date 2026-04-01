@@ -120,6 +120,17 @@ namespace Interception.UI.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("interception_action_id");
 
+                    b.Property<string>("LocationClass")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("location_class");
+
+                    b.Property<string>("LocationDetails")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("location_details");
+
                     b.Property<string>("Note")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
