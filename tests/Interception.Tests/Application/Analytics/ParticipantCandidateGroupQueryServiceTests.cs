@@ -182,7 +182,9 @@ public sealed class ParticipantCandidateGroupQueryServiceTests
             frequency,
             division,
             vectorSignal,
-            action,
+            locationDetails: null,
+            locationClass: LocationClass.NoInfo,
+            interceptionAction: action,
             note: null,
             createdBy: "tester");
 }

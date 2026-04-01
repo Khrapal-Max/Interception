@@ -5,6 +5,7 @@
 using FluentAssertions;
 using Interception.UI.Application.Analytics.Services;
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Domain.Records;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -216,7 +217,9 @@ public sealed class KnownParticipantSuggestionServiceTests
             frequency,
             division,
             vectorSignal,
-            action,
+            locationDetails: null,
+            locationClass: LocationClass.NoInfo,
+            interceptionAction: action,
             note: null,
             createdBy: "tester");
 }

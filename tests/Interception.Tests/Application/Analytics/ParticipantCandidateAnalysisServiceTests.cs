@@ -5,6 +5,7 @@
 using FluentAssertions;
 using Interception.UI.Application.Analytics.Services;
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -260,7 +261,9 @@ public sealed class ParticipantCandidateAnalysisServiceTests
             frequency,
             division,
             vectorSignal,
-            action,
+            locationDetails: null,
+            locationClass: LocationClass.NoInfo,
+            interceptionAction: action,
             note: null,
             createdBy: "tester");
 }

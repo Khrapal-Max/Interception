@@ -5,6 +5,7 @@
 using FluentAssertions;
 using Interception.UI.Application.Registry.Services;
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -161,6 +162,8 @@ public sealed class FrequencyDivisionServiceTests
             frequency,
             division,
             vectorSignal: null,
+            locationDetails: null,
+            locationClass: LocationClass.NoInfo,
             interceptionAction: action,
             note: null,
             createdBy: "test");
