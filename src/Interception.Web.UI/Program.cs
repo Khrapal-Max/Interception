@@ -28,6 +28,7 @@ builder.Services.AddDbContextFactory<AppDbContext>(options =>
 {
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")); // або ваш провайдер
 });
+builder.Services.AddDatabaseStartupMigration();
 
 // DataProtection keys must survive restarts and be shared across instances
 builder.Services.AddDataProtection()
@@ -84,6 +85,4 @@ app.Use(async (ctx, next) =>
     await next();
 });
 
-// після Build(), до Run()
-await app.AddMigrationDb();
 app.Run();
