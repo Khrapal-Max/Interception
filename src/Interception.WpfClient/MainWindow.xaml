@@ -1,0 +1,28 @@
+<Window x:Class="Interception.WpfClient.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Interception WPF Client" Height="420" Width="720"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Interception WPF UI"
+                   FontSize="24"
+                   FontWeight="SemiBold" />
+
+        <TextBlock Grid.Row="1"
+                   Margin="0,12,0,16"
+                   Text="UI шар відокремлено від Domain/Application/Infrastructure та працює через API." />
+
+        <StackPanel Grid.Row="2" Orientation="Vertical">
+            <TextBlock Text="Базові URL сервісів:" FontWeight="Bold" Margin="0,0,0,8" />
+            <TextBlock Text="• Domain API: http://localhost:6011" Margin="0,0,0,4" />
+            <TextBlock Text="• Application API: http://localhost:6012" Margin="0,0,0,4" />
+            <TextBlock Text="• Infrastructure API: http://localhost:6013" />
+        </StackPanel>
+    </Grid>
+</Window>
