@@ -6,17 +6,18 @@ using Interception.Application.Reports.Abstractions;
 using Interception.Application.Reports.Dtos;
 using Interception.Domain.Entities;
 using Interception.Domain.Enums;
+using Interception.Application.Abstractions;
 
 namespace Interception.Application.Reports.Services;
 
 /// <summary>
 /// Будує простий зведений звіт по підрозділах.
 /// </summary>
-public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFactory)
+public sealed class DivisionReportService(IAppDbContextFactory dbFactory)
     : IDivisionReportService
 {
     private const string UnknownDivision = "НВ підрозділ";
-    private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
+    private readonly IAppDbContextFactory _dbFactory = dbFactory;
 
     /// <inheritdoc />
     public async Task<DivisionReportDto> BuildAsync(
@@ -265,7 +266,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
     /// Рахує open-групи НВ за effective division пов'язаних повідомлень.
     /// </summary>
     private static async Task<Dictionary<string, int>> LoadUnknownGroupsCountByDivisionAsync(
-        AppDbContext db,
+        IAppDbContext db,
         HashSet<Guid> messageIds,
         IReadOnlyDictionary<Guid, string> messageEffectiveDivisions,
         CancellationToken ct)
@@ -287,7 +288,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
     /// Завантажує підтверджених осіб і визначає effective division з пріоритетом confirmed division.
     /// </summary>
     private static async Task<List<(string Division, string Name, string? Role, DateTime LastSeenAt)>> LoadConfirmedPeopleAsync(
-        AppDbContext db,
+        IAppDbContext db,
         HashSet<Guid> messageIds,
         IReadOnlyDictionary<Guid, DateTime> messageDates,
         IReadOnlyDictionary<Guid, string> messageEffectiveDivisions,

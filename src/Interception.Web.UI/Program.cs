@@ -2,6 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
+using Interception.Application.Abstractions;
 using Interception.Application.Analytics.Abstractions;
 using Interception.Application.Analytics.Services;
 using Interception.Application.Import.Abstractions;
@@ -35,6 +36,7 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo("/data-protection-keys"));
 
 builder.Services.AddScoped<ToastService>();
+builder.Services.AddScoped<IAppDbContextFactory, AppDbContextFactory>();
 
 // --- Application services ---
 // Поточні контракти, які ще використовує фронт.

@@ -2,12 +2,13 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
+using Interception.Application.Abstractions;
 using Interception.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Infrastructure;
 
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options), IAppDbContext
 {
     public DbSet<InterceptionAction> InterceptionActions { get; init; }
     public DbSet<InterceptionMessage> InterceptionMessages { get; init; }

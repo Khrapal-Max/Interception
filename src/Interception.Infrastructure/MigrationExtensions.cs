@@ -4,7 +4,6 @@
 // MigrationExtension
 //-----------------------------------------------------------------------------
 
-using Interception.Application.Registry.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -145,27 +144,35 @@ public static class MigrationExtension
         ILogger logger,
         CancellationToken ct)
     {
-        var actionService = scope.ServiceProvider
-            .GetRequiredService<IInterceptionActionService>();
+        var factory = scope.ServiceProvider.GetService<IDbContextFactory<AppDbContext>>();
 
-        var added = 0;
-        foreach (var (name, description) in ActionSeed)
+        await using var db = factory is not null
+            ? await factory.CreateDbContextAsync(ct)
+            : scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var existingNames = await db.InterceptionActions
+            .Select(a => a.Name)
+            .ToHashSetAsync(ct);
+
+        var toAdd = ActionSeed
+            .Where(a => !existingNames.Contains(a.Name))
+            .Select(a => new Domain.Entities.InterceptionAction
+            {
+                Name = a.Name,
+                Description = a.Description
+            })
+            .ToList();
+
+        if (toAdd.Count == 0)
         {
-            try
-            {
-                await actionService.CreateAsync(name, description, ct);
-                added++;
-            }
-            catch (InvalidOperationException)
-            {
-                // Вже існує — пропускаємо
-            }
+            logger.LogInformation("✅ Actions already seeded, skipping.");
+            return;
         }
 
-        if (added > 0)
-            logger.LogInformation("✅ Seeded {Count} action(s).", added);
-        else
-            logger.LogInformation("✅ Actions already seeded, skipping.");
+        await db.InterceptionActions.AddRangeAsync(toAdd, ct);
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("✅ Seeded {Count} action(s).", toAdd.Count);
     }
 
     // -------------------------------------------------------------------------

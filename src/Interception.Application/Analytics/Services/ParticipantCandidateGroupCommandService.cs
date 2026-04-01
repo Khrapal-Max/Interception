@@ -6,13 +6,14 @@ using Interception.Application.Analytics.Abstractions;
 using Interception.Domain.Entities;
 using Interception.Domain.Enums;
 using Interception.Domain.Extensions;
+using Interception.Application.Abstractions;
 
 namespace Interception.Application.Analytics.Services;
 
 /// <summary>
 /// Реалізація write-side сценаріїв для життєвого циклу груп кандидатів.
 /// </summary>
-public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<AppDbContext> dbFactory)
+public sealed class ParticipantCandidateGroupCommandService(IAppDbContextFactory dbFactory)
     : IParticipantCandidateGroupCommandService
 {
     /// <inheritdoc />

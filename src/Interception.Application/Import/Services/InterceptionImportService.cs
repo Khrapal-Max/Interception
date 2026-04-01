@@ -6,11 +6,12 @@ using Interception.Application.Import.Abstractions;
 using Interception.Application.Import.Dtos;
 using Interception.Domain.Entities;
 using Interception.Domain.Extensions;
+using Interception.Application.Abstractions;
 
 namespace Interception.Application.Import.Services;
 
 public sealed class InterceptionImportService(
-    IDbContextFactory<AppDbContext> dbFactory) : IInterceptionImportService
+    IAppDbContextFactory dbFactory) : IInterceptionImportService
 {
     public async Task<ImportResultDto> ImportAsync(
         Stream stream,

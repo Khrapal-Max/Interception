@@ -6,6 +6,7 @@ using Interception.Application.Analytics.Abstractions;
 using Interception.Application.Analytics.Dtos;
 using Interception.Application.Analytics.Services.Builders.LinkMap;
 using Interception.Domain.Entities;
+using Interception.Application.Abstractions;
 
 namespace Interception.Application.Analytics.Services;
 
@@ -15,10 +16,10 @@ namespace Interception.Application.Analytics.Services;
 /// для них робиться спроба вивести підрозділ та міжгрупові мости.
 /// Додатково агрегуються характерні дії групи й моста.
 /// </summary>
-public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFactory) : ILinkMapService
+public sealed partial class LinkMapService(IAppDbContextFactory dbFactory) : ILinkMapService
 {
     private const string UnknownDivision = "НВ підрозділ";
-    private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
+    private readonly IAppDbContextFactory _dbFactory = dbFactory;
 
     /// <inheritdoc />
     public async Task<LinkMapDto> BuildAsync(
