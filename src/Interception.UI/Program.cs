@@ -50,6 +50,7 @@ builder.Services.AddScoped<IFrequencyDivisionService, FrequencyDivisionService>(
 
 // Нові candidate-сервіси
 builder.Services.AddScoped<ILinkMapService, LinkMapService>();
+builder.Services.AddScoped<ILinkMapSliceService, LinkMapSliceService>();
 builder.Services.AddScoped<IContextSuggestionService, ContextSuggestionService>();
 builder.Services.AddScoped<IKnownParticipantSuggestionService, KnownParticipantSuggestionService>();
 builder.Services.AddScoped<IParticipantCandidateAnalysisService, ParticipantCandidateAnalysisService>();

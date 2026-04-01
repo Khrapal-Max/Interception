@@ -43,6 +43,28 @@
                 <span class="visually-hidden">Карта зв'язків</span>
             </NavLink>
         }
+
+        @if (ActiveSection == "link-map-slices")
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/analytics/link-map-slices"
+                     Match="NavLinkMatch.All"
+                     title="Зрізи груп"
+                     aria-label="Зрізи груп">
+                <i class="bi bi-diagram-3"></i>
+                <span class="visually-hidden">Зрізи груп</span>
+            </NavLink>
+        }
+        else
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/analytics/link-map-slices"
+                     title="Зрізи груп"
+                     aria-label="Зрізи груп">
+                <i class="bi bi-diagram-3"></i>
+                <span class="visually-hidden">Зрізи груп</span>
+            </NavLink>
+        }
     </div>
 
     <div class="registry-toolbar-meta toolbar-meta">
