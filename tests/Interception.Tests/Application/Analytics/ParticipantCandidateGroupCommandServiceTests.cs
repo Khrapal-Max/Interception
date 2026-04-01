@@ -7,13 +7,14 @@ using Interception.UI.Application.Analytics.Services;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
 using Interception.UI.Domain.Records;
+using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests.Application.Analytics;
 
 public sealed class ParticipantCandidateGroupCommandServiceTests
 {
-    private static ParticipantCandidateGroupCommandService CreateService(IDbContextFactory<Interception.UI.Infrastructure.AppDbContext> factory)
+    private static ParticipantCandidateGroupCommandService CreateService(IDbContextFactory<AppDbContext> factory)
         => new(factory);
 
     [Fact]
