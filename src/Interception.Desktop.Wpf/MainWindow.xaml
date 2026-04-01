@@ -10,14 +10,20 @@
         MinHeight="700"
         WindowStartupLocation="CenterScreen">
     <Window.Resources>
-        <DataTemplate DataType="{x:Type viewModels:DashboardViewModel}">
-            <views:DashboardView />
+        <DataTemplate DataType="{x:Type viewModels:HomeViewModel}">
+            <views:HomeView />
         </DataTemplate>
-        <DataTemplate DataType="{x:Type viewModels:ProjectsViewModel}">
-            <views:ProjectsView />
+        <DataTemplate DataType="{x:Type viewModels:ObservationsViewModel}">
+            <views:ObservationsView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:AnalyticsViewModel}">
+            <views:AnalyticsView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type viewModels:ReportsViewModel}">
             <views:ReportsView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:RegistriesViewModel}">
+            <views:RegistriesView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type viewModels:SettingsViewModel}">
             <views:SettingsView />
@@ -31,7 +37,7 @@
             <RowDefinition Height="30" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="250" />
+            <ColumnDefinition Width="68" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
@@ -46,17 +52,27 @@
                            DockPanel.Dock="Left" />
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
                     <Button Content="Налаштування" Style="{StaticResource TopBarButtonStyle}" Command="{Binding NavigateSettingsCommand}" />
-                    <Button Content="Профіль" Style="{StaticResource TopBarButtonStyle}" />
                 </StackPanel>
             </DockPanel>
         </Border>
 
-        <Border Grid.Row="1" Grid.Column="0" Background="{StaticResource Brush.Sidebar}" Padding="10">
+        <Border Grid.Row="1" Grid.Column="0" Background="{StaticResource Brush.Sidebar}" Padding="8,10">
             <StackPanel>
-                <Button Content="Dashboard" Style="{StaticResource SidebarButtonStyle}" Command="{Binding NavigateDashboardCommand}" />
-                <Button Content="Projects" Style="{StaticResource SidebarButtonStyle}" Command="{Binding NavigateProjectsCommand}" />
-                <Button Content="Reports" Style="{StaticResource SidebarButtonStyle}" Command="{Binding NavigateReportsCommand}" />
-                <Button Content="Settings" Style="{StaticResource SidebarButtonStyle}" Command="{Binding NavigateSettingsCommand}" />
+                <Button Style="{StaticResource NavMenuIconButtonStyle}" Command="{Binding NavigateHomeCommand}">
+                    <TextBlock Text="⌂" Style="{StaticResource NavMenuIconTextStyle}" />
+                </Button>
+                <Button Style="{StaticResource NavMenuIconButtonStyle}" Command="{Binding NavigateObservationsCommand}">
+                    <TextBlock Text="▦" Style="{StaticResource NavMenuIconTextStyle}" />
+                </Button>
+                <Button Style="{StaticResource NavMenuIconButtonStyle}" Command="{Binding NavigateAnalyticsCommand}">
+                    <TextBlock Text="▤" Style="{StaticResource NavMenuIconTextStyle}" />
+                </Button>
+                <Button Style="{StaticResource NavMenuIconButtonStyle}" Command="{Binding NavigateReportsCommand}">
+                    <TextBlock Text="☰" Style="{StaticResource NavMenuIconTextStyle}" />
+                </Button>
+                <Button Style="{StaticResource NavMenuIconButtonStyle}" Command="{Binding NavigateRegistriesCommand}">
+                    <TextBlock Text="⎚" Style="{StaticResource NavMenuIconTextStyle}" />
+                </Button>
             </StackPanel>
         </Border>
 
@@ -71,7 +87,7 @@
                 BorderThickness="1,1,0,0">
             <DockPanel Margin="12,0">
                 <TextBlock VerticalAlignment="Center" Text="{Binding StatusMessage}" />
-                <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Text="Desktop shell v0.1" />
+                <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Text="Desktop shell v0.2" />
             </DockPanel>
         </Border>
     </Grid>

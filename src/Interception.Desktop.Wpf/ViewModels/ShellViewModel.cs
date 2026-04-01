@@ -4,7 +4,7 @@ using Interception.Desktop.Wpf.Infrastructure;
 namespace Interception.Desktop.Wpf.ViewModels;
 
 /// <summary>
-/// Головна модель представлення shell-розмітки з маршрутизацією сторінок.
+/// Головна модель представлення shell-розмітки з маршрутизацією модулів.
 /// </summary>
 public sealed class ShellViewModel : ViewModelBase
 {
@@ -13,18 +13,22 @@ public sealed class ShellViewModel : ViewModelBase
 
     public ShellViewModel()
     {
-        NavigateDashboardCommand = new RelayCommand(() => NavigateTo("Dashboard"));
-        NavigateProjectsCommand = new RelayCommand(() => NavigateTo("Projects"));
+        NavigateHomeCommand = new RelayCommand(() => NavigateTo("Home"));
+        NavigateObservationsCommand = new RelayCommand(() => NavigateTo("Observations"));
+        NavigateAnalyticsCommand = new RelayCommand(() => NavigateTo("Analytics"));
         NavigateReportsCommand = new RelayCommand(() => NavigateTo("Reports"));
+        NavigateRegistriesCommand = new RelayCommand(() => NavigateTo("Registries"));
         NavigateSettingsCommand = new RelayCommand(() => NavigateTo("Settings"));
 
-        _currentViewModel = new DashboardViewModel();
-        _statusMessage = "Готово. Активна сторінка: Dashboard";
+        _currentViewModel = new HomeViewModel();
+        _statusMessage = "Готово. Активна сторінка: Home";
     }
 
-    public ICommand NavigateDashboardCommand { get; }
-    public ICommand NavigateProjectsCommand { get; }
+    public ICommand NavigateHomeCommand { get; }
+    public ICommand NavigateObservationsCommand { get; }
+    public ICommand NavigateAnalyticsCommand { get; }
     public ICommand NavigateReportsCommand { get; }
+    public ICommand NavigateRegistriesCommand { get; }
     public ICommand NavigateSettingsCommand { get; }
 
     public object CurrentViewModel
@@ -43,11 +47,13 @@ public sealed class ShellViewModel : ViewModelBase
     {
         CurrentViewModel = route switch
         {
-            "Dashboard" => new DashboardViewModel(),
-            "Projects" => new ProjectsViewModel(),
+            "Home" => new HomeViewModel(),
+            "Observations" => new ObservationsViewModel(),
+            "Analytics" => new AnalyticsViewModel(),
             "Reports" => new ReportsViewModel(),
+            "Registries" => new RegistriesViewModel(),
             "Settings" => new SettingsViewModel(),
-            _ => new DashboardViewModel()
+            _ => new HomeViewModel()
         };
 
         StatusMessage = $"Готово. Активна сторінка: {route}";

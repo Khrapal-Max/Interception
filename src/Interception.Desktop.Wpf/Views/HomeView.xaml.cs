@@ -1,0 +1,9 @@
+namespace Interception.Desktop.Wpf.Views;
+
+public partial class HomeView : System.Windows.Controls.UserControl
+{
+    public HomeView()
+    {
+        InitializeComponent();
+    }
+}

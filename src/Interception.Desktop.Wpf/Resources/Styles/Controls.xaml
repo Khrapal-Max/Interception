@@ -8,19 +8,38 @@
         <Setter Property="Margin" Value="6,0,0,0" />
     </Style>
 
-    <Style x:Key="SidebarButtonStyle" TargetType="Button">
-        <Setter Property="Foreground" Value="{StaticResource Brush.OnDark}" />
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="HorizontalContentAlignment" Value="Left" />
-        <Setter Property="Padding" Value="14,10" />
-        <Setter Property="Margin" Value="0,0,0,4" />
+    <Style x:Key="NavMenuIconButtonStyle" TargetType="Button">
+        <Setter Property="Width" Value="44" />
+        <Setter Property="Height" Value="44" />
+        <Setter Property="Margin" Value="0,0,0,8" />
+        <Setter Property="BorderBrush" Value="#3F4A55" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Background" Value="#20252B" />
+        <Setter Property="Foreground" Value="#E6ECF2" />
         <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="7">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{StaticResource Brush.SidebarHover}" />
+                <Setter Property="Background" Value="#2A3036" />
+                <Setter Property="BorderBrush" Value="#586573" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="#313941" />
             </Trigger>
         </Style.Triggers>
+    </Style>
+
+    <Style x:Key="NavMenuIconTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="17" />
+        <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
     <Style x:Key="CardBorderStyle" TargetType="Border">
@@ -29,5 +48,64 @@
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="10" />
         <Setter Property="Padding" Value="20" />
+    </Style>
+
+    <Style x:Key="HomeMenuBlockBaseStyle" TargetType="Button">
+        <Setter Property="Foreground" Value="#E8EDF2" />
+        <Setter Property="BorderBrush" Value="#45515D" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Background" Value="#2B3239" />
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="Margin" Value="0,0,12,12" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Bottom" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
+                        <ContentPresenter Margin="{TemplateBinding Padding}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Opacity" Value="0.92" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="HomeMenuBlockLargeStyle" TargetType="Button" BasedOn="{StaticResource HomeMenuBlockBaseStyle}">
+        <Setter Property="Width" Value="520" />
+        <Setter Property="Height" Value="180" />
+        <Setter Property="Background" Value="#325067" />
+        <Setter Property="BorderBrush" Value="#44749D" />
+    </Style>
+
+    <Style x:Key="HomeMenuBlockMediumStyle" TargetType="Button" BasedOn="{StaticResource HomeMenuBlockBaseStyle}">
+        <Setter Property="Width" Value="340" />
+        <Setter Property="Height" Value="180" />
+        <Setter Property="Background" Value="#5A4769" />
+        <Setter Property="BorderBrush" Value="#8F63A7" />
+    </Style>
+
+    <Style x:Key="HomeMenuBlockSmallStyle" TargetType="Button" BasedOn="{StaticResource HomeMenuBlockBaseStyle}">
+        <Setter Property="Width" Value="250" />
+        <Setter Property="Height" Value="84" />
+        <Setter Property="Background" Value="#2E5A52" />
+        <Setter Property="BorderBrush" Value="#2F8B7D" />
+    </Style>
+
+    <Style x:Key="MenuBlockTitleStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="#E8EDF2" />
+    </Style>
+
+    <Style x:Key="MenuBlockSubtitleStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Margin" Value="0,4,0,0" />
+        <Setter Property="Foreground" Value="#CFD6DD" />
     </Style>
 </ResourceDictionary>
