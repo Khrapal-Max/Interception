@@ -30,7 +30,7 @@ public sealed class FrequencyDivisionRegistryTests : BunitContext
         Services.AddSingleton<ToastService>();
         ComponentFactories.AddStub<FrequencyDivisionDrawer>();
 
-        var cut = RenderComponent<FrequencyDivisionRegistry>();
+        var cut = Render<FrequencyDivisionRegistry>();
 
         cut.Markup.Should().Contain("Частот ще немає");
         cut.Markup.Should().Contain("Оновити");
