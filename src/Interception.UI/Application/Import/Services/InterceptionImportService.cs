@@ -90,6 +90,7 @@ public sealed class InterceptionImportService(
                 frequency: row.Frequency,
                 division: row.Division,
                 vectorSignal: row.VectorSignal,
+                locationDetails: null,
                 locationClass: LocationClass.NoInfo,
                 interceptionAction: action,
                 note: row.Details,

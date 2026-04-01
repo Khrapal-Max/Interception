@@ -122,6 +122,18 @@
         </select>
     </div>
 
+    <!-- Локація для карти -->
+    <div class="col-6">
+        <label class="form-label form-label-sm">Локація (точка/маршрут/зона)</label>
+        <input type="text" class="form-control form-control-sm"
+               placeholder="напр. район Нове / Нове->Старе / точка біля мосту"
+               value="@Form.LocationDetails"
+               @oninput="e => Form.LocationDetails = e.Value?.ToString()" />
+        <div class="form-text">
+            Це поле для карти. "Точка перехвату" нижче — лише точка пеленга.
+        </div>
+    </div>
+
     <!-- Точка перехвату -->
     <div class="col-3">
         <label class="form-label form-label-sm">Точка перехвату</label>

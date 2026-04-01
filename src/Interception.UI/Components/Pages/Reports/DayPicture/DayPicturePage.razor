@@ -88,6 +88,7 @@
                                     <tr>
                                         <th>Час</th>
                                         <th>Частота</th>
+                                        <th>Підрозділ</th>
                                         <th>Дія</th>
                                         <th>LocationClass</th>
                                         <th>Особи</th>
@@ -100,6 +101,7 @@
                                         <tr>
                                             <td class="text-nowrap">@entry.ObservedDate.ToLocalTime().ToString("HH:mm")</td>
                                             <td class="text-nowrap">@(entry.Frequency ?? "—")</td>
+                                            <td>@(entry.Division ?? "—")</td>
                                             <td>@(entry.ActionName ?? "—")</td>
                                             <td class="text-nowrap">@entry.LocationClass</td>
                                             <td>

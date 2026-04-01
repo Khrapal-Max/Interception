@@ -16,6 +16,7 @@ public class InterceptionMessage
     public string? Division { get; set; }
     public string? PointSignal { get; private set; }
     public string? VectorSignal { get; private set; }
+    public string? LocationDetails { get; private set; }
     public LocationClass LocationClass { get; private set; } = LocationClass.NoInfo;
 
     public Guid? InterceptionActionId { get; private set; }
@@ -34,6 +35,7 @@ public class InterceptionMessage
         string? frequency,
         string? division,
         string? vectorSignal,
+        string? locationDetails,
         LocationClass locationClass,
         InterceptionAction interceptionAction,
         string? note,
@@ -48,6 +50,7 @@ public class InterceptionMessage
             Frequency = NormalizeOptional(frequency),
             Division = NormalizeOptional(division),
             VectorSignal = NormalizeOptional(vectorSignal),
+            LocationDetails = NormalizeOptional(locationDetails),
             LocationClass = locationClass,
             InterceptionAction = interceptionAction,
             InterceptionActionId = interceptionAction.Id,
@@ -63,6 +66,7 @@ public class InterceptionMessage
         string? frequency,
         string? division,
         string? vectorSignal,
+        string? locationDetails,
         LocationClass locationClass,
         InterceptionAction interceptionAction,
         string? note,
@@ -74,6 +78,7 @@ public class InterceptionMessage
         Frequency = NormalizeOptional(frequency);
         Division = NormalizeOptional(division);
         VectorSignal = NormalizeOptional(vectorSignal);
+        LocationDetails = NormalizeOptional(locationDetails);
         LocationClass = locationClass;
         InterceptionAction = interceptionAction;
         InterceptionActionId = interceptionAction.Id;

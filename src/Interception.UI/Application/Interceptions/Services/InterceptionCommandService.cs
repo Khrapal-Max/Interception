@@ -33,6 +33,7 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
             form.Frequency,
             form.Division,
             form.VectorSignal,
+            form.LocationDetails,
             locationClass,
             action,
             form.Note,
@@ -65,7 +66,7 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
             ?? throw new InvalidOperationException($"InterceptionAction '{form.InterceptionActionId}' не знайдено.");
 
         var locationClass = ResolveLocationClass(form);
-        message.Update(form.ObservedDate, form.Frequency, form.Division, form.VectorSignal, locationClass, action, form.Note, form.PointSignal);
+        message.Update(form.ObservedDate, form.Frequency, form.Division, form.VectorSignal, form.LocationDetails, locationClass, action, form.Note, form.PointSignal);
 
         foreach (var p in message.Participants.ToList())
             message.RemoveParticipant(p.Id);
@@ -95,36 +96,28 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
         if (form.LocationClass != LocationClass.NoInfo)
             return form.LocationClass;
 
-        var pointSignal = form.PointSignal?.Trim();
-        if (!string.IsNullOrWhiteSpace(pointSignal))
-            return LocationClass.Point;
+        var locationDetails = form.LocationDetails?.Trim();
+        if (string.IsNullOrWhiteSpace(locationDetails))
+            return LocationClass.NoInfo;
 
-        var vectorSignal = form.VectorSignal?.Trim();
-        if (!string.IsNullOrWhiteSpace(vectorSignal))
+        if (locationDetails.Contains("->", StringComparison.OrdinalIgnoreCase)
+            || locationDetails.Contains("→", StringComparison.OrdinalIgnoreCase)
+            || locationDetails.Contains('-', StringComparison.OrdinalIgnoreCase)
+            || locationDetails.Contains("маршрут", StringComparison.OrdinalIgnoreCase)
+            || locationDetails.Contains("напрям", StringComparison.OrdinalIgnoreCase)
+            || locationDetails.Contains("курс", StringComparison.OrdinalIgnoreCase))
         {
-            if (vectorSignal.Contains("->", StringComparison.OrdinalIgnoreCase)
-                || vectorSignal.Contains("→", StringComparison.OrdinalIgnoreCase)
-                || vectorSignal.Contains('-', StringComparison.OrdinalIgnoreCase)
-                || vectorSignal.Contains("курс", StringComparison.OrdinalIgnoreCase)
-                || vectorSignal.Contains("напрям", StringComparison.OrdinalIgnoreCase))
-            {
-                return LocationClass.Route;
-            }
+            return LocationClass.Route;
+        }
 
+        if (locationDetails.Contains("район", StringComparison.OrdinalIgnoreCase)
+            || locationDetails.Contains("сектор", StringComparison.OrdinalIgnoreCase)
+            || locationDetails.Contains("зона", StringComparison.OrdinalIgnoreCase))
+        {
             return LocationClass.Zone;
         }
 
-        var note = form.Note?.Trim();
-        if (!string.IsNullOrWhiteSpace(note))
-        {
-            if (note.Contains("район", StringComparison.OrdinalIgnoreCase)
-                || note.Contains("сектор", StringComparison.OrdinalIgnoreCase)
-                || note.Contains("зона", StringComparison.OrdinalIgnoreCase))
-            {
-                return LocationClass.Zone;
-            }
-        }
+        return LocationClass.Point;
 
-        return LocationClass.NoInfo;
     }
 }

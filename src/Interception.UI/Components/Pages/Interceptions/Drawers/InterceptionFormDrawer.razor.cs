@@ -79,6 +79,7 @@ public partial class InterceptionFormDrawer : ComponentBase
             Frequency = topFreq?.Frequency,
             Division = topFreq?.Division,
             VectorSignal = topFreq?.VectorSignal,
+            LocationDetails = null,
             LocationClass = LocationClass.NoInfo,
             InterceptionActionId = _actions.Count == 1 ? _actions[0].Id : Guid.Empty,
             Participants =
@@ -112,6 +113,7 @@ public partial class InterceptionFormDrawer : ComponentBase
             Division = message.Division,
             PointSignal = message.PointSignal,
             VectorSignal = message.VectorSignal,
+            LocationDetails = message.LocationDetails,
             LocationClass = message.LocationClass,
             InterceptionActionId = message.InterceptionActionId ?? Guid.Empty,
             Note = message.Note,

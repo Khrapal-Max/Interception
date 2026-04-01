@@ -40,6 +40,10 @@ internal sealed class InterceptionMessageConfiguration
             .HasColumnName("vector_signal")
             .HasMaxLength(100);
 
+        builder.Property(x => x.LocationDetails)
+            .HasColumnName("location_details")
+            .HasMaxLength(300);
+
         builder.Property(x => x.LocationClass)
             .HasColumnName("location_class")
             .HasConversion<string>()

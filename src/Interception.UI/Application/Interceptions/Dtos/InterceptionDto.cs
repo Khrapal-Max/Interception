@@ -16,6 +16,7 @@ public sealed class InterceptionFormDto
     public string? Division { get; set; }
     public string? PointSignal { get; set; }
     public string? VectorSignal { get; set; }
+    public string? LocationDetails { get; set; }
     public LocationClass LocationClass { get; set; } = LocationClass.NoInfo;
     public Guid InterceptionActionId { get; set; }
     public string? Note { get; set; }
