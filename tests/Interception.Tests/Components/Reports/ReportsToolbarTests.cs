@@ -33,14 +33,14 @@ public sealed class ReportsToolbarTests : BunitContext
         dayPicture.ClassList.Should().Contain("btn-outline-secondary");
     }
 
-  /*  [Fact]
+    [Fact]
     public void Render_WithMetaAndActions_RendersBothFragments()
     {
-        var cut = RenderComponent<ReportsToolbar>(p => p
-            .Add<RenderFragment>(x => x.MetaContent, _ => b => b.AddContent(0, "META"))
-            .Add<RenderFragment>(x => x.ActionsContent, _ => b => b.AddContent(0, "ACTION")));
+        var cut = Render<ReportsToolbar>(p => p
+            .Add(x => x.MetaContent, (RenderFragment)(b => b.AddContent(0, "META")))
+            .Add(x => x.ActionsContent, (RenderFragment)(b => b.AddContent(0, "ACTION"))));
 
         cut.Markup.Should().Contain("META");
         cut.Markup.Should().Contain("ACTION");
-    }*/
+    }
 }
