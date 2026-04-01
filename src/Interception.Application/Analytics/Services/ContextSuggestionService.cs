@@ -2,7 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.Application.Abstractions;
 using Interception.Application.Analytics.Abstractions;
 using Interception.Application.Analytics.Builders;
 using Interception.Application.Analytics.Dtos;
@@ -16,7 +15,7 @@ namespace Interception.Application.Analytics.Services;
 /// Реалізація non-person suggestions: підрозділ / контекст / середовище групи.
 /// </summary>
 public sealed class ContextSuggestionService(
-    IAppDbContextFactory dbFactory,
+    IDbContextFactory<AppDbContext> dbFactory,
     IOptions<PatternRecognitionOptions> options) : IContextSuggestionService
 {
     private readonly PatternRecognitionOptions _options = options.Value;
@@ -43,7 +42,7 @@ public sealed class ContextSuggestionService(
     /// Будує контекстні suggestions для конкретної групи кандидатів.
     /// </summary>
     internal async Task<IReadOnlyList<CandidateContextSuggestionDto>> BuildContextSuggestionsAsync(
-        IAppDbContext db,
+        AppDbContext db,
         ParticipantCandidateGroup group,
         int take,
         CancellationToken ct)
@@ -158,7 +157,7 @@ public sealed class ContextSuggestionService(
     /// <summary>
     /// Будує базові профілі контекстів із known та confirmed історії.
     /// </summary>
-    private async Task<IReadOnlyList<ContextProfile>> BuildContextProfilesAsync(IAppDbContext db, CancellationToken ct)
+    private async Task<IReadOnlyList<ContextProfile>> BuildContextProfilesAsync(AppDbContext db, CancellationToken ct)
     {
         var knownRows = await db.InterceptionMessageParticipants
             .Where(p => !p.IsUnknown && p.Name != null && p.InterceptionMessage.Division != null)

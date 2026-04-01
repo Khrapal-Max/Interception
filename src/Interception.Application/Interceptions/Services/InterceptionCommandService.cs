@@ -2,7 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.Application.Abstractions;
 using Interception.Application.Interceptions.Abstractions;
 using Interception.Application.Interceptions.Dtos;
 using Interception.Domain.Entities;
@@ -12,7 +11,7 @@ namespace Interception.Application.Interceptions.Services;
 /// <summary>
 /// Реалізація write-side сценаріїв для повідомлень перехоплення.
 /// </summary>
-public sealed class InterceptionCommandService(IAppDbContextFactory dbFactory) : IInterceptionCommandService
+public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> dbFactory) : IInterceptionCommandService
 {
     /// <inheritdoc />
     public async Task<InterceptionMessage> CreateAsync(

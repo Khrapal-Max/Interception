@@ -2,7 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.Application.Abstractions;
 using Interception.Application.Reports.Abstractions;
 using Interception.Application.Reports.Dtos;
 using Interception.Domain.Entities;
@@ -13,11 +12,11 @@ namespace Interception.Application.Reports.Services;
 /// <summary>
 /// Будує простий зведений звіт по підрозділах.
 /// </summary>
-public sealed class DivisionReportService(IAppDbContextFactory dbFactory)
+public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFactory)
     : IDivisionReportService
 {
     private const string UnknownDivision = "НВ підрозділ";
-    private readonly IAppDbContextFactory _dbFactory = dbFactory;
+    private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
 
     /// <inheritdoc />
     public async Task<DivisionReportDto> BuildAsync(
@@ -266,7 +265,7 @@ public sealed class DivisionReportService(IAppDbContextFactory dbFactory)
     /// Рахує open-групи НВ за effective division пов'язаних повідомлень.
     /// </summary>
     private static async Task<Dictionary<string, int>> LoadUnknownGroupsCountByDivisionAsync(
-        IAppDbContext db,
+        AppDbContext db,
         HashSet<Guid> messageIds,
         IReadOnlyDictionary<Guid, string> messageEffectiveDivisions,
         CancellationToken ct)
@@ -288,7 +287,7 @@ public sealed class DivisionReportService(IAppDbContextFactory dbFactory)
     /// Завантажує підтверджених осіб і визначає effective division з пріоритетом confirmed division.
     /// </summary>
     private static async Task<List<(string Division, string Name, string? Role, DateTime LastSeenAt)>> LoadConfirmedPeopleAsync(
-        IAppDbContext db,
+        AppDbContext db,
         HashSet<Guid> messageIds,
         IReadOnlyDictionary<Guid, DateTime> messageDates,
         IReadOnlyDictionary<Guid, string> messageEffectiveDivisions,

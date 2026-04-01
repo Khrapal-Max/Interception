@@ -2,7 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.Application.Abstractions;
 using Interception.Application.Analytics.Dtos;
 using Interception.Application.Interceptions.Abstractions;
 
@@ -11,7 +10,7 @@ namespace Interception.Application.Interceptions.Services;
 /// <summary>
 /// Реалізація контекстних підказок для операторського вводу перехоплень.
 /// </summary>
-public sealed class InterceptionSuggestionService(IAppDbContextFactory dbFactory) : IInterceptionSuggestionService
+public sealed class InterceptionSuggestionService(IDbContextFactory<AppDbContext> dbFactory) : IInterceptionSuggestionService
 {
     /// <inheritdoc />
     public async Task<IReadOnlyList<FrequencySuggestionDto>> GetFrequencyWithDivisionAsync(

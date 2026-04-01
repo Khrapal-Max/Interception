@@ -2,7 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.Application.Abstractions;
 using Interception.Application.Import.Abstractions;
 using Interception.Application.Import.Dtos;
 using Interception.Common.Extensions;
@@ -11,7 +10,7 @@ using Interception.Domain.Entities;
 namespace Interception.Application.Import.Services;
 
 public sealed class InterceptionImportService(
-    IAppDbContextFactory dbFactory) : IInterceptionImportService
+    IDbContextFactory<AppDbContext> dbFactory) : IInterceptionImportService
 {
     public async Task<ImportResultDto> ImportAsync(
         Stream stream,
