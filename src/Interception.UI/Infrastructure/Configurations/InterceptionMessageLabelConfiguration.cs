@@ -27,7 +27,7 @@ internal sealed class InterceptionMessageLabelConfiguration
 
         builder.Property(x => x.NameLabel)
             .HasColumnName("name_label")
-            .HasMaxLength(100)
+            .HasMaxLength(1000)
             .IsRequired();
 
         // Унікальність мітки в межах одного повідомлення

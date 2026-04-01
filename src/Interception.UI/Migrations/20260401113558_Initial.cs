@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
@@ -203,7 +204,7 @@ namespace Interception.UI.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    name_label = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    name_label = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
                     interception_message_id = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>

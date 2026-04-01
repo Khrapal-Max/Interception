@@ -171,8 +171,8 @@ namespace Interception.UI.Migrations
 
                     b.Property<string>("NameLabel")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
                         .HasColumnName("name_label");
 
                     b.HasKey("Id");

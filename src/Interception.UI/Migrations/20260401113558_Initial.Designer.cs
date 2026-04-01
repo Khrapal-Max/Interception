@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Interception.UI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260325135355_Initial")]
+    [Migration("20260401113558_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -174,8 +174,8 @@ namespace Interception.UI.Migrations
 
                     b.Property<string>("NameLabel")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
                         .HasColumnName("name_label");
 
                     b.HasKey("Id");
