@@ -5,7 +5,7 @@
 using Interception.Application.Registry.Abstractions;
 using Interception.Application.Registry.Dtos;
 using Interception.Domain.Entities;
-using Interception.Domain.Extensions;
+using Interception.Common.Extensions;
 using Interception.Application.Abstractions;
 
 namespace Interception.Application.Registry.Services;

@@ -3,7 +3,7 @@
     <Project Path="src/Interception.Application/Interception.Application.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
-    <Project Path="src/Interception.Common/Interception.Common/Interception.Common.csproj" Id="aca2da95-18f4-4cc7-b202-fd4ab211ec25" />
+    <Project Path="src/Interception.Common/Interception.Common.csproj" Id="aca2da95-18f4-4cc7-b202-fd4ab211ec25" />
     <Project Path="src/Interception.Desktop.Wpf/Interception.Desktop.Wpf.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
