@@ -8,6 +8,7 @@ using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Registry.Abstractions;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 
@@ -78,6 +79,7 @@ public partial class InterceptionFormDrawer : ComponentBase
             Frequency = topFreq?.Frequency,
             Division = topFreq?.Division,
             VectorSignal = topFreq?.VectorSignal,
+            LocationClass = LocationClass.NoInfo,
             InterceptionActionId = _actions.Count == 1 ? _actions[0].Id : Guid.Empty,
             Participants =
             [
@@ -110,6 +112,7 @@ public partial class InterceptionFormDrawer : ComponentBase
             Division = message.Division,
             PointSignal = message.PointSignal,
             VectorSignal = message.VectorSignal,
+            LocationClass = message.LocationClass,
             InterceptionActionId = message.InterceptionActionId ?? Guid.Empty,
             Note = message.Note,
             Participants = [.. message.Participants

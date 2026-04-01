@@ -14,5 +14,6 @@ public sealed record DayPictureEntryDto(
     string? Division,
     string? VectorSignal,
     string? ActionName,
+    string LocationClass,
     string? Note,
     IReadOnlyList<string> Participants);

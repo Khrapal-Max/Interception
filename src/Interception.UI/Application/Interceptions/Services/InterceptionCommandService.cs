@@ -5,6 +5,7 @@
 using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,11 +27,13 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
         var action = await db.InterceptionActions.FindAsync([form.InterceptionActionId], ct)
             ?? throw new InvalidOperationException($"InterceptionAction '{form.InterceptionActionId}' не знайдено.");
 
+        var locationClass = ResolveLocationClass(form);
         var message = InterceptionMessage.Create(
             form.ObservedDate,
             form.Frequency,
             form.Division,
             form.VectorSignal,
+            locationClass,
             action,
             form.Note,
             operatorName,
@@ -61,7 +64,8 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
         var action = await db.InterceptionActions.FindAsync([form.InterceptionActionId], ct)
             ?? throw new InvalidOperationException($"InterceptionAction '{form.InterceptionActionId}' не знайдено.");
 
-        message.Update(form.ObservedDate, form.Frequency, form.Division, form.VectorSignal, action, form.Note, form.PointSignal);
+        var locationClass = ResolveLocationClass(form);
+        message.Update(form.ObservedDate, form.Frequency, form.Division, form.VectorSignal, locationClass, action, form.Note, form.PointSignal);
 
         foreach (var p in message.Participants.ToList())
             message.RemoveParticipant(p.Id);
@@ -84,5 +88,43 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
             ?? throw new InvalidOperationException($"InterceptionMessage '{id}' не знайдено.");
         db.InterceptionMessages.Remove(message);
         await db.SaveChangesAsync(ct);
+    }
+
+    private static LocationClass ResolveLocationClass(InterceptionFormDto form)
+    {
+        if (form.LocationClass != LocationClass.NoInfo)
+            return form.LocationClass;
+
+        var pointSignal = form.PointSignal?.Trim();
+        if (!string.IsNullOrWhiteSpace(pointSignal))
+            return LocationClass.Point;
+
+        var vectorSignal = form.VectorSignal?.Trim();
+        if (!string.IsNullOrWhiteSpace(vectorSignal))
+        {
+            if (vectorSignal.Contains("->", StringComparison.OrdinalIgnoreCase)
+                || vectorSignal.Contains("→", StringComparison.OrdinalIgnoreCase)
+                || vectorSignal.Contains('-', StringComparison.OrdinalIgnoreCase)
+                || vectorSignal.Contains("курс", StringComparison.OrdinalIgnoreCase)
+                || vectorSignal.Contains("напрям", StringComparison.OrdinalIgnoreCase))
+            {
+                return LocationClass.Route;
+            }
+
+            return LocationClass.Zone;
+        }
+
+        var note = form.Note?.Trim();
+        if (!string.IsNullOrWhiteSpace(note))
+        {
+            if (note.Contains("район", StringComparison.OrdinalIgnoreCase)
+                || note.Contains("сектор", StringComparison.OrdinalIgnoreCase)
+                || note.Contains("зона", StringComparison.OrdinalIgnoreCase))
+            {
+                return LocationClass.Zone;
+            }
+        }
+
+        return LocationClass.NoInfo;
     }
 }

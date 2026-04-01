@@ -5,6 +5,7 @@
 using Interception.UI.Application.Import.Abstractions;
 using Interception.UI.Application.Import.Dtos;
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -89,6 +90,7 @@ public sealed class InterceptionImportService(
                 frequency: row.Frequency,
                 division: row.Division,
                 vectorSignal: row.VectorSignal,
+                locationClass: LocationClass.NoInfo,
                 interceptionAction: action,
                 note: row.Details,
                 createdBy: operatorName,
