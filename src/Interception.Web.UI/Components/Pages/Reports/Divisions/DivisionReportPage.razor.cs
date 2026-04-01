@@ -5,6 +5,7 @@
 using Interception.Application.Reports.Abstractions;
 using Interception.Application.Reports.Dtos;
 using Interception.Application.Toasts;
+using Interception.Common.Extensions;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.Web.UI.Components.Pages.Reports.Divisions;

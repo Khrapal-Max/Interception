@@ -7,6 +7,7 @@ using Interception.Application.Analytics.Abstractions;
 using Interception.Application.Analytics.Builders;
 using Interception.Domain.Entities;
 using Interception.Domain.Enums;
+using Interception.Common.Extensions;
 using Interception.Domain.Records;
 
 namespace Interception.Application.Analytics.Services;

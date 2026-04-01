@@ -8,6 +8,7 @@ using Interception.Application.Interceptions.Dtos;
 using Interception.Application.Registry.Abstractions;
 using Interception.Application.Toasts;
 using Interception.Domain.Entities;
+using Interception.Common.Extensions;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.Web.UI.Components.Pages.Interceptions.Drawers;

@@ -6,6 +6,7 @@ using Interception.Application.Analytics.Abstractions;
 using Interception.Application.Analytics.Dtos;
 using Interception.Application.Toasts;
 using Interception.Domain.Enums;
+using Interception.Common.Extensions;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.Web.UI.Components.Pages.Analytics.Candidates.Drawers;

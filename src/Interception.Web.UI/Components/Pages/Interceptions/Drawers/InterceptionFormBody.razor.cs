@@ -5,6 +5,7 @@
 using Interception.Application.Analytics.Dtos;
 using Interception.Application.Interceptions.Dtos;
 using Interception.Domain.Entities;
+using Interception.Common.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
