@@ -143,6 +143,7 @@ public sealed partial class DayPictureService(IDbContextFactory<AppDbContext> db
                     Division: NormalizeMeaningfulOrNull(x.EffectiveDivision),
                     VectorSignal: NormalizeMeaningfulOrNull(x.Message.VectorSignal),
                     ActionName: x.Message.InterceptionAction?.Name,
+                    LocationClass: x.Message.LocationClass.ToString(),
                     Note: x.Message.Note,
                     Participants: [.. x.Message.Participants
                         .OrderBy(p => p.Ordinal)

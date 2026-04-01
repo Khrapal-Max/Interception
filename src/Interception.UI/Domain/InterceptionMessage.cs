@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Extensions;
+using Interception.UI.Domain.Enums;
 
 namespace Interception.UI.Domain;
 
@@ -15,6 +16,7 @@ public class InterceptionMessage
     public string? Division { get; set; }
     public string? PointSignal { get; private set; }
     public string? VectorSignal { get; private set; }
+    public LocationClass LocationClass { get; private set; } = LocationClass.NoInfo;
 
     public Guid? InterceptionActionId { get; private set; }
     public InterceptionAction? InterceptionAction { get; private set; }
@@ -32,6 +34,7 @@ public class InterceptionMessage
         string? frequency,
         string? division,
         string? vectorSignal,
+        LocationClass locationClass,
         InterceptionAction interceptionAction,
         string? note,
         string? createdBy,
@@ -45,6 +48,7 @@ public class InterceptionMessage
             Frequency = NormalizeOptional(frequency),
             Division = NormalizeOptional(division),
             VectorSignal = NormalizeOptional(vectorSignal),
+            LocationClass = locationClass,
             InterceptionAction = interceptionAction,
             InterceptionActionId = interceptionAction.Id,
             Note = NormalizeOptional(note),
@@ -59,6 +63,7 @@ public class InterceptionMessage
         string? frequency,
         string? division,
         string? vectorSignal,
+        LocationClass locationClass,
         InterceptionAction interceptionAction,
         string? note,
         string? pointSignal = null)
@@ -69,6 +74,7 @@ public class InterceptionMessage
         Frequency = NormalizeOptional(frequency);
         Division = NormalizeOptional(division);
         VectorSignal = NormalizeOptional(vectorSignal);
+        LocationClass = locationClass;
         InterceptionAction = interceptionAction;
         InterceptionActionId = interceptionAction.Id;
         Note = NormalizeOptional(note);

@@ -5,6 +5,7 @@
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -61,6 +62,12 @@ public partial class InterceptionFormBody : ComponentBase
     {
         if (Guid.TryParse(e.Value?.ToString(), out var id))
             Form.InterceptionActionId = id;
+    }
+
+    private void OnLocationClassChange(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<LocationClass>(e.Value?.ToString(), out var value))
+            Form.LocationClass = value;
     }
 
     // -------------------------------------------------------------------------

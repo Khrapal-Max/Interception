@@ -22,6 +22,16 @@
                 <button type="button" class="btn btn-sm btn-secondary" @onclick="ResetDayAsync" disabled="@_loading">
                     Сьогодні
                 </button>
+                <select class="form-select form-select-sm"
+                        style="width: 10rem;"
+                        value="@_locationClassFilter"
+                        @onchange="e => _locationClassFilter = e.Value?.ToString()">
+                    <option value="">Всі класи</option>
+                    @foreach (var option in GetLocationClassOptions())
+                    {
+                        <option value="@option">@option</option>
+                    }
+                </select>
             </div>
         </ActionsContent>
     </ReportsToolbar>
@@ -44,7 +54,13 @@
             <div class="panel-scroll p-2 d-flex flex-column gap-2">
                 @foreach (var group in _picture.Groups.OrderBy(x => x.Division))
                 {
-                    var entries = GetOrderedEntries(group);
+                    var entries = ApplyLocationClassFilter(GetOrderedEntries(group), _locationClassFilter);
+                    if (entries.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    var actionLocationGroups = BuildActionLocationGroups(entries).Take(3).ToList();
 
                     <div class="card rounded-0 border-0 shadow-sm">
                         <div class="card-header py-2 px-3 d-flex justify-content-between align-items-start gap-2 flex-wrap">
@@ -53,6 +69,12 @@
                                 <div class="small text-muted">
                                     Спостережень: @entries.Count
                                 </div>
+                                @if (actionLocationGroups.Count > 0)
+                                {
+                                    <div class="small text-muted">
+                                        @string.Join(" · ", actionLocationGroups.Select(x => $"{x.Key}: {x.Count}"))
+                                    </div>
+                                }
                             </div>
                             @if (group.Conversations.Count > 1)
                             {
@@ -67,6 +89,7 @@
                                         <th>Час</th>
                                         <th>Частота</th>
                                         <th>Дія</th>
+                                        <th>LocationClass</th>
                                         <th>Особи</th>
                                         <th>Примітка</th>
                                     </tr>
@@ -78,6 +101,7 @@
                                             <td class="text-nowrap">@entry.ObservedDate.ToLocalTime().ToString("HH:mm")</td>
                                             <td class="text-nowrap">@(entry.Frequency ?? "—")</td>
                                             <td>@(entry.ActionName ?? "—")</td>
+                                            <td class="text-nowrap">@entry.LocationClass</td>
                                             <td>
                                                 @if (entry.Participants.Count == 0)
                                                 {

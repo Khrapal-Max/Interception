@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Dtos;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Extensions;
 
 namespace Interception.UI.Application.Interceptions.Dtos;
@@ -15,6 +16,7 @@ public sealed class InterceptionFormDto
     public string? Division { get; set; }
     public string? PointSignal { get; set; }
     public string? VectorSignal { get; set; }
+    public LocationClass LocationClass { get; set; } = LocationClass.NoInfo;
     public Guid InterceptionActionId { get; set; }
     public string? Note { get; set; }
 
