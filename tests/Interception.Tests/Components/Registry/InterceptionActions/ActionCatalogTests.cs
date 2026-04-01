@@ -5,6 +5,7 @@
 using Bunit;
 using Bunit.TestDoubles;
 using FluentAssertions;
+using Interception.UI.Application.Import.Abstractions;
 using Interception.UI.Application.Registry.Abstractions;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Components.Pages.Registry.InterceptionActions;
@@ -31,6 +32,7 @@ public sealed class ActionCatalogTests : BunitContext
            .Returns(actions ?? []);
 
         Services.AddSingleton(svc);
+        Services.AddSingleton(Substitute.For<IDatabaseImportExportService>());
         Services.AddSingleton<ToastService>();
         ComponentFactories.AddStub<ActionFormDrawer>();
 
@@ -193,6 +195,7 @@ public sealed class ActionCatalogTests : BunitContext
            .ThrowsAsync(new Exception("DB error"));
 
         Services.AddSingleton(svc);
+        Services.AddSingleton(Substitute.For<IDatabaseImportExportService>());
         Services.AddSingleton<ToastService>();
         ComponentFactories.AddStub<ActionFormDrawer>();
 

@@ -2,6 +2,7 @@
 @using Interception.UI.Components.Pages.Registry.InterceptionActions.Drawers
 @using Interception.UI.Components.Pages.Registry.Toolbar
 @using Interception.UI.Domain
+@using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>Регістри — Дії</PageTitle>
 
@@ -15,6 +16,15 @@
             }
         </MetaContent>
         <ActionsContent>
+            <button class="btn btn-outline-light btn-sm" @onclick="ExportDatabaseAsync">
+                <i class="bi bi-download me-1"></i>Export DB
+            </button>
+            <label class="btn btn-outline-warning btn-sm mb-0">
+                <i class="bi bi-upload me-1"></i>Import DB
+                <InputFile OnChange="ImportDatabaseAsync"
+                           accept=".json,application/json"
+                           style="display:none" />
+            </label>
             <button class="btn btn-success btn-sm" @onclick="OpenCreate">
                 <i class="bi bi-plus-lg me-1"></i>Додати дію
             </button>
