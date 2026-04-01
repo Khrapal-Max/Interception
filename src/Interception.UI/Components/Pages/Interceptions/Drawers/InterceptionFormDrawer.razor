@@ -1,0 +1,46 @@
+@using Interception.UI.Application.Interceptions.Dtos
+@using Interception.UI.Components.Shared.Drawer
+@namespace Interception.UI.Components.Pages.Interceptions.Drawers
+
+<Drawer IsOpen="@IsOpen"
+        IsOpenChanged="IsOpenChanged"
+        Title="@(EditingId.HasValue ? "Редагування" : "Нове повідомлення")"
+        DisableClose="@_saving"
+        CloseOnBackdrop="true"
+        CloseOnEscape="true"
+        OnClosed="OnDrawerClosed">
+    <HeaderActions>
+        @if (EditingId.HasValue)
+        {
+            <span class="badge bg-secondary me-2">Редагування</span>
+        }
+    </HeaderActions>
+    <ChildContent>
+        @if (_form is not null)
+        {
+            <InterceptionFormBody Form="_form"
+                                  Actions="_actions"
+                                  FrequencySuggestions="_frequencySuggestions"
+                                  VectorSuggestions="_vectorSuggestions"
+                                  OnFrequencySearch="SearchFrequencyAsync"
+                                  OnVectorSearch="SearchVectorAsync"
+                                  OnParticipantSearch="SearchParticipantsAsync" />
+        }
+    </ChildContent>
+    <FooterContent>
+        <button class="btn btn-secondary btn-sm"
+                @onclick="CloseAsync"
+                disabled="@_saving">
+            Скасувати
+        </button>
+        <button class="btn btn-primary btn-sm"
+                @onclick="SaveAsync"
+                disabled="@(_saving || _form is null || _form.InterceptionActionId == Guid.Empty)">
+            @if (_saving)
+            {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            Зберегти
+        </button>
+    </FooterContent>
+</Drawer>

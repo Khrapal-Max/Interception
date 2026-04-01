@@ -1,0 +1,83 @@
+<div class="registry-toolbar flex-shrink-0">
+    <div class="toolbar-start d-flex align-items-center gap-2">
+        @if (ActiveSection == "divisions")
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/registries/divisions"
+                     Match="NavLinkMatch.All"
+                     title="Підрозділи"
+                     aria-label="Підрозділи">
+                <i class="bi bi-broadcast"></i>
+                <span class="visually-hidden">Підрозділи</span>
+            </NavLink>
+        }
+        else
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/registries/divisions"
+                     title="Підрозділи"
+                     aria-label="Підрозділи">
+                <i class="bi bi-broadcast"></i>
+                <span class="visually-hidden">Підрозділи</span>
+            </NavLink>
+        }
+
+        @if (ActiveSection == "persons")
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/registries/persons"
+                     Match="NavLinkMatch.All"
+                     title="Особи"
+                     aria-label="Особи">
+                <i class="bi bi-people"></i>
+                <span class="visually-hidden">Особи</span>
+            </NavLink>
+        }
+        else
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/registries/persons"
+                     title="Особи"
+                     aria-label="Особи">
+                <i class="bi bi-people"></i>
+                <span class="visually-hidden">Особи</span>
+            </NavLink>
+        }
+
+        @if (ActiveSection == "actions")
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/registries/actions"
+                     Match="NavLinkMatch.All"
+                     title="Дії"
+                     aria-label="Дії">
+                <i class="bi bi-lightning"></i>
+                <span class="visually-hidden">Дії</span>
+            </NavLink>
+        }
+        else
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/registries/actions"
+                     title="Дії"
+                     aria-label="Дії">
+                <i class="bi bi-lightning"></i>
+                <span class="visually-hidden">Дії</span>
+            </NavLink>
+        }
+    </div>
+
+    <div class="registry-toolbar-meta toolbar-meta">
+        @if (MetaContent is not null)
+        {
+            @MetaContent
+        }
+    </div>
+
+    <div class="toolbar-actions d-flex align-items-center gap-2 justify-content-end">
+        @if (ActionsContent is not null)
+        {
+            @ActionsContent
+        }
+    </div>
+</div>

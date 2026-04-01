@@ -1,0 +1,44 @@
+﻿<div class="drawer-backdrop @(IsOpen ? "show" : "")"
+     @onclick="HandleBackdropClick"
+     aria-hidden="@BackdropAriaHidden">
+</div>
+
+<div class="drawer-panel @(IsOpen ? "show" : "")"
+     tabindex="-1"
+     @onkeydown="HandleKeyDown"
+     @ref="_panelRef"
+     role="dialog"
+     aria-modal="true"
+     aria-label="@Title">
+    <div class="drawer-header">
+        <div class="drawer-title">@Title</div>
+
+        <div class="d-flex align-items-center gap-2">
+            @if (HeaderActions is not null)
+            {
+                @HeaderActions
+            }
+
+            <button type="button"
+                    class="btn btn-sm btn-danger rounded-0"
+                    @onclick="CloseAsync"
+                    disabled="@DisableClose"
+                    aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="drawer-body">
+        <div class="drawer-form">
+            @ChildContent
+        </div>
+    </div>
+
+    @if (FooterContent is not null)
+    {
+        <div class="drawer-footer">
+            @FooterContent
+        </div>
+    }
+</div>

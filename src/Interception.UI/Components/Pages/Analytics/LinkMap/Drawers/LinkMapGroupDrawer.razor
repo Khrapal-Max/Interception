@@ -1,0 +1,97 @@
+@if (IsOpen && Group is not null)
+{
+    <div class="drawer-backdrop show" @onclick="CloseAsync"></div>
+
+    <div class="drawer-panel show" role="dialog" aria-modal="true" aria-label="Деталі групи карти зв'язків">
+        <div class="drawer-header">
+            <div class="small text-muted">Група зв'язку</div>
+            <button type="button" class="btn-close" aria-label="Close" @onclick="CloseAsync"></button>
+        </div>
+
+        <div class="drawer-body d-flex flex-column gap-3">
+            <div class="row g-2">
+                <div class="col-12 col-md-6">
+                    <div class="small text-muted mb-1">Центральна особа</div>
+                    <div class="fw-semibold">@Group.KeyPersonName</div>
+                    <div class="small text-muted">@(string.IsNullOrWhiteSpace(Group.KeyPersonRole) ? "Роль не визначена" : Group.KeyPersonRole)</div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="small text-muted mb-1">Основна дія</div>
+                    <div class="fw-semibold">@(string.IsNullOrWhiteSpace(Group.PrimaryAction) ? "Дія не визначена" : Group.PrimaryAction)</div>
+                    <div class="small text-muted">Зовнішніх зв'язків: @Group.Bridges.Count</div>
+                </div>
+            </div>
+
+            @if (Group.TopActions.Any())
+            {
+                <div>
+                    <span class="small text-muted px-1">Характерні дії групи</span>
+                    @foreach (var action in Group.TopActions)
+                    {
+                        <span class="badge px-1 bg-secondary">@action</span>
+                    }
+                </div>
+            }
+
+            @if (Group.Frequencies.Any())
+            {
+                <div>
+                    <span class="small text-muted px-1">Частоти групи</span>
+                    @foreach (var frequency in Group.Frequencies)
+                    {
+                        <span class="badge px-1 bg-dark border">@frequency</span>
+                    }
+                </div>
+            }
+
+            <div class="page-panel">
+                <div class="px-3 py-2 border-bottom small text-muted">Склад групи</div>
+                <div class="panel-scroll">
+                    <div class="table-wrap p-0">
+                        <table class="table data-table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Особа</th>
+                                    <th>Роль</th>
+                                    <th>Згадки</th>
+                                    <th>Партнери</th>
+                                    <th>Остання поява</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var member in Group.MemberDetails
+                                    .OrderByDescending(x => x.IsKeyPerson)
+                                    .ThenByDescending(x => x.IsCrossGroup)
+                                    .ThenByDescending(x => x.MentionCount)
+                                    .ThenBy(x => x.Name))
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex flex-column gap-1">
+                                                <div class="fw-semibold">@member.Name</div>
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    @if (member.IsKeyPerson)
+                                                    {
+                                                        <span class="badge bg-primary">Центр</span>
+                                                    }
+                                                    @if (member.IsCrossGroup)
+                                                    {
+                                                        <span class="badge bg-secondary">Між групами</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>@(string.IsNullOrWhiteSpace(member.Role) ? "—" : member.Role)</td>
+                                        <td>@member.MentionCount</td>
+                                        <td>@member.UniquePartnerCount</td>
+                                        <td>@member.LastSeenAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}

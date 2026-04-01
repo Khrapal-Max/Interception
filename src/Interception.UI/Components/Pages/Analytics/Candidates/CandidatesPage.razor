@@ -1,0 +1,197 @@
+@page "/analytics/candidates"
+@using Interception.UI.Components.Pages.Analytics.Candidates.Drawers
+@using Interception.UI.Components.Pages.Analytics.Toolbar
+@using Interception.UI.Domain.Enums
+
+<PageTitle>Групи на розгляд</PageTitle>
+
+<div class="page-shell">
+
+    <CandidatesToolbar ActiveSection="groups">
+        <MetaContent>
+            @if (_pagedResult is not null)
+            {
+                <span>Всього: <strong>@_pagedResult.TotalCount</strong></span>
+            }
+        </MetaContent>
+        <ActionsContent>
+            <button class="btn btn-success btn-sm"
+                    @onclick="RunAnalysisAsync"
+                    disabled="@(_running || _activeTab != CandidateGroupStatus.Open)">
+                @if (_running)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                else
+                {
+                    <i class="bi bi-cpu me-1"></i>
+                }
+                Запустити аналіз
+            </button>
+        </ActionsContent>
+    </CandidatesToolbar>
+
+    <div class="flex-shrink-0 px-1 px-md-2">
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <button class="nav-link @(_activeTab == CandidateGroupStatus.Open ? "active" : "")"
+                        @onclick="() => SwitchTabAsync(CandidateGroupStatus.Open)">
+                    Очікують
+                    @if (_openCount > 0)
+                    {
+                        <span class="badge text-bg-warning ms-1">@_openCount</span>
+                    }
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(_activeTab == CandidateGroupStatus.Confirmed ? "active" : "")"
+                        @onclick="() => SwitchTabAsync(CandidateGroupStatus.Confirmed)">
+                    Підтверджені
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(_activeTab == CandidateGroupStatus.Dismissed ? "active" : "")"
+                        @onclick="() => SwitchTabAsync(CandidateGroupStatus.Dismissed)">
+                    Відхилені
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <div class="page-panel">
+        @if (_loading)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-sm me-2"></div>Завантаження...
+                </div>
+            </div>
+        }
+        else if (_pagedResult is null || _pagedResult.TotalCount == 0)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <i class="bi bi-person-question-mark fs-1 d-block mb-2 opacity-25"></i>
+                    @if (_activeTab == CandidateGroupStatus.Open)
+                    {
+                        <div>Груп для розгляду немає</div>
+                        <div class="small mt-1">Натисніть «Запустити аналіз», щоб знайти спільні ознаки серед НВ</div>
+                    }
+                    else
+                    {
+                        <div>Записів немає</div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="table table-hover table-sm align-middle data-table">
+                    <thead>
+                        <tr>
+                            <th>Впевненість</th>
+                            <th>Пропозиція</th>
+                            <th>Ознаки</th>
+                            <th>Спост.</th>
+                            @if (_activeTab != CandidateGroupStatus.Open)
+                            {
+                                <th>Оператор</th>
+                            }
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var g in _pagedResult.Items)
+                        {
+                            var group = g;
+                            <tr>
+                                <td style="min-width: 8rem;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-grow-1" style="height: 6px;">
+                                            <div class="progress-bar @ConfidenceBarClass(group.ConfidenceScore)"
+                                                 style="@($"width:{group.ConfidenceScore * 100:F0}%")">
+                                            </div>
+                                        </div>
+                                        <small class="text-muted text-nowrap">@($"{group.ConfidenceScore * 100:F0}")%</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(group.SuggestedName))
+                                    {
+                                        <span class="fw-medium">@group.SuggestedName</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(group.SuggestedDivision))
+                                    {
+                                        <small class="text-muted d-block">@group.SuggestedDivision</small>
+                                    }
+                                    @if (string.IsNullOrWhiteSpace(group.SuggestedName) && string.IsNullOrWhiteSpace(group.SuggestedDivision))
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach (var reason in group.Reasons.ActiveReasons)
+                                        {
+                                            <span class="badge bg-secondary">@reason</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td class="small text-muted">@group.Refs.Count</td>
+                                @if (_activeTab != CandidateGroupStatus.Open)
+                                {
+                                    <td class="small text-muted text-nowrap">@group.ResolvedBy · @group.ResolvedAt?.ToString("dd.MM.yy")</td>
+                                }
+                                <td class="text-end p-2 text-nowrap">
+                                    <button class="btn btn-secondary btn-sm"
+                                            title="Переглянути"
+                                            @onclick="() => OpenGroup(group)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (_pagedResult.TotalPages > 1)
+            {
+                <nav class="pagination-strip">
+                    <div class="pagination-summary">
+                        Сторінка <strong>@_currentPage</strong> з <strong>@_pagedResult.TotalPages</strong>
+                    </div>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(!_pagedResult.HasPreviousPage ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => GoToPageAsync(_currentPage - 1)">‹</button>
+                        </li>
+                        @foreach (var page in GetVisiblePages())
+                        {
+                            if (page.HasValue)
+                            {
+                                var p = page.Value;
+                                <li class="page-item @(p == _currentPage ? "active" : "")">
+                                    <button class="page-link" @onclick="() => GoToPageAsync(p)">@p</button>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="page-item disabled"><span class="page-link">…</span></li>
+                            }
+                        }
+                        <li class="page-item @(!_pagedResult.HasNextPage ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => GoToPageAsync(_currentPage + 1)">›</button>
+                        </li>
+                    </ul>
+                </nav>
+            }
+        }
+    </div>
+
+</div>
+
+<CandidateGroupDrawer @bind-IsOpen="_drawerOpen"
+                      Group="_selectedGroup"
+                      OnConfirmed="OnGroupClosed"
+                      OnDismissed="OnGroupClosed" />
