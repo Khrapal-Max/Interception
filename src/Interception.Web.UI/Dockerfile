@@ -14,6 +14,9 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["src/Interception.Web.UI/Interception.Web.UI.csproj", "src/Interception.Web.UI/"]
+COPY ["src/Interception.Application/Interception.Application.csproj", "src/Interception.Application/"]
+COPY ["src/Interception.Infrastructure/Interception.Infrastructure.csproj", "src/Interception.Infrastructure/"]
+COPY ["src/Interception.Domain/Interception.Domain.csproj", "src/Interception.Domain/"]
 RUN dotnet restore "./src/Interception.Web.UI/Interception.Web.UI.csproj"
 COPY . .
 WORKDIR "/src/src/Interception.Web.UI"
