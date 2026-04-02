@@ -1,3 +1,7 @@
+//-----------------------------------------------------------------------------
+// All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
+//-----------------------------------------------------------------------------
+
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows.Input;
@@ -76,7 +80,7 @@ public sealed class ObservationsViewModel : ViewModelBase
         RefreshPage();
     }
 
-    public string Title => "Реєстр спостережень";
+    public static string Title => "Реєстр спостережень";
 
     public ObservableCollection<ObservationRecord> PagedItems => _pagedItems;
 
@@ -557,7 +561,7 @@ public sealed class ObservationsViewModel : ViewModelBase
             query = query.Where(x => x.Labels.Any(l => ContainsIgnoreCase(l, FilterLabel)));
         }
 
-        return query.ToList();
+        return [.. query];
     }
 
     private static bool ContainsIgnoreCase(string? source, string? query)
