@@ -1,10 +1,161 @@
 <UserControl x:Class="Interception.Desktop.Wpf.Views.ObservationsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Border Style="{StaticResource CardBorderStyle}">
-        <StackPanel>
-            <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitleTextStyle}" />
-            <TextBlock Margin="0,8,0,0" Text="{Binding Description}" Style="{StaticResource PageDescriptionTextStyle}" />
-        </StackPanel>
-    </Border>
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="700"
+             d:DesignWidth="1100">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="340" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,12,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0">
+                    <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitleTextStyle}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,8">
+                        <Button Content="З тексту" Margin="0,0,8,0" Command="{Binding ToggleTextBlockCommand}" />
+                        <Button Content="Додати" Margin="0,0,8,0" Command="{Binding OpenCreateCommand}" />
+                        <Button Content="Редагувати" Margin="0,0,8,0" Command="{Binding EditSelectedCommand}" />
+                        <Button Content="Видалити" Margin="0,0,8,0" Command="{Binding DeleteSelectedCommand}" />
+                        <Button Content="Фільтр" Margin="0,0,8,0" Command="{Binding ToggleFilterCommand}" />
+                        <Button Content="Імпорт" Command="{Binding ToggleImportCommand}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding PageSummary}" Style="{StaticResource PageDescriptionTextStyle}" />
+                    <TextBlock Text="Фільтр активний"
+                               Margin="0,4,0,8"
+                               Foreground="#9A6B00"
+                               FontWeight="SemiBold"
+                               Visibility="{Binding HasActiveFilter, Converter={StaticResource BoolToVisibilityConverter}}" />
+                </StackPanel>
+
+                <DataGrid Grid.Row="1"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          ItemsSource="{Binding PagedItems}"
+                          SelectedItem="{Binding SelectedObservation}"
+                          Margin="0,0,0,8">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Дата / Час" Binding="{Binding ObservedDate, StringFormat=dd.MM.yy HH:mm}" Width="130" />
+                        <DataGridTextColumn Header="Частота" Binding="{Binding Frequency}" Width="110" />
+                        <DataGridTextColumn Header="Р/М" Binding="{Binding Division}" Width="130" />
+                        <DataGridTextColumn Header="Вектор" Binding="{Binding VectorSignal}" Width="180" />
+                        <DataGridTextColumn Header="Учасники" Binding="{Binding ParticipantsDisplay}" Width="220" />
+                        <DataGridTextColumn Header="Дія" Binding="{Binding ActionName}" Width="130" />
+                        <DataGridTextColumn Header="Мітки" Binding="{Binding LabelsDisplay}" Width="130" />
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="‹" Width="32" Margin="0,0,8,0" Command="{Binding PrevPageCommand}" />
+                    <Button Content="›" Width="32" Command="{Binding NextPageCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Border Style="{StaticResource CardBorderStyle}"
+                        Margin="0,0,0,12"
+                        Visibility="{Binding IsFormOpen, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding FormMode}" FontSize="18" FontWeight="SemiBold" />
+
+                        <TextBlock Margin="0,10,0,4" Text="Дата та час" />
+                        <DatePicker SelectedDate="{Binding FormObservedDate}" />
+
+                        <TextBlock Margin="0,10,0,4" Text="Частота" />
+                        <TextBox Text="{Binding FormFrequency, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Margin="0,10,0,4" Text="Р/М" />
+                        <TextBox Text="{Binding FormDivision, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Margin="0,10,0,4" Text="Вектор" />
+                        <TextBox Text="{Binding FormVectorSignal, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Margin="0,10,0,4" Text="Учасники (через кому)" />
+                        <TextBox Text="{Binding FormParticipants, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Margin="0,10,0,4" Text="Дія" />
+                        <TextBox Text="{Binding FormActionName, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Margin="0,10,0,4" Text="Мітки (через кому)" />
+                        <TextBox Text="{Binding FormLabels, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Margin="0,10,0,4" Text="Нотатка" />
+                        <TextBox Text="{Binding FormNote, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="80" />
+
+                        <Button Margin="0,12,0,0" Content="Зберегти" Command="{Binding SaveObservationCommand}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorderStyle}"
+                        Margin="0,0,0,12"
+                        Visibility="{Binding IsFilterOpen, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="Фільтр" FontSize="18" FontWeight="SemiBold" />
+
+                        <TextBlock Margin="0,10,0,4" Text="Дата від" />
+                        <DatePicker SelectedDate="{Binding FilterDateFrom}" />
+
+                        <TextBlock Margin="0,10,0,4" Text="Дата до" />
+                        <DatePicker SelectedDate="{Binding FilterDateTo}" />
+
+                        <TextBlock Margin="0,10,0,4" Text="Частота" />
+                        <TextBox Text="{Binding FilterFrequency, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Margin="0,10,0,4" Text="Вектор" />
+                        <TextBox Text="{Binding FilterVectorSignal, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Margin="0,10,0,4" Text="Учасник" />
+                        <TextBox Text="{Binding FilterParticipant, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Margin="0,10,0,4" Text="Мітка" />
+                        <TextBox Text="{Binding FilterLabel, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <Button Content="Скинути" Margin="0,0,8,0" Command="{Binding ResetFilterCommand}" />
+                            <Button Content="Застосувати" Command="{Binding ApplyFilterCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorderStyle}"
+                        Margin="0,0,0,12"
+                        Visibility="{Binding IsImportOpen, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="Імпорт" FontSize="18" FontWeight="SemiBold" />
+                        <TextBlock Margin="0,8,0,8" TextWrapping="Wrap" Text="Формат: дата;частота;р/м;вектор;учасники(,);дія;мітки(,);нотатка" />
+                        <TextBox Text="{Binding ImportText, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="160" />
+                        <Button Margin="0,10,0,0" Content="Імпортувати" Command="{Binding RunImportCommand}" />
+                        <TextBlock Margin="0,10,0,0" Foreground="#1A5E22" TextWrapping="Wrap" Text="{Binding ImportStatus}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorderStyle}"
+                        Visibility="{Binding IsTextBlockOpen, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="Додати з тексту" FontSize="18" FontWeight="SemiBold" />
+                        <TextBlock Margin="0,8,0,8" TextWrapping="Wrap" Text="Очікується блок: дата/час, частота, Р/М, ініціатор, відповідачі, далі діалог." />
+                        <TextBox Text="{Binding RawTextBlock, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="180" />
+                        <Button Margin="0,10,0,0" Content="Розібрати" Command="{Binding ParseTextBlockCommand}" />
+                        <TextBlock Margin="0,10,0,0" Foreground="#8A5A00" TextWrapping="Wrap" Text="{Binding TextBlockStatus}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
 </UserControl>
