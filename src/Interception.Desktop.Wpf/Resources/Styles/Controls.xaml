@@ -117,4 +117,53 @@
         <Setter Property="Margin" Value="0,4,0,0" />
         <Setter Property="Foreground" Value="#CFD6DD" />
     </Style>
+
+    <Style x:Key="ObservationToolbarButtonStyle" TargetType="Button">
+        <Setter Property="Margin" Value="0,0,8,0" />
+        <Setter Property="Padding" Value="14,8" />
+        <Setter Property="Foreground" Value="#F8FAFC" />
+        <Setter Property="Background" Value="#2F6D9B" />
+        <Setter Property="BorderBrush" Value="#235376" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="8">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#3E7EA8" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="#245A81" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.45" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="ObservationSecondaryToolbarButtonStyle" TargetType="Button" BasedOn="{StaticResource ObservationToolbarButtonStyle}">
+        <Setter Property="Background" Value="#7C4D9E" />
+        <Setter Property="BorderBrush" Value="#5D3977" />
+    </Style>
+
+    <Style x:Key="ModalWindowBorderStyle" TargetType="Border">
+        <Setter Property="Width" Value="640" />
+        <Setter Property="MaxHeight" Value="660" />
+        <Setter Property="Background" Value="#FFFDFEFF" />
+        <Setter Property="BorderBrush" Value="#5A77A8" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="18" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
 </ResourceDictionary>

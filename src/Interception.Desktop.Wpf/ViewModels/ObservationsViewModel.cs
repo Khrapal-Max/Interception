@@ -1,7 +1,3 @@
-//-----------------------------------------------------------------------------
-// All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
-//-----------------------------------------------------------------------------
-
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows.Input;
@@ -73,6 +69,10 @@ public sealed class ObservationsViewModel : ViewModelBase
         SaveObservationCommand = new RelayCommand(SaveObservation);
         RunImportCommand = new RelayCommand(RunImport);
         ParseTextBlockCommand = new RelayCommand(ParseTextBlock);
+        CloseFormCommand = new RelayCommand(() => IsFormOpen = false);
+        CloseFilterCommand = new RelayCommand(() => IsFilterOpen = false);
+        CloseImportCommand = new RelayCommand(() => IsImportOpen = false);
+        CloseTextBlockCommand = new RelayCommand(() => IsTextBlockOpen = false);
 
         _prevPageCommand = new RelayCommand(() => GoToPage(CurrentPage - 1), () => CurrentPage > 1);
         _nextPageCommand = new RelayCommand(() => GoToPage(CurrentPage + 1), () => CurrentPage < TotalPages);
@@ -80,7 +80,7 @@ public sealed class ObservationsViewModel : ViewModelBase
         RefreshPage();
     }
 
-    public static string Title => "Реєстр спостережень";
+    public string Title => "Реєстр спостережень";
 
     public ObservableCollection<ObservationRecord> PagedItems => _pagedItems;
 
@@ -124,6 +124,8 @@ public sealed class ObservationsViewModel : ViewModelBase
         !string.IsNullOrWhiteSpace(FilterVectorSignal) ||
         !string.IsNullOrWhiteSpace(FilterParticipant) ||
         !string.IsNullOrWhiteSpace(FilterLabel);
+
+    public bool IsAnyModalOpen => IsFormOpen || IsFilterOpen || IsImportOpen || IsTextBlockOpen;
 
     public DateTime? FilterDateFrom
     {
@@ -200,25 +202,49 @@ public sealed class ObservationsViewModel : ViewModelBase
     public bool IsFormOpen
     {
         get => _isFormOpen;
-        set => SetProperty(ref _isFormOpen, value);
+        set
+        {
+            if (SetProperty(ref _isFormOpen, value))
+            {
+                OnPropertyChanged(nameof(IsAnyModalOpen));
+            }
+        }
     }
 
     public bool IsFilterOpen
     {
         get => _isFilterOpen;
-        set => SetProperty(ref _isFilterOpen, value);
+        set
+        {
+            if (SetProperty(ref _isFilterOpen, value))
+            {
+                OnPropertyChanged(nameof(IsAnyModalOpen));
+            }
+        }
     }
 
     public bool IsImportOpen
     {
         get => _isImportOpen;
-        set => SetProperty(ref _isImportOpen, value);
+        set
+        {
+            if (SetProperty(ref _isImportOpen, value))
+            {
+                OnPropertyChanged(nameof(IsAnyModalOpen));
+            }
+        }
     }
 
     public bool IsTextBlockOpen
     {
         get => _isTextBlockOpen;
-        set => SetProperty(ref _isTextBlockOpen, value);
+        set
+        {
+            if (SetProperty(ref _isTextBlockOpen, value))
+            {
+                OnPropertyChanged(nameof(IsAnyModalOpen));
+            }
+        }
     }
 
     public string FormMode => _editingId.HasValue ? "Редагування" : "Нове повідомлення";
@@ -308,6 +334,10 @@ public sealed class ObservationsViewModel : ViewModelBase
     public ICommand ParseTextBlockCommand { get; }
     public ICommand PrevPageCommand => _prevPageCommand;
     public ICommand NextPageCommand => _nextPageCommand;
+    public ICommand CloseFormCommand { get; }
+    public ICommand CloseFilterCommand { get; }
+    public ICommand CloseImportCommand { get; }
+    public ICommand CloseTextBlockCommand { get; }
 
     private void OpenCreate()
     {
@@ -404,6 +434,7 @@ public sealed class ObservationsViewModel : ViewModelBase
     {
         CurrentPage = 1;
         RefreshPage();
+        IsFilterOpen = false;
     }
 
     private void ResetFilter()
@@ -416,6 +447,7 @@ public sealed class ObservationsViewModel : ViewModelBase
         FilterLabel = string.Empty;
         CurrentPage = 1;
         RefreshPage();
+        IsFilterOpen = false;
     }
 
     private void RunImport()
@@ -457,6 +489,7 @@ public sealed class ObservationsViewModel : ViewModelBase
 
         ImportStatus = $"Імпортовано: {imported}, пропущено: {skipped}.";
         RefreshPage();
+        IsImportOpen = false;
     }
 
     private void ParseTextBlock()
@@ -492,6 +525,7 @@ public sealed class ObservationsViewModel : ViewModelBase
         FormNote = string.Join(Environment.NewLine, rows.Skip(5));
 
         TextBlockStatus = "Текст розібрано. Перевірте поля та натисніть «Зберегти» у формі.";
+        IsTextBlockOpen = false;
         ToggleDrawer(DrawerMode.Form);
         OnPropertyChanged(nameof(FormMode));
     }
@@ -561,7 +595,7 @@ public sealed class ObservationsViewModel : ViewModelBase
             query = query.Where(x => x.Labels.Any(l => ContainsIgnoreCase(l, FilterLabel)));
         }
 
-        return [.. query];
+        return query.ToList();
     }
 
     private static bool ContainsIgnoreCase(string? source, string? query)
