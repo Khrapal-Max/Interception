@@ -102,7 +102,7 @@ public class InterceptionMessage
         if (string.IsNullOrWhiteSpace(nameLabel))
             throw new ArgumentException("Значення мітки обов'язкове.", nameof(nameLabel));
 
-        var norm = TextNorm.NormalizeRequired(nameLabel);
+        var norm = StringTextNormExtensions.NormalizeRequired(nameLabel);
         if (Labels.Any(x => x.NameLabel == norm))
             throw new InvalidOperationException($"Мітка '{nameLabel}' вже існує.");
 
@@ -133,5 +133,5 @@ public class InterceptionMessage
     }
 
     private static string? NormalizeOptional(string? value)
-        => SemanticValue.NormalizeMeaningfulOrNull(value);
+        => SemanticValueExtensions.NormalizeMeaningfulOrNull(value);
 }

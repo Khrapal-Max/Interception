@@ -89,7 +89,7 @@ public sealed class KnownParticipantSuggestionService(
 
         var blockedKnownNames = groupRows
             .SelectMany(x => x.KnownParticipants)
-            .Select(Extensions.SemanticValue.NormalizeMeaningfulOrNull)
+            .Select(Extensions.SemanticValueExtensions.NormalizeMeaningfulOrNull)
             .Where(x => x is not null)
             .Cast<string>()
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -115,7 +115,7 @@ public sealed class KnownParticipantSuggestionService(
         return [.. knownRows
             .Where(x =>
             {
-                var normalized = Extensions.SemanticValue.NormalizeMeaningfulOrNull(x.Name);
+                var normalized = Extensions.SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Name);
                 return normalized is not null && !blockedKnownNames.Contains(normalized);
             })
             .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)

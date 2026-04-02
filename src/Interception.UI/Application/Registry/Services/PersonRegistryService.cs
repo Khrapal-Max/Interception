@@ -62,17 +62,17 @@ public sealed class PersonRegistryService(
              .GroupBy(x => new
              {
                  NameKey = x.Name!.Trim().ToUpperInvariant(),
-                 DivisionKey = (SemanticValue.NormalizeMeaningfulOrNull(x.Division) ?? string.Empty).ToUpperInvariant()
+                 DivisionKey = (SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Division) ?? string.Empty).ToUpperInvariant()
              })
              .Select(group => new PersonRegistryItemDto
              {
                  Id = group.OrderBy(x => x.ParticipantId).Select(x => x.ParticipantId).First(),
                  Name = group.Select(x => x.Name!.Trim()).First(),
-                 Role = group.Select(x => SemanticValue.NormalizeMeaningfulOrNull(x.Role))
+                 Role = group.Select(x => SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Role))
                      .FirstOrDefault(x => x is not null),
                  Division = string.IsNullOrWhiteSpace(group.Key.DivisionKey)
                      ? null
-                     : group.Select(x => SemanticValue.NormalizeMeaningfulOrNull(x.Division))
+                     : group.Select(x => SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Division))
                          .FirstOrDefault(x => x is not null),
                  IsConfirmed = false,
                  ConfirmedBy = null,
@@ -95,8 +95,8 @@ public sealed class PersonRegistryService(
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
         var normalizedName = dto.Name.Trim();
-        var normalizedRole = SemanticValue.NormalizeMeaningfulOrNull(dto.Role);
-        var normalizedDivision = SemanticValue.NormalizeMeaningfulOrNull(dto.Division);
+        var normalizedRole = SemanticValueExtensions.NormalizeMeaningfulOrNull(dto.Role);
+        var normalizedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(dto.Division);
 
         var resolved = await db.ResolvedParticipants
             .FirstOrDefaultAsync(x => x.Id == id, ct);
@@ -158,8 +158,8 @@ public sealed class PersonRegistryService(
         if (!singleConfirmedByName.TryGetValue(observed.Name, out var confirmed))
             return false;
 
-        var observedDivision = SemanticValue.NormalizeMeaningfulOrNull(observed.Division);
-        var confirmedDivision = SemanticValue.NormalizeMeaningfulOrNull(confirmed.Division);
+        var observedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(observed.Division);
+        var confirmedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(confirmed.Division);
 
         if (observedDivision is null)
             return true;

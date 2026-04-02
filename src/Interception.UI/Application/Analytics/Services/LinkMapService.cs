@@ -3,8 +3,8 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Abstractions;
+using Interception.UI.Application.Analytics.Builders.LinkMap;
 using Interception.UI.Application.Analytics.Dtos;
-using Interception.UI.Application.Analytics.Services.Builders.LinkMap;
 using Interception.UI.Domain;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;

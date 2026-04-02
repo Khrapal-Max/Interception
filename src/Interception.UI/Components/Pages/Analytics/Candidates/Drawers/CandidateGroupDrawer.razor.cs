@@ -79,9 +79,9 @@ public partial class CandidateGroupDrawer : ComponentBase
         if (_initialized) return;
         _initialized = true;
 
-        _confirmName = SemanticValue.NormalizeMeaningfulOrNull(Group?.SuggestedName) ?? string.Empty;
-        _confirmRole = SemanticValue.NormalizeMeaningfulOrNull(Group?.SuggestedRole) ?? string.Empty;
-        _confirmDivision = SemanticValue.NormalizeMeaningfulOrNull(Group?.SuggestedDivision) ?? string.Empty;
+        _confirmName = SemanticValueExtensions.NormalizeMeaningfulOrNull(Group?.SuggestedName) ?? string.Empty;
+        _confirmRole = SemanticValueExtensions.NormalizeMeaningfulOrNull(Group?.SuggestedRole) ?? string.Empty;
+        _confirmDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(Group?.SuggestedDivision) ?? string.Empty;
         _nameError = false;
         _serverError = null;
         _suggestions = [];
@@ -127,16 +127,16 @@ public partial class CandidateGroupDrawer : ComponentBase
     /// <summary>Клік на підказку — заповнює форму підтвердження.</summary>
     private void ApplySuggestion(KnownParticipantSuggestionDto suggestion)
     {
-        _confirmName = SemanticValue.NormalizeMeaningfulOrNull(suggestion.Name) ?? string.Empty;
-        _confirmRole = SemanticValue.NormalizeMeaningfulOrNull(suggestion.Role) ?? string.Empty;
-        _confirmDivision = SemanticValue.NormalizeMeaningfulOrNull(suggestion.Division) ?? _confirmDivision ?? string.Empty;
+        _confirmName = SemanticValueExtensions.NormalizeMeaningfulOrNull(suggestion.Name) ?? string.Empty;
+        _confirmRole = SemanticValueExtensions.NormalizeMeaningfulOrNull(suggestion.Role) ?? string.Empty;
+        _confirmDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(suggestion.Division) ?? _confirmDivision ?? string.Empty;
         _nameError = false;
     }
 
     /// <summary>Клік на контекст — не підтверджує особу, а лише підставляє підрозділ.</summary>
     private void ApplyContextSuggestion(CandidateContextSuggestionDto suggestion)
     {
-        _confirmDivision = SemanticValue.NormalizeMeaningfulOrNull(suggestion.Division) ?? string.Empty;
+        _confirmDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(suggestion.Division) ?? string.Empty;
     }
 
     private async Task ConfirmAsync()
@@ -213,11 +213,11 @@ public partial class CandidateGroupDrawer : ComponentBase
     };
 
     private static string NormalizeKey(string? value)
-        => SemanticValue.NormalizeKeyOrNull(value) ?? string.Empty;
+        => SemanticValueExtensions.NormalizeKeyOrNull(value) ?? string.Empty;
 
     private static string? FirstNonEmpty(IEnumerable<string?> values)
         => values
-            .Select(SemanticValue.NormalizeMeaningfulOrNull)
+            .Select(SemanticValueExtensions.NormalizeMeaningfulOrNull)
             .FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
 
     private sealed class CandidateGroupFeatureRow

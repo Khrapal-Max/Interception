@@ -65,11 +65,11 @@ public sealed class ParticipantCandidateAnalysisService(
                     ParticipantId: p.Id,
                     Ordinal: p.Ordinal,
                     MessageId: p.InterceptionMessageId,
-                    Frequency: SemanticValue.NormalizeMeaningfulOrNull(m.Frequency),
-                    VectorSignal: SemanticValue.NormalizeMeaningfulOrNull(m.VectorSignal),
-                    PointSignal: SemanticValue.NormalizeMeaningfulOrNull(m.PointSignal),
-                    Division: SemanticValue.NormalizeMeaningfulOrNull(m.Division),
-                    Role: SemanticValue.NormalizeMeaningfulOrNull(p.Role),
+                    Frequency: SemanticValueExtensions.NormalizeMeaningfulOrNull(m.Frequency),
+                    VectorSignal: SemanticValueExtensions.NormalizeMeaningfulOrNull(m.VectorSignal),
+                    PointSignal: SemanticValueExtensions.NormalizeMeaningfulOrNull(m.PointSignal),
+                    Division: SemanticValueExtensions.NormalizeMeaningfulOrNull(m.Division),
+                    Role: SemanticValueExtensions.NormalizeMeaningfulOrNull(p.Role),
                     ObservedDate: m.ObservedDate,
                     KnownPartnerNames: PatternRecognitionMath.ToNormalizedSet(m.KnownPartners),
                     Labels: PatternRecognitionMath.ToNormalizedSet(m.Labels));
@@ -111,11 +111,11 @@ public sealed class ParticipantCandidateAnalysisService(
                             ParticipantId: p.Id,
                             Ordinal: p.Ordinal,
                             MessageId: p.InterceptionMessageId,
-                            Frequency: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.Frequency),
-                            VectorSignal: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.VectorSignal),
-                            PointSignal: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.PointSignal),
-                            Division: Extensions.SemanticValue.NormalizeMeaningfulOrNull(m.Division),
-                            Role: Extensions.SemanticValue.NormalizeMeaningfulOrNull(p.Role),
+                            Frequency: Extensions.SemanticValueExtensions.NormalizeMeaningfulOrNull(m.Frequency),
+                            VectorSignal: Extensions.SemanticValueExtensions.NormalizeMeaningfulOrNull(m.VectorSignal),
+                            PointSignal: Extensions.SemanticValueExtensions.NormalizeMeaningfulOrNull(m.PointSignal),
+                            Division: Extensions.SemanticValueExtensions.NormalizeMeaningfulOrNull(m.Division),
+                            Role: Extensions.SemanticValueExtensions.NormalizeMeaningfulOrNull(p.Role),
                             ObservedDate: m.ObservedDate,
                             KnownPartnerNames: PatternRecognitionMath.ToNormalizedSet(m.KnownPartners),
                             Labels: PatternRecognitionMath.ToNormalizedSet(m.Labels));
@@ -266,11 +266,11 @@ public sealed class ParticipantCandidateAnalysisService(
 
         group.UpdateScore(update.Score, update.Reasons);
 
-        var suggestedRole = SemanticValue.NormalizeMeaningfulOrNull(update.SuggestedRole);
+        var suggestedRole = SemanticValueExtensions.NormalizeMeaningfulOrNull(update.SuggestedRole);
         if (!string.IsNullOrWhiteSpace(suggestedRole) && group.SuggestedRole != suggestedRole)
             group.UpdateSuggestedRole(suggestedRole);
 
-        var suggestedDivision = SemanticValue.NormalizeMeaningfulOrNull(update.SuggestedDivision);
+        var suggestedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(update.SuggestedDivision);
         if (!string.IsNullOrWhiteSpace(suggestedDivision) && group.SuggestedDivision != suggestedDivision)
             group.UpdateSuggestedDivision(suggestedDivision);
 
@@ -298,21 +298,21 @@ public sealed class ParticipantCandidateAnalysisService(
 
         var changed = false;
 
-        var suggestedName = SemanticValue.NormalizeMeaningfulOrNull(best?.Name);
+        var suggestedName = SemanticValueExtensions.NormalizeMeaningfulOrNull(best?.Name);
         if (group.SuggestedName != suggestedName)
         {
             group.UpdateSuggestedName(suggestedName);
             changed = true;
         }
 
-        var suggestedRole = SemanticValue.NormalizeMeaningfulOrNull(best?.Role);
+        var suggestedRole = SemanticValueExtensions.NormalizeMeaningfulOrNull(best?.Role);
         if (!string.IsNullOrWhiteSpace(suggestedRole) && group.SuggestedRole != suggestedRole)
         {
             group.UpdateSuggestedRole(suggestedRole);
             changed = true;
         }
 
-        var suggestedDivision = SemanticValue.NormalizeMeaningfulOrNull(best?.Division);
+        var suggestedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(best?.Division);
         if (!string.IsNullOrWhiteSpace(suggestedDivision) && group.SuggestedDivision != suggestedDivision)
         {
             group.UpdateSuggestedDivision(suggestedDivision);

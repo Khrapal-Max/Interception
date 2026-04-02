@@ -207,8 +207,8 @@ public sealed class ContextSuggestionService(
 
         foreach (var row in knownRows)
         {
-            var normalizedDivision = Extensions.SemanticValue.NormalizeMeaningfulOrNull(row.Division);
-            var key = Extensions.SemanticValue.NormalizeKeyOrNull(row.Division);
+            var normalizedDivision = Extensions.SemanticValueExtensions.NormalizeMeaningfulOrNull(row.Division);
+            var key = Extensions.SemanticValueExtensions.NormalizeKeyOrNull(row.Division);
             if (key is null || normalizedDivision is null)
                 continue;
 
@@ -219,8 +219,8 @@ public sealed class ContextSuggestionService(
 
         foreach (var group in confirmedGroups)
         {
-            var normalizedDivision = Extensions.SemanticValue.NormalizeMeaningfulOrNull(group.SuggestedDivision);
-            var key = Extensions.SemanticValue.NormalizeKeyOrNull(group.SuggestedDivision);
+            var normalizedDivision = Extensions.SemanticValueExtensions.NormalizeMeaningfulOrNull(group.SuggestedDivision);
+            var key = Extensions.SemanticValueExtensions.NormalizeKeyOrNull(group.SuggestedDivision);
             if (key is null || normalizedDivision is null)
                 continue;
 

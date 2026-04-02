@@ -78,5 +78,5 @@ public class InterceptionMessageParticipant
     }
 
     private static string? NormalizeOptional(string? value)
-        => SemanticValue.NormalizeMeaningfulOrNull(value);
+        => SemanticValueExtensions.NormalizeMeaningfulOrNull(value);
 }

@@ -95,9 +95,9 @@ public sealed class ParticipantCandidateGroupQueryService(IDbContextFactory<AppD
                 ParticipantId = r.ParticipantId,
                 Ordinal = r.Ordinal,
                 ObservedDate = msg?.ObservedDate ?? default,
-                Frequency = SemanticValue.NormalizeMeaningfulOrNull(msg?.Frequency),
-                VectorSignal = SemanticValue.NormalizeMeaningfulOrNull(msg?.VectorSignal),
-                Division = SemanticValue.NormalizeMeaningfulOrNull(msg?.Division),
+                Frequency = SemanticValueExtensions.NormalizeMeaningfulOrNull(msg?.Frequency),
+                VectorSignal = SemanticValueExtensions.NormalizeMeaningfulOrNull(msg?.VectorSignal),
+                Division = SemanticValueExtensions.NormalizeMeaningfulOrNull(msg?.Division),
             };
         }).ToList();
 

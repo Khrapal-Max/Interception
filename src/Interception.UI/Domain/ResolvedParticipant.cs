@@ -74,5 +74,5 @@ public sealed class ResolvedParticipant
     // -------------------------------------------------------------------------
 
     private static string? NormalizeOptional(string? value)
-        => SemanticValue.NormalizeMeaningfulOrNull(value);
+        => SemanticValueExtensions.NormalizeMeaningfulOrNull(value);
 }

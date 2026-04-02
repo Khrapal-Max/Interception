@@ -4,7 +4,7 @@
 
 using Interception.UI.Domain;
 
-namespace Interception.UI.Application.Analytics.Services.Builders.LinkMap;
+namespace Interception.UI.Application.Analytics.Builders.LinkMap;
 
 internal sealed record MessageRow(
         InterceptionMessage Message,

@@ -1,0 +1,105 @@
+@page "/analytics/frequency-weights"
+@using Interception.UI.Components.Pages.Analytics.Toolbar
+
+<PageTitle>Аналітика — Вага підрозділів по частотах</PageTitle>
+
+<div class="page-shell">
+
+    <CandidatesToolbar ActiveSection="frequency-weights">
+        <MetaContent>
+            Частот: <strong>@(_report?.Frequencies.Count ?? 0)</strong>
+        </MetaContent>
+        <ActionsContent>
+            <button class="btn btn-success btn-sm"
+                    @onclick="LoadAsync"
+                    disabled="@_loading">
+                @if (_loading)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                else
+                {
+                    <i class="bi bi-arrow-repeat me-1"></i>
+                }
+                Оновити
+            </button>
+        </ActionsContent>
+    </CandidatesToolbar>
+
+    <div class="page-panel">
+        @if (_loading)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-sm me-2"></div>Завантаження...
+                </div>
+            </div>
+        }
+        else if (_report is null || _report.Frequencies.Count == 0)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <i class="bi bi-broadcast fs-1 d-block mb-2 opacity-25"></i>
+                    <div>Даних по частотах не знайдено</div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="panel-scroll p-0">
+                <div class="table-wrap">
+                    <table class="table table-hover table-sm align-middle data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Частота</th>
+                                <th>Підрозділ по частоті</th>
+                                <th>Група підрозділу</th>
+                                <th class="text-end">Кількість учасників</th>
+                                <th class="text-end">Вага, %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var frequencyIndex = 0; frequencyIndex < _report.Frequencies.Count; frequencyIndex++)
+                            {
+                                var frequency = _report.Frequencies[frequencyIndex];
+
+                                if (frequency.Groups.Count == 0)
+                                {
+                                    var rowClass = frequencyIndex == 0 ? null : "border-top border-2";
+
+                                    <tr class="@rowClass">
+                                        <td class="text-nowrap fw-medium">@frequency.Frequency</td>
+                                        <td class="text-nowrap">@(frequency.FrequencyDivision ?? "—")</td>
+                                        <td>Невідомо</td>
+                                        <td class="text-end">0</td>
+                                        <td class="text-end text-nowrap">0</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    for (var groupIndex = 0; groupIndex < frequency.Groups.Count; groupIndex++)
+                                    {
+                                        var group = frequency.Groups[groupIndex];
+                                        var isFirstRow = groupIndex == 0;
+                                        var rowClass = frequencyIndex == 0 && isFirstRow
+                                            ? null
+                                            : (isFirstRow ? "border-top border-2" : null);
+
+                                        <tr class="@rowClass">
+                                            <td class="text-nowrap fw-medium">@(isFirstRow ? frequency.Frequency : string.Empty)</td>
+                                            <td class="text-nowrap">@(isFirstRow ? frequency.FrequencyDivision ?? "—" : string.Empty)</td>
+                                            <td>@group.GroupName</td>
+                                            <td class="text-end">@group.PersonsCount</td>
+                                            <td class="text-end text-nowrap">@group.WeightPercent.ToString("0.##")</td>
+                                        </tr>
+                                    }
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+
+</div>

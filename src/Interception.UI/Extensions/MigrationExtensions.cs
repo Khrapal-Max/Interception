@@ -4,13 +4,12 @@
 // MigrationExtension
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Domain;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.UI.Extensions;
 
-public static class MigrationExtension
+public static class MigrationExtensions
 {
     public static async Task AddMigrationDb(this WebApplication app, CancellationToken ct = default)
     {

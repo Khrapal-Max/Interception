@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Analytics.Services.Builders.LinkMap;
+namespace Interception.UI.Application.Analytics.Builders.LinkMap;
 
 internal sealed class PersonAccumulator(string name)
 {

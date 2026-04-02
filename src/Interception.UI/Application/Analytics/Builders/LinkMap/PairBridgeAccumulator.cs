@@ -7,7 +7,17 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Analytics.Services.Builders.LinkMap;
+
+//-----------------------------------------------------------------------------
+// All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
+//-----------------------------------------------------------------------------
+
+namespace Interception.UI.Application.Analytics.Builders.LinkMap;
 
 internal sealed class PairBridgeAccumulator(string leftGroupKey, string rightGroupKey)
 {

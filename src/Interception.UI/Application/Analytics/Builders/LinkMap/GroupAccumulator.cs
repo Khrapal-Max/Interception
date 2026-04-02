@@ -3,8 +3,9 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Dtos;
+using Interception.UI.Application.Analytics.Services;
 
-namespace Interception.UI.Application.Analytics.Services.Builders.LinkMap;
+namespace Interception.UI.Application.Analytics.Builders.LinkMap;
 
 internal sealed class GroupAccumulator
 {
