@@ -120,7 +120,7 @@
     <div class="col-12 mt-1">
         <div class="d-flex align-items-center justify-content-between mb-1">
             <label class="form-label form-label-sm mb-0">Учасники</label>
-            <button type="button" class="btn btn-outline-secondary btn-sm py-0"
+            <button type="button" class="btn btn-warning btn-sm py-0"
                     @onclick="AddParticipant">
                 <i class="bi bi-person-plus me-1"></i>Додати
             </button>
@@ -197,6 +197,14 @@
         }
     </div>
 
+    <!-- Нотатка -->
+    <div class="col-12">
+        <label class="form-label form-label-sm">Деталі / нотатка</label>
+        <textarea class="form-control form-control-sm" rows="2"
+                  value="@Form.Note"
+                  @oninput="e => Form.Note = e.Value?.ToString()"></textarea>
+    </div>
+
     <!-- Мітки -->
     <div class="col-12">
         <label class="form-label form-label-sm">Мітки</label>
@@ -222,14 +230,6 @@
                 <i class="bi bi-plus"></i>
             </button>
         </div>
-    </div>
-
-    <!-- Нотатка -->
-    <div class="col-12">
-        <label class="form-label form-label-sm">Деталі / нотатка</label>
-        <textarea class="form-control form-control-sm" rows="2"
-                  value="@Form.Note"
-                  @oninput="e => Form.Note = e.Value?.ToString()"></textarea>
     </div>
 
 </div>

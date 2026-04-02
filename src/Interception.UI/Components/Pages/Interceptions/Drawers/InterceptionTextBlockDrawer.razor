@@ -51,7 +51,7 @@
             <!-- Крок 2: перевірка розпізнаного + вибір дії -->
             <div class="row g-2">
 
-                <div class="col-12 mb-1">
+                <div class="col-12">
                     <button class="btn btn-link btn-sm p-0 text-muted"
                             @onclick="() => _parsed = null">
                         <i class="bi bi-arrow-left me-1"></i>Назад до тексту
@@ -118,8 +118,13 @@
 
                 <!-- Учасники — показуємо розпізнаних, можна редагувати -->
                 <div class="col-12 mt-1">
-                    <label class="form-label form-label-sm mb-1">Учасники</label>
-
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <label class="form-label form-label-sm mb-1">Учасники</label>
+                            <button type="button" class="btn btn-warning btn-sm py-0 mt-1"
+                                    @onclick="AddParticipant">
+                                <i class="bi bi-person-plus me-1"></i>Додати
+                            </button>
+                        </div>
                     @foreach (var pt in _form.Participants.OrderBy(p => p.Ordinal))
                     {
                         var participant = pt;
@@ -157,56 +162,7 @@
                                 </button>
                             </div>
                         </div>
-                    }
-
-                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 mt-1"
-                            @onclick="AddParticipant">
-                        <i class="bi bi-person-plus me-1"></i>Додати
-                    </button>
-                </div>
-
-                <!-- Мітки -->
-                <div class="col-12 mt-1">
-                    <label class="form-label form-label-sm mb-1">Мітки</label>
-
-                    <div class="input-group input-group-sm mb-2">
-                        <input type="text"
-                               class="form-control"
-                               placeholder="Додати мітку"
-                               value="@_newLabel"
-                               @oninput="e => _newLabel = e.Value?.ToString()"
-                               @onkeydown="OnLabelKeyDown" />
-                        <button type="button"
-                                class="btn btn-outline-secondary"
-                                @onclick="AddLabel"
-                                disabled="@string.IsNullOrWhiteSpace(_newLabel)">
-                            <i class="bi bi-plus-lg me-1"></i>Додати
-                        </button>
-                    </div>
-
-                    @if (_form.Labels.Count > 0)
-                    {
-                        <div class="d-flex flex-wrap gap-2">
-                            @foreach (var label in _form.Labels)
-                            {
-                                <span class="badge text-bg-secondary d-inline-flex align-items-center gap-1 px-2 py-2">
-                                    <span>@label</span>
-                                    <button type="button"
-                                            class="btn btn-sm btn-link text-white text-decoration-none p-0 border-0"
-                                            title="Видалити мітку"
-                                            @onclick="() => RemoveLabel(label)">
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
-                                </span>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="small text-muted">
-                            Мітки ще не додані.
-                        </div>
-                    }
+                    }                  
                 </div>
 
                 <!-- Нотатка -->
@@ -216,6 +172,44 @@
                               value="@_form.Note"
                               @oninput="e => _form.Note = e.Value?.ToString()"></textarea>
                 </div>
+
+                    <!-- Мітки -->
+                    <div class="col-12 mt-1">
+                        <label class="form-label form-label-sm mb-1">Мітки</label>
+
+                        <div class="input-group input-group-sm mb-2">
+                            <input type="text"
+                                   class="form-control"
+                                   placeholder="Додати мітку"
+                                   value="@_newLabel"
+                                   @oninput="e => _newLabel = e.Value?.ToString()"
+                                   @onkeydown="OnLabelKeyDown" />
+                            <button type="button"
+                                    class="btn btn-outline-secondary"
+                                    @onclick="AddLabel"
+                                    disabled="@string.IsNullOrWhiteSpace(_newLabel)">
+                                <i class="bi bi-plus-lg me-1"></i>Додати
+                            </button>
+                        </div>
+
+                        @if (_form.Labels.Count > 0)
+                        {
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var label in _form.Labels)
+                                {
+                                    <span class="badge text-bg-secondary d-inline-flex align-items-center gap-1 px-2 py-2">
+                                        <span>@label</span>
+                                        <button type="button"
+                                                class="btn btn-sm btn-link text-white text-decoration-none p-0 border-0"
+                                                title="Видалити мітку"
+                                                @onclick="() => RemoveLabel(label)">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </span>
+                                }
+                            </div>
+                        }
+                    </div>
 
             </div>
         }
