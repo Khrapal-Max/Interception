@@ -70,10 +70,21 @@ public partial class DatabaseToolsPage : ComponentBase
         {
             await using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 1024L * 1024 * 1024);
             var result = await DatabaseService.ImportAsync(stream, _selectedFile.Name, "operator", CancellationToken.None);
-            _lastBackupPath = result.BackupFilePath;
-            Toasts.Success(result.Title, result.Message);
+
+            var backupFileName = string.IsNullOrWhiteSpace(result.BackupFilePath)
+                ? null
+                : Path.GetFileName(result.BackupFilePath);
+
+            var toastMessage = string.IsNullOrWhiteSpace(backupFileName)
+                ? result.Message
+                : $"{result.Message} Backup: {backupFileName}";
+
+            Toasts.Success(result.Title, toastMessage);
+
             _selectedFile = null;
             _selectedFileName = null;
+            _lastBackupPath = null;
+
             await LoadAsync();
         }
         catch (Exception ex)
@@ -98,9 +109,22 @@ public partial class DatabaseToolsPage : ComponentBase
         try
         {
             var result = await DatabaseService.ClearAsync("operator", CancellationToken.None);
-            _lastBackupPath = result.BackupFilePath;
-            Toasts.Warning(result.Title, result.Message);
+
+            var backupFileName = string.IsNullOrWhiteSpace(result.BackupFilePath)
+                ? null
+                : Path.GetFileName(result.BackupFilePath);
+
+            var toastMessage = string.IsNullOrWhiteSpace(backupFileName)
+                ? result.Message
+                : $"{result.Message} Backup: {backupFileName}";
+
+            Toasts.Warning(result.Title, toastMessage);
+
             _clearConfirmation = string.Empty;
+            _selectedFile = null;
+            _selectedFileName = null;
+            _lastBackupPath = null;
+
             await LoadAsync();
         }
         catch (Exception ex)
