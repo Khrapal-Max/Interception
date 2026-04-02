@@ -3,6 +3,8 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Abstractions;
+using Interception.UI.Application.Database.Abstractions;
+using Interception.UI.Application.Database.Services;
 using Interception.UI.Application.Analytics.Services;
 using Interception.UI.Application.Import.Abstractions;
 using Interception.UI.Application.Import.Services;
@@ -70,6 +72,9 @@ builder.Services.AddScoped<IParticipantCandidateGroupCommandService, Participant
 builder.Services.AddScoped<IDayPictureService, DayPictureService>();
 builder.Services.AddScoped<IDivisionReportService, DivisionReportService>();
 
+// Portable database tools
+builder.Services.AddScoped<IDatabaseMaintenanceService, DatabaseMaintenanceService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -85,6 +90,12 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapGet("/api/database/export", async (IDatabaseMaintenanceService dbService, CancellationToken ct) =>
+{
+    var export = await dbService.PrepareExportAsync(ct);
+    return Results.File(export.FilePath, "application/octet-stream", export.DownloadFileName);
+});
 
 app.Use(async (ctx, next) =>
 {
