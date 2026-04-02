@@ -3,15 +3,13 @@
 <PageTitle>Сервіс — База даних</PageTitle>
 
 <div class="page-shell">
-    <div class="page-panel panel-scroll p-3 p-md-4 d-flex flex-column gap-3">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div class="page-panel panel-scroll p-2 p-md-4 d-flex flex-column gap-2">
+        <div class="d-flex align-items-center justify-content-between flex-wrap">
             <div>
-                <h1 class="h4 mb-1">SQLite база даних</h1>
-                <div class="text-muted small">Portable-операції: експорт, імпорт та повне очищення бази.</div>
+                <div>SQLite база даних
+                    <span class="text-muted small">Portable-операції: експорт, імпорт та повне очищення бази.</span>
+                </div>                
             </div>
-            <button class="btn btn-sm btn-outline-secondary" @onclick="LoadAsync" disabled="@_loading || _busy">
-                <i class="bi bi-arrow-clockwise me-1"></i>Оновити
-            </button>
         </div>
 
         @if (_loading)
@@ -20,11 +18,11 @@
         }
         else if (_status is not null)
         {
-            <div class="row g-3">
-                <div class="col-12 col-xl-6">
-                    <div class="card rounded-0 border-0 shadow-sm h-100">
-                        <div class="card-header py-2 px-3 fw-semibold">Стан бази</div>
-                        <div class="card-body small d-flex flex-column gap-2">
+            <div class="row g-2 align-items-start">
+                <div class="col-12 col-xl-7">
+                    <div class="border rounded-0 p-2 h-100">
+                        <div class="fw-semibold">Стан бази</div>
+                        <div class="small d-flex flex-column">
                             <div><span class="text-muted">Файл:</span> <code>@_status.DatabasePath</code></div>
                             <div><span class="text-muted">Ключі:</span> <code>@_status.KeysDirectoryPath</code></div>
                             <div><span class="text-muted">База існує:</span> @(_status.DatabaseExists ? "так" : "ні")</div>
@@ -39,37 +37,33 @@
                     </div>
                 </div>
 
-                <div class="col-12 col-xl-6">
-                    <div class="card rounded-0 border-0 shadow-sm h-100">
-                        <div class="card-header py-2 px-3 fw-semibold">Експорт бази</div>
-                        <div class="card-body d-flex flex-column gap-3">
+                <div class="col-12 col-xl-5">
+                    <div class="d-flex flex-column">
+                        <div class="border rounded-0 p-2">
+                            <div class="fw-semibold">Експорт бази</div>
                             <div class="small text-muted">
                                 Експорт формує окремий snapshot SQLite-файлу. Рекомендується робити перед великими змінами та перед імпортом.
                             </div>
-                            <div class="d-flex flex-wrap gap-2">
+                            <div class="d-flex flex-wrap">
                                 <a class="btn btn-success btn-sm" href="/api/database/export">
                                     <i class="bi bi-download me-1"></i>Експортувати .db
                                 </a>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div class="col-12 col-xl-6">
-                    <div class="card rounded-0 border-0 shadow-sm h-100">
-                        <div class="card-header py-2 px-3 fw-semibold">Імпорт бази</div>
-                        <div class="card-body d-flex flex-column gap-3">
+                        <div class="border rounded-0 p-2">
+                            <div class="fw-semibold">Імпорт бази</div>
                             <div class="small text-muted">
                                 Імпорт повністю замінює поточну SQLite-базу вибраним файлом. Перед заміною автоматично створюється backup поточної бази.
                             </div>
-                            <div>
+                            <div class="mb-2">
                                 <InputFile class="form-control form-control-sm" accept=".db,.sqlite,.sqlite3" OnChange="OnFileSelected" />
                                 @if (!string.IsNullOrWhiteSpace(_selectedFileName))
                                 {
-                                    <div class="form-text text-success mt-1">Обрано: @_selectedFileName</div>
+                                    <div class="form-text text-success">Обрано: @_selectedFileName</div>
                                 }
                             </div>
-                            <div class="d-flex flex-wrap gap-2">
+                            <div class="d-flex flex-wrap">
                                 <button class="btn btn-primary btn-sm" @onclick="RunImportAsync" disabled="@(_busy || _selectedFile is null)">
                                     @if (_busy && _busyOperation == "import")
                                     {
@@ -79,21 +73,17 @@
                                 </button>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div class="col-12 col-xl-6">
-                    <div class="card rounded-0 border-0 shadow-sm h-100 border border-danger-subtle">
-                        <div class="card-header py-2 px-3 fw-semibold text-danger">Очистити базу</div>
-                        <div class="card-body d-flex flex-column gap-3">
+                        <div class="border border-danger-subtle rounded-0 p-2">
+                            <div class="fw-semibold text-danger">Очистити базу</div>
                             <div class="small text-muted">
                                 Операція повністю видаляє поточні дані, створює порожню схему та повторно виконує seed довідника дій. Перед очищенням також створюється backup.
                             </div>
-                            <div>
+                            <div class="mb-2">
                                 <label class="form-label form-label-sm">Для підтвердження введи <code>ОЧИСТИТИ</code></label>
                                 <input class="form-control form-control-sm" @bind="_clearConfirmation" @bind:event="oninput" />
                             </div>
-                            <div class="d-flex flex-wrap gap-2">
+                            <div class="d-flex flex-wrap">
                                 <button class="btn btn-danger btn-sm" @onclick="RunClearAsync" disabled="@(_busy || !CanClear)">
                                     @if (_busy && _busyOperation == "clear")
                                     {
