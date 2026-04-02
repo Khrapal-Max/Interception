@@ -1,7 +1,3 @@
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Linq;
-using System.Windows.Input;
 using Interception.Application.Analytics.Dtos;
 using Interception.Application.Import.Abstractions;
 using Interception.Application.Interceptions.Abstractions;
@@ -11,8 +7,10 @@ using Interception.Application.Registry.Abstractions;
 using Interception.Common.Extensions;
 using Interception.Desktop.Wpf.Infrastructure;
 using Interception.Domain.Entities;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Windows.Input;
 
 namespace Interception.Desktop.Wpf.ViewModels;
 
@@ -24,11 +22,11 @@ public sealed class ObservationsViewModel : ViewModelBase
 {
     private const int PageSize = 25;
 
-    private readonly IInterceptionQueryService? _queryService;
-    private readonly IInterceptionCommandService? _commandService;
-    private readonly IInterceptionSuggestionService? _suggestionService;
-    private readonly IInterceptionImportService? _importService;
-    private readonly IInterceptionActionService? _actionService;
+    private readonly IInterceptionQueryService _queryService;
+    private readonly IInterceptionCommandService _commandService;
+    private readonly IInterceptionSuggestionService _suggestionService;
+    private readonly IInterceptionImportService _importService;
+    private readonly IInterceptionActionService _actionService;
 
     private readonly ObservableCollection<ObservationRecord> _pagedItems = [];
     private readonly ObservableCollection<InterceptionAction> _actions = [];
@@ -85,13 +83,18 @@ public sealed class ObservationsViewModel : ViewModelBase
 
     private string? _serviceStatus;
 
-    public ObservationsViewModel()
+    public ObservationsViewModel(
+         IInterceptionQueryService queryService,
+         IInterceptionCommandService commandService,
+         IInterceptionSuggestionService suggestionService,
+         IInterceptionImportService importService,
+         IInterceptionActionService actionService)
     {
-        _queryService = App.Services.GetService<IInterceptionQueryService>();
-        _commandService = App.Services.GetService<IInterceptionCommandService>();
-        _suggestionService = App.Services.GetService<IInterceptionSuggestionService>();
-        _importService = App.Services.GetService<IInterceptionImportService>();
-        _actionService = App.Services.GetService<IInterceptionActionService>();
+        _queryService = queryService;
+        _commandService = commandService;
+        _suggestionService = suggestionService;
+        _importService = importService;
+        _actionService = actionService;
 
         OpenCreateCommand = new RelayCommand(OpenCreate);
         _editSelectedCommand = new RelayCommand(() => _ = OpenEditSelectedAsync(), () => SelectedObservation is not null && CanUseDataServices);
@@ -129,12 +132,7 @@ public sealed class ObservationsViewModel : ViewModelBase
     public ObservableCollection<ParticipantDraft> ParticipantItems => _participantItems;
     public ObservableCollection<ParticipantSuggestionDto> ParticipantSuggestions => _participantSuggestions;
 
-    public bool CanUseDataServices =>
-        _queryService is not null &&
-        _commandService is not null &&
-        _suggestionService is not null &&
-        _importService is not null &&
-        _actionService is not null;
+    public static bool CanUseDataServices => true;
 
     public bool HasServiceStatus => !string.IsNullOrWhiteSpace(ServiceStatus);
     public bool HasFormStatus => !string.IsNullOrWhiteSpace(FormStatus);
@@ -188,14 +186,7 @@ public sealed class ObservationsViewModel : ViewModelBase
             if (!SetProperty(ref _selectedFrequencySuggestion, value) || value is null)
                 return;
 
-            FormFrequency = value.Frequency;
-            if (!string.IsNullOrWhiteSpace(value.Division))
-                FormDivision = value.Division;
-            if (!string.IsNullOrWhiteSpace(value.VectorSignal))
-                FormVectorSignal = value.VectorSignal;
-
-            FrequencySuggestions.Clear();
-            SelectedFrequencySuggestion = null;
+            ApplyFrequencySuggestion(value);
         }
     }
 
@@ -207,9 +198,7 @@ public sealed class ObservationsViewModel : ViewModelBase
             if (!SetProperty(ref _selectedVectorSuggestion, value) || string.IsNullOrWhiteSpace(value))
                 return;
 
-            FormVectorSignal = value;
-            VectorSuggestions.Clear();
-            SelectedVectorSuggestion = null;
+            ApplyVectorSuggestion(value);
         }
     }
 
@@ -511,7 +500,7 @@ public sealed class ObservationsViewModel : ViewModelBase
 
         try
         {
-            var actions = await _actionService!.GetAllAsync();
+            var actions = await _actionService.GetAllAsync();
             ReplaceCollection(_actions, actions);
             await LoadPageAsync();
         }
@@ -541,7 +530,7 @@ public sealed class ObservationsViewModel : ViewModelBase
 
             var result = await _queryService.GetPagedAsync(filter, CurrentPage, PageSize);
             TotalCount = result.TotalCount;
-            CurrentPage = Math.Clamp(1, 1, Math.Max(1, result.TotalPages));
+            CurrentPage = Math.Clamp(CurrentPage, 1, Math.Max(1, result.TotalPages));
 
             ReplaceCollection(_pagedItems, result.Items.Select(MapRecord));
             _prevPageCommand.RaiseCanExecuteChanged();
@@ -933,6 +922,45 @@ public sealed class ObservationsViewModel : ViewModelBase
         SelectedParticipant.Role = SelectedParticipantSuggestion.Role;
         ParticipantSuggestions.Clear();
         SelectedParticipantSuggestion = null;
+    }
+
+    private void ApplyFrequencySuggestion(FrequencySuggestionDto suggestion)
+    {
+        FormFrequency = suggestion.Frequency;
+
+        if (!string.IsNullOrWhiteSpace(suggestion.Division))
+            FormDivision = suggestion.Division;
+
+        if (!string.IsNullOrWhiteSpace(suggestion.VectorSignal))
+            FormVectorSignal = suggestion.VectorSignal;
+
+        FrequencySuggestions.Clear();
+        ClearSelectedFrequencySuggestion();
+    }
+
+    private void ApplyVectorSuggestion(string suggestion)
+    {
+        FormVectorSignal = suggestion;
+        VectorSuggestions.Clear();
+        ClearSelectedVectorSuggestion();
+    }
+
+    private void ClearSelectedFrequencySuggestion()
+    {
+        if (_selectedFrequencySuggestion is null)
+            return;
+
+        _selectedFrequencySuggestion = null;
+        OnPropertyChanged(nameof(SelectedFrequencySuggestion));
+    }
+
+    private void ClearSelectedVectorSuggestion()
+    {
+        if (_selectedVectorSuggestion is null)
+            return;
+
+        _selectedVectorSuggestion = null;
+        OnPropertyChanged(nameof(SelectedVectorSuggestion));
     }
 
     private async Task PopulateParticipantRolesAsync()

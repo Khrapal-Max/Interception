@@ -1,5 +1,7 @@
+using System;
 using System.Windows.Input;
 using Interception.Desktop.Wpf.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Interception.Desktop.Wpf.ViewModels;
 
@@ -8,11 +10,15 @@ namespace Interception.Desktop.Wpf.ViewModels;
 /// </summary>
 public sealed class ShellViewModel : ViewModelBase
 {
+    private readonly IServiceProvider _services;
+
     private object _currentViewModel;
     private string _statusMessage;
 
-    public ShellViewModel()
+    public ShellViewModel(IServiceProvider services)
     {
+        _services = services;
+
         NavigateHomeCommand = new RelayCommand(() => NavigateTo("Home"));
         NavigateObservationsCommand = new RelayCommand(() => NavigateTo("Observations"));
         NavigateAnalyticsCommand = new RelayCommand(() => NavigateTo("Analytics"));
@@ -48,7 +54,7 @@ public sealed class ShellViewModel : ViewModelBase
         CurrentViewModel = route switch
         {
             "Home" => new HomeViewModel(),
-            "Observations" => new ObservationsViewModel(),
+            "Observations" => _services.GetRequiredService<ObservationsViewModel>(),
             "Analytics" => new AnalyticsViewModel(),
             "Reports" => new ReportsViewModel(),
             "Registries" => new RegistriesViewModel(),
