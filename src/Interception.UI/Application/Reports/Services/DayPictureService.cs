@@ -21,11 +21,11 @@ public sealed partial class DayPictureService(IDbContextFactory<AppDbContext> db
     private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
 
     /// <inheritdoc />
-    public async Task<DayPictureDto> BuildAsync(DateOnly day, CancellationToken ct = default)
+    public async Task<DayPictureDto> BuildAsync(DateTime day, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
-        var fromUtc = day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var fromUtc = day.ToUniversalTime();
         var toUtc = fromUtc.AddDays(1);
 
         var messages = await db.InterceptionMessages

@@ -27,7 +27,7 @@ public sealed class DayPictureServiceTests
         var ct = TestContext.Current.CancellationToken;
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var day = new DateOnly(2026, 03, 28);
+        var day = new DateTime(2026, 03, 28);
 
         var result = await service.BuildAsync(day, ct);
 
@@ -42,7 +42,7 @@ public sealed class DayPictureServiceTests
         var ct = TestContext.Current.CancellationToken;
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var day = new DateOnly(2026, 03, 28);
+        var day = new DateTime(2026, 03, 28);
 
         await using (var db = await factory.CreateDbContextAsync(ct))
         {
@@ -86,7 +86,7 @@ public sealed class DayPictureServiceTests
         var ct = TestContext.Current.CancellationToken;
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var day = new DateOnly(2026, 03, 28);
+        var day = new DateTime(2026, 03, 28);
 
         await using (var db = await factory.CreateDbContextAsync(ct))
         {
@@ -131,7 +131,7 @@ public sealed class DayPictureServiceTests
         var ct = TestContext.Current.CancellationToken;
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var day = new DateOnly(2026, 03, 28);
+        var day = new DateTime(2026, 03, 28);
 
         await using (var db = await factory.CreateDbContextAsync(ct))
         {
@@ -162,7 +162,7 @@ public sealed class DayPictureServiceTests
         var ct = TestContext.Current.CancellationToken;
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var day = new DateOnly(2026, 03, 28);
+        var day = new DateTime(2026, 03, 28);
 
         await using (var db = await factory.CreateDbContextAsync(ct))
         {
@@ -196,7 +196,7 @@ public sealed class DayPictureServiceTests
         var ct = TestContext.Current.CancellationToken;
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var day = new DateOnly(2026, 03, 28);
+        var day = new DateTime(2026, 03, 28);
 
         await using (var db = await factory.CreateDbContextAsync(ct))
         {
@@ -227,7 +227,7 @@ public sealed class DayPictureServiceTests
         var ct = TestContext.Current.CancellationToken;
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var day = new DateOnly(2026, 03, 28);
+        var day = new DateTime(2026, 03, 28);
 
         await using (var db = await factory.CreateDbContextAsync(ct))
         {
@@ -257,7 +257,7 @@ public sealed class DayPictureServiceTests
         var ct = TestContext.Current.CancellationToken;
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var day = new DateOnly(2026, 03, 28);
+        var day = new DateTime(2026, 03, 28);
 
         await using (var db = await factory.CreateDbContextAsync(ct))
         {

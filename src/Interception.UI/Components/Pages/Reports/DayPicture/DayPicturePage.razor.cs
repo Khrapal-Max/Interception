@@ -34,7 +34,7 @@ public partial class DayPicturePage : ComponentBase
 
         try
         {
-            var day = DateOnly.FromDateTime((_day ?? DateTime.Today).Date);
+            var day = _day ?? DateTime.Today;
             _picture = await DayPictureService.BuildAsync(day, CancellationToken.None);
         }
         catch (Exception ex)
@@ -64,8 +64,7 @@ public partial class DayPicturePage : ComponentBase
     }
 
     private static List<DayPictureEntryDto> GetOrderedEntries(DayPictureGroupDto group)
-        => group.Conversations
+        => [.. group.Conversations
             .SelectMany(x => x.Entries)
-            .OrderBy(x => x.ObservedDate)
-            .ToList();
+            .OrderBy(x => x.ObservedDate)];
 }

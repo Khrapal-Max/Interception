@@ -3,9 +3,11 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Abstractions;
+using Interception.UI.Application.Analytics.Services;
 using Interception.UI.Application.Database.Abstractions;
 using Interception.UI.Application.Database.Services;
-using Interception.UI.Application.Analytics.Services;
+using Interception.UI.Application.Exports.Abstractions;
+using Interception.UI.Application.Exports.Services;
 using Interception.UI.Application.Import.Abstractions;
 using Interception.UI.Application.Import.Services;
 using Interception.UI.Application.Interceptions.Abstractions;
@@ -50,6 +52,7 @@ builder.Services.AddScoped<ToastService>();
 
 // --- Application services ---
 // Поточні контракти, які ще використовує фронт.
+builder.Services.AddScoped<IExcelExportService, ExcelExportService>();
 builder.Services.AddScoped<IInterceptionImportService, InterceptionImportService>();
 builder.Services.AddScoped<IInterceptionActionService, InterceptionActionService>();
 builder.Services.AddScoped<IPersonRegistryService, PersonRegistryService>();

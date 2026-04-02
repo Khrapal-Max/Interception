@@ -13,6 +13,6 @@ namespace Interception.UI.Application.Reports.Dtos;
 /// Денна картина повідомлень.
 /// </summary>
 public sealed record DayPictureDto(
-    DateOnly Day,
+    DateTime Day,
     int TotalMessages,
     IReadOnlyList<DayPictureGroupDto> Groups);

@@ -1,6 +1,8 @@
 @page "/registries/divisions"
+@using Interception.UI.Application.Exports.Models
 @using Interception.UI.Components.Pages.Registry.Divisions.Drawers
 @using Interception.UI.Components.Pages.Registry.Toolbar
+@using Interception.UI.Components.Pages.Reports.Divisions
 
 <PageTitle>Регістри — Підрозділи</PageTitle>
 
@@ -78,7 +80,12 @@
             </div>
         }
     </div>
-
+    <div class="d-flex justify-content-end">
+        <ExportLauncher Kind="ExportKind.FrequencyDivisionRegistry"
+                        Title="Експорт частот"
+                        ButtonClass="btn btn-outline-secondary btn-sm rounded-0" />
+    </div>
+   
 </div>
 
 <FrequencyDivisionDrawer @bind-IsOpen="_drawerOpen"

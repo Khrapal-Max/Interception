@@ -1,4 +1,5 @@
 @page "/reports/day-picture"
+@using Interception.UI.Application.Exports.Models
 @using Interception.UI.Components.Pages.Reports.Toolbar
 
 <PageTitle>Картина дня</PageTitle>
@@ -9,6 +10,12 @@
             Підрозділів: @(_picture?.Groups.Count ?? 0) · Спостережень: @(_picture?.TotalMessages ?? 0)
         </MetaContent>
         <ActionsContent>
+
+            <ExportLauncher Kind="ExportKind.DayPicture"
+                            Title="Експорт картини дня"
+                            ButtonClass="btn btn-outline-secondary btn-sm rounded-0"
+                            Day="_day" />
+
             <div class="d-flex align-items-center gap-2 flex-nowrap">
                 <label class="form-label small text-muted mb-0">День</label>
                 <input class="form-control form-control-sm"

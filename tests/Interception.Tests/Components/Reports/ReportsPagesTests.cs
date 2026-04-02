@@ -4,6 +4,7 @@
 
 using Bunit;
 using FluentAssertions;
+using Interception.UI.Application.Exports.Abstractions;
 using Interception.UI.Application.Reports.Abstractions;
 using Interception.UI.Application.Reports.Dtos;
 using Interception.UI.Application.Toasts;
@@ -17,12 +18,15 @@ namespace Interception.Tests.Components.Reports;
 public sealed class DivisionReportPageTests : BunitContext
 {
     private readonly IDivisionReportService _divisionReportService;
+    private readonly IExcelExportService _excelExportService;
 
     public DivisionReportPageTests()
     {
         _divisionReportService = Substitute.For<IDivisionReportService>();
+        _excelExportService = Substitute.For<IExcelExportService>();
 
         Services.AddSingleton(_divisionReportService);
+        Services.AddSingleton(_excelExportService);
         Services.AddSingleton<ToastService>();
     }
 
@@ -44,26 +48,29 @@ public sealed class DivisionReportPageTests : BunitContext
 public sealed class DayPicturePageTests : BunitContext
 {
     private readonly IDayPictureService _dayPictureService;
+    private readonly IExcelExportService _excelExportService;
 
     public DayPicturePageTests()
     {
         _dayPictureService = Substitute.For<IDayPictureService>();
+        _excelExportService = Substitute.For<IExcelExportService>();
 
         Services.AddSingleton(_dayPictureService);
+        Services.AddSingleton(_excelExportService);
         Services.AddSingleton<ToastService>();
     }
 
     [Fact]
     public void Render_EmptyData_ShowsEmptyStateAndLoadsData()
     {
-        _dayPictureService.BuildAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
-            .Returns(new DayPictureDto(DateOnly.FromDateTime(DateTime.Today), 0, []));
+        _dayPictureService.BuildAsync(Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            .Returns(new DayPictureDto(DateTime.Today, 0, []));
 
         var cut = Render<DayPicturePage>();
 
         cut.Markup.Should().Contain("За вибраний день спостережень не знайдено.");
         cut.Markup.Should().Contain("Сьогодні");
 
-        _dayPictureService.Received(1).BuildAsync(Arg.Any<DateOnly>(), Arg.Any<CancellationToken>());
+        _dayPictureService.Received(1).BuildAsync(Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
     }
 }

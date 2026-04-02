@@ -1,86 +1,8 @@
 @page "/analytics/frequency-weights"
+@using Interception.UI.Application.Exports.Models
 @using Interception.UI.Components.Pages.Analytics.Toolbar
 
 <PageTitle>Аналітика — Вага підрозділів по частотах</PageTitle>
-
-<style>
-    .freq-page-shell {
-        height: 100%;
-        min-height: 0;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .freq-page-panel {
-        flex: 1 1 auto;
-        min-height: 0;
-        overflow: hidden;
-    }
-
-    .freq-panel-scroll {
-        height: 100%;
-        min-height: 0;
-        overflow: hidden;
-    }
-
-    .freq-table-scroll {
-        height: 100%;
-        min-height: 0;
-        overflow: auto;
-    }
-
-    .freq-table {
-        margin-bottom: 0;
-    }
-
-    .freq-table thead th {
-        position: sticky;
-        top: 0;
-        z-index: 3;
-        background: var(--bs-body-bg);
-        box-shadow: inset 0 -1px 0 var(--bs-border-color);
-        white-space: nowrap;
-    }
-
-    .freq-table tbody tr.freq-start td,
-    .freq-table tbody tr.freq-middle td,
-    .freq-table tbody tr.freq-end td,
-    .freq-table tbody tr.freq-single td {
-        background: var(--bs-body-bg);
-        border-left: 1px solid var(--bs-border-color);
-        border-right: 1px solid var(--bs-border-color);
-    }
-
-    .freq-table tbody tr.freq-start td,
-    .freq-table tbody tr.freq-single td {
-        border-top: 2px solid var(--bs-secondary-color);
-    }
-
-    .freq-table tbody tr.freq-end td,
-    .freq-table tbody tr.freq-single td {
-        border-bottom: 2px solid var(--bs-secondary-color);
-    }
-
-    .freq-table tbody tr.freq-start td,
-    .freq-table tbody tr.freq-single td {
-        background: var(--bs-secondary-bg);
-    }
-
-    .freq-frequency,
-    .freq-division {
-        font-weight: 500;
-        white-space: nowrap;
-    }
-
-    .freq-group-name {
-        padding-left: 1rem;
-    }
-
-    .freq-empty {
-        opacity: .75;
-    }
-</style>
 
 <div class="page-shell freq-page-shell">
 
@@ -89,6 +11,11 @@
             Частот: <strong>@(_report?.Frequencies.Count ?? 0)</strong>
         </MetaContent>
         <ActionsContent>
+
+            <ExportLauncher Kind="ExportKind.FrequencyWeights"
+                            Title="Експорт ваг підрозділів"
+                            ButtonClass="btn btn-outline-secondary btn-sm rounded-0" />
+
             <button class="btn btn-success btn-sm"
                     @onclick="LoadAsync"
                     disabled="@_loading">

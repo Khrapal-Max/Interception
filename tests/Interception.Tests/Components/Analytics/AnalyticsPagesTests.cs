@@ -6,6 +6,7 @@ using Bunit;
 using FluentAssertions;
 using Interception.UI.Application.Analytics.Abstractions;
 using Interception.UI.Application.Analytics.Dtos;
+using Interception.UI.Application.Exports.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Components.Pages.Analytics.Candidates;
@@ -56,12 +57,15 @@ public sealed class CandidatesPageTests : BunitContext
 public sealed class LinkMapPageTests : BunitContext
 {
     private readonly ILinkMapService _linkMapService;
+    private readonly IExcelExportService _excelExportService;
 
     public LinkMapPageTests()
     {
         _linkMapService = Substitute.For<ILinkMapService>();
+        _excelExportService = Substitute.For<IExcelExportService>();
 
         Services.AddSingleton(_linkMapService);
+        Services.AddSingleton(_excelExportService);
         Services.AddSingleton<ToastService>();
 
         ComponentFactories.AddStub<LinkMapGroupDrawer>();

@@ -1,4 +1,5 @@
 @page "/registries/persons"
+@using Interception.UI.Application.Exports.Models
 @using Interception.UI.Components.Pages.Registry.Persons.Drawers
 @using Interception.UI.Components.Pages.Registry.Toolbar
 
@@ -92,6 +93,12 @@
                 </table>
             </div>
         }
+    </div>
+
+    <div class="d-flex justify-content-end">
+        <ExportLauncher Kind="ExportKind.PersonsRegistry"
+                        Title="Експорт осіб"
+                        ButtonClass="btn btn-outline-secondary btn-sm rounded-0" />
     </div>
 
 </div>

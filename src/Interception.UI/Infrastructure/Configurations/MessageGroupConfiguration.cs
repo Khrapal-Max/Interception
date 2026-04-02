@@ -3,7 +3,6 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Domain;
-using Interception.UI.Domain.Records;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

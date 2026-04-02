@@ -1,0 +1,19 @@
+@using Interception.UI.Application.Exports.Models
+
+@if (_hasAction)
+{
+    <button type="button"
+            class="@ButtonClass"
+            disabled="@(_busy || !_resolvedKind.HasValue)"
+            @onclick="ExportAsync">
+        @if (_busy)
+        {
+            <span class="spinner-border spinner-border-sm me-1"></span>
+        }
+        else
+        {
+            <i class="bi bi-download me-1"></i>
+        }
+        @_resolvedTitle
+    </button>
+}

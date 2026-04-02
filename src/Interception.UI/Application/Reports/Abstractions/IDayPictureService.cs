@@ -29,5 +29,5 @@ public interface IDayPictureService
     /// <summary>
     /// Повертає денну картину спостережень за вказану дату.
     /// </summary>
-    Task<DayPictureDto> BuildAsync(DateOnly day, CancellationToken ct = default);
+    Task<DayPictureDto> BuildAsync(DateTime day, CancellationToken ct = default);
 }

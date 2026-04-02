@@ -1,4 +1,5 @@
 @page "/analytics/link-map"
+@using Interception.UI.Application.Exports.Models
 @using Interception.UI.Components.Pages.Analytics.LinkMap.Drawers
 @using Interception.UI.Components.Pages.Analytics.Toolbar
 
@@ -47,6 +48,12 @@
             </div>
         </MetaContent>
         <ActionsContent>
+            <ExportLauncher Kind="ExportKind.LinkMap"
+                            Title="Експорт карти зв'язків"
+                            ButtonClass="btn btn-outline-secondary btn-sm rounded-0"
+                            DateFrom="_dateFrom"
+                            DateTo="_dateTo" />
+
             <div class="registry-toolbar-meta">
                 Груп: <strong>@VisibleGroups.Count</strong>
             </div>
