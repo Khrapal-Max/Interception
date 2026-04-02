@@ -6,7 +6,6 @@ using Interception.UI.Application.Analytics.Abstractions;
 using Interception.UI.Application.Analytics.Builders.Frequency;
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Domain;
-using Interception.UI.Domain.Records;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;

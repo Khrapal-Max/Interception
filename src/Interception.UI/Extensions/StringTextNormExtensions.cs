@@ -10,7 +10,13 @@ public static partial class StringTextNormExtensions
 {
     private static readonly Regex MultiWs = MyRegex();
 
-    public static string? Normalize(string? value)
+    public static string NormalizeRequired(string value)
+        => NormalizeToLowerInvariant(value) ?? throw new ArgumentException("Value must not be empty.", nameof(value));
+
+    [GeneratedRegex(@"\s+", RegexOptions.Compiled)]
+    private static partial Regex MyRegex();
+
+    public static string? NormalizeToLowerInvariant(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return null;
@@ -19,12 +25,6 @@ public static partial class StringTextNormExtensions
         var trimmed = MultiWs.Replace(value.Trim(), " ");
         return trimmed.ToLowerInvariant();
     }
-
-    public static string NormalizeRequired(string value)
-        => Normalize(value) ?? throw new ArgumentException("Value must not be empty.", nameof(value));
-
-    [GeneratedRegex(@"\s+", RegexOptions.Compiled)]
-    private static partial Regex MyRegex();
 
     public static string? NormalizeOption(string? value)
     {

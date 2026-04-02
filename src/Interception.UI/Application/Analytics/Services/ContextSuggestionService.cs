@@ -49,7 +49,7 @@ public sealed class ContextSuggestionService(
         CancellationToken ct)
     {
         var groupParticipantIds = group.ParticipantRefs
-            .Select(r => (Guid)r.ParticipantId)
+            .Select(r => r.ParticipantId)
             .ToHashSet();
 
         if (groupParticipantIds.Count == 0)

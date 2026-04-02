@@ -91,11 +91,9 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
         var groups = divisions
             .Select(division => BuildGroup(
                 division,
-                messageRows.Where(x => string.Equals(x.EffectiveDivision, division, StringComparison.OrdinalIgnoreCase))
-                    .Select(x => x.Message)
-                    .ToList(),
-                observedPeople.Where(x => string.Equals(x.Division, division, StringComparison.OrdinalIgnoreCase)).ToList(),
-                confirmedPeople.Where(x => string.Equals(x.Division, division, StringComparison.OrdinalIgnoreCase)).ToList(),
+                [.. messageRows.Where(x => string.Equals(x.EffectiveDivision, division, StringComparison.OrdinalIgnoreCase)).Select(x => x.Message)],
+                [.. observedPeople.Where(x => string.Equals(x.Division, division, StringComparison.OrdinalIgnoreCase))],
+                [.. confirmedPeople.Where(x => string.Equals(x.Division, division, StringComparison.OrdinalIgnoreCase))],
                 unknownGroupsCountByDivision))
             .OrderBy(x => x.Division)
             .ToList();
@@ -144,7 +142,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
         people.AddRange(observedPeople.Select(x => (x.Name, x.Role, x.LastSeenAt)));
         people.AddRange(confirmedPeople.Select(x => (x.Name, x.Role, x.LastSeenAt)));
 
-        return people
+        return [.. people
             .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
             .Select(group =>
             {
@@ -152,20 +150,19 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
                     .OrderByDescending(x => x.LastSeenAt)
                     .ToList();
 
-                var latest = ordered.First();
+                var (Name, Role, LastSeenAt) = ordered.First();
 
                 var lastNonEmptyRole = ordered
                     .Select(x => x.Role)
                     .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
 
                 return new DivisionReportPersonRowDto(
-                    PersonKey: latest.Name.Trim().ToUpperInvariant(),
-                    Name: latest.Name,
+                    PersonKey: Name.Trim().ToUpperInvariant(),
+                    Name: Name,
                     Role: lastNonEmptyRole,
-                    LastSeenAt: latest.LastSeenAt);
+                    LastSeenAt: LastSeenAt);
             })
-            .OrderBy(x => x.Name)
-            .ToList();
+            .OrderBy(x => x.Name)];
     }
 
     /// <summary>
@@ -232,7 +229,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
                     LastSeenAt: messageRow.Message.ObservedDate)))
             .ToList();
 
-        return observations
+        return [.. observations
             .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
             .Select(group =>
             {
@@ -248,7 +245,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
                     .OrderByDescending(x => x.LastSeenAt)
                     .ToList();
 
-                var latest = ordered.First();
+                var (Division, Name, Role, LastSeenAt) = ordered.First();
 
                 var lastNonEmptyRole = ordered
                     .Select(x => x.Role)
@@ -256,11 +253,10 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
 
                 return (
                     Division: assignedDivision,
-                    Name: latest.Name,
+                    Name,
                     Role: lastNonEmptyRole,
-                    LastSeenAt: latest.LastSeenAt);
-            })
-            .ToList();
+                    LastSeenAt);
+            })];
     }
 
     /// <summary>
@@ -339,7 +335,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
 
             people.Add((
                 Division: division,
-                Name: resolvedParticipant.Name,
+                resolvedParticipant.Name,
                 Role: resolvedParticipant.Role ?? group.SuggestedRole,
                 LastSeenAt: lastSeenAt));
         }
