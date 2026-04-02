@@ -7,14 +7,14 @@ using Interception.Application.Analytics.Services;
 using Interception.Domain.Entities;
 using Interception.Domain.Enums;
 using Interception.Domain.Records;
-using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests.Application.Analytics;
 
 public sealed class ParticipantCandidateGroupCommandServiceTests
 {
-    private static ParticipantCandidateGroupCommandService CreateService(IDbContextFactory<AppDbContext> factory)
+    private static ParticipantCandidateGroupCommandService CreateService(IDbContextFactory<PostgreSqlDbContext> factory)
         => new(factory);
 
     [Fact]

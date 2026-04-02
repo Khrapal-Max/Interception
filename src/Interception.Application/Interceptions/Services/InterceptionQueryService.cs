@@ -9,6 +9,7 @@ using Interception.Application.Registry.Builders;
 using Interception.Domain.Entities;
 using Interception.Domain.Enums;
 using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Interceptions.Services;
@@ -16,7 +17,7 @@ namespace Interception.Application.Interceptions.Services;
 /// <summary>
 /// Реалізація read-side реєстру перехоплень і деталізації одного повідомлення.
 /// </summary>
-public sealed class InterceptionQueryService(IDbContextFactory<AppDbContext> dbFactory) : IInterceptionQueryService
+public sealed class InterceptionQueryService(IDbContextFactory<PostgreSqlDbContext> dbFactory) : IInterceptionQueryService
 {
     /// <inheritdoc />
     public async Task<PagedResultDto<InterceptionListItemDto>> GetPagedAsync(
@@ -139,7 +140,7 @@ public sealed class InterceptionQueryService(IDbContextFactory<AppDbContext> dbF
     /// Будує overlay-map для unknown participants у реєстрі.
     /// </summary>
     private static async Task<Dictionary<Guid, (string? Name, bool IsResolved)>> BuildUnknownOverlayMapAsync(
-        AppDbContext db,
+        PostgreSqlDbContext db,
         IReadOnlyList<InterceptionRegistryItemSnapshot> rawItems,
         CancellationToken ct)
     {

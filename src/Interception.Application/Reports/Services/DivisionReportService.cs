@@ -7,6 +7,7 @@ using Interception.Application.Reports.Dtos;
 using Interception.Domain.Entities;
 using Interception.Domain.Enums;
 using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Reports.Services;
@@ -14,11 +15,11 @@ namespace Interception.Application.Reports.Services;
 /// <summary>
 /// Будує простий зведений звіт по підрозділах.
 /// </summary>
-public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFactory)
+public sealed class DivisionReportService(IDbContextFactory<PostgreSqlDbContext> dbFactory)
     : IDivisionReportService
 {
     private const string UnknownDivision = "НВ підрозділ";
-    private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
+    private readonly IDbContextFactory<PostgreSqlDbContext> _dbFactory = dbFactory;
 
     /// <inheritdoc />
     public async Task<DivisionReportDto> BuildAsync(
@@ -152,17 +153,17 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
                     .OrderByDescending(x => x.LastSeenAt)
                     .ToList();
 
-                var latest = ordered.First();
+                var (Name, Role, LastSeenAt) = ordered.First();
 
                 var lastNonEmptyRole = ordered
                     .Select(x => x.Role)
                     .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
 
                 return new DivisionReportPersonRowDto(
-                    PersonKey: latest.Name.Trim().ToUpperInvariant(),
-                    Name: latest.Name,
+                    PersonKey: Name.Trim().ToUpperInvariant(),
+                    Name: Name,
                     Role: lastNonEmptyRole,
-                    LastSeenAt: latest.LastSeenAt);
+                    LastSeenAt: LastSeenAt);
             })
             .OrderBy(x => x.Name)
             .ToList();
@@ -248,7 +249,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
                     .OrderByDescending(x => x.LastSeenAt)
                     .ToList();
 
-                var latest = ordered.First();
+                var (Division, Name, Role, LastSeenAt) = ordered.First();
 
                 var lastNonEmptyRole = ordered
                     .Select(x => x.Role)
@@ -256,9 +257,9 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
 
                 return (
                     Division: assignedDivision,
-                    Name: latest.Name,
+                    Name,
                     Role: lastNonEmptyRole,
-                    LastSeenAt: latest.LastSeenAt);
+                    LastSeenAt);
             })
             .ToList();
     }
@@ -267,7 +268,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
     /// Рахує open-групи НВ за effective division пов'язаних повідомлень.
     /// </summary>
     private static async Task<Dictionary<string, int>> LoadUnknownGroupsCountByDivisionAsync(
-        AppDbContext db,
+        PostgreSqlDbContext db,
         HashSet<Guid> messageIds,
         IReadOnlyDictionary<Guid, string> messageEffectiveDivisions,
         CancellationToken ct)
@@ -289,7 +290,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
     /// Завантажує підтверджених осіб і визначає effective division з пріоритетом confirmed division.
     /// </summary>
     private static async Task<List<(string Division, string Name, string? Role, DateTime LastSeenAt)>> LoadConfirmedPeopleAsync(
-        AppDbContext db,
+        PostgreSqlDbContext db,
         HashSet<Guid> messageIds,
         IReadOnlyDictionary<Guid, DateTime> messageDates,
         IReadOnlyDictionary<Guid, string> messageEffectiveDivisions,

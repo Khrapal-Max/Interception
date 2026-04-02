@@ -6,7 +6,7 @@ using FluentAssertions;
 using Interception.Application.Analytics.Services;
 using Interception.Domain.Entities;
 using Interception.Domain.Records;
-using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -15,7 +15,7 @@ namespace Interception.Tests.Application.Analytics;
 public sealed class KnownParticipantSuggestionServiceTests
 {
     private static KnownParticipantSuggestionService CreateService(
-        IDbContextFactory<AppDbContext> factory,
+        IDbContextFactory<PostgreSqlDbContext> factory,
         PatternRecognitionOptions? options = null)
         => new(factory, Options.Create(options ?? new PatternRecognitionOptions()));
 

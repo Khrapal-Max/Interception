@@ -6,14 +6,14 @@ using FluentAssertions;
 using Interception.Application.Reports.Services;
 using Interception.Domain.Entities;
 using Interception.Domain.Records;
-using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests.Application.Reports;
 
 public sealed class DivisionReportServiceTests
 {
-    private static DivisionReportService CreateService(IDbContextFactory<AppDbContext> factory)
+    private static DivisionReportService CreateService(IDbContextFactory<PostgreSqlDbContext> factory)
         => new(factory);
 
     [Fact]

@@ -7,6 +7,7 @@ using Interception.Common.Extensions;
 using Interception.Domain.Entities;
 using Interception.Domain.Enums;
 using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Analytics.Services;
@@ -14,7 +15,7 @@ namespace Interception.Application.Analytics.Services;
 /// <summary>
 /// Реалізація write-side сценаріїв для життєвого циклу груп кандидатів.
 /// </summary>
-public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<AppDbContext> dbFactory)
+public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<PostgreSqlDbContext> dbFactory)
     : IParticipantCandidateGroupCommandService
 {
     /// <inheritdoc />

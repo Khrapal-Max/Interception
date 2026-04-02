@@ -67,7 +67,7 @@ public partial class InterceptionRegistry : ComponentBase
     internal async Task LoadPageAsync()
     {
         _loading = true;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
         try
         {
             _pagedResult = await InterceptionQueryService.GetPagedAsync(
@@ -80,7 +80,7 @@ public partial class InterceptionRegistry : ComponentBase
         finally
         {
             _loading = false;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
     }
 

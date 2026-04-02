@@ -16,7 +16,7 @@ COPY ["src/Interception.Web.UI/Interception.Web.UI.csproj", "src/Interception.We
 COPY ["src/Interception.Application/Interception.Application.csproj", "src/Interception.Application/"]
 COPY ["src/Interception.Common/Interception.Common.csproj", "src/Interception.Common/"]
 COPY ["src/Interception.Domain/Interception.Domain.csproj", "src/Interception.Domain/"]
-COPY ["src/Interception.Infrastructure/Interception.Infrastructure.csproj", "src/Interception.Infrastructure/"]
+COPY ["src/Interception.Infrastructure.PostgreSql/Interception.Infrastructure.PostgreSql.csproj", "src/Interception.Infrastructure.PostgreSql/"]
 RUN dotnet restore "./src/Interception.Web.UI/Interception.Web.UI.csproj"
 COPY . .
 WORKDIR "/src/src/Interception.Web.UI"

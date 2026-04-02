@@ -5,9 +5,9 @@
 using Interception.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace Interception.Infrastructure;
+namespace Interception.Infrastructure.PostgreSql;
 
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public sealed class PostgreSqlDbContext(DbContextOptions<PostgreSqlDbContext> options) : DbContext(options)
 {
     public DbSet<InterceptionAction> InterceptionActions { get; init; }
     public DbSet<InterceptionMessage> InterceptionMessages { get; init; }
@@ -28,6 +28,6 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         if (Database.IsNpgsql())
             modelBuilder.HasPostgresExtension("btree_gist");
 
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(PostgreSqlDbContext).Assembly);
     }
 }

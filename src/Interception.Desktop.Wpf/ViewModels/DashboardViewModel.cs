@@ -5,6 +5,6 @@ namespace Interception.Desktop.Wpf.ViewModels;
 /// </summary>
 public sealed class DashboardViewModel
 {
-    public string Title => "Dashboard";
-    public string Description => "Огляд метрик і швидкий доступ до сценаріїв.";
+    public static string Title => "Dashboard";
+    public static string Description => "Огляд метрик і швидкий доступ до сценаріїв.";
 }

@@ -4,14 +4,14 @@
 
 using FluentAssertions;
 using Interception.Application.Registry.Services;
-using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests.Application.Registry;
 
 public sealed class InterceptionActionServiceTests
 {
-    private static InterceptionActionService CreateService(IDbContextFactory<AppDbContext> factory)
+    private static InterceptionActionService CreateService(IDbContextFactory<PostgreSqlDbContext> factory)
         => new(factory);
 
     // -------------------------------------------------------------------------

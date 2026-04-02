@@ -9,6 +9,7 @@ using Interception.Application.Analytics.Services.Builders;
 using Interception.Common.Extensions;
 using Interception.Domain.Entities;
 using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -18,7 +19,7 @@ namespace Interception.Application.Analytics.Services;
 /// Реалізація top-N підказок по конкретних відомих особах для групи НВ.
 /// </summary>
 public sealed class KnownParticipantSuggestionService(
-    IDbContextFactory<AppDbContext> dbFactory,
+    IDbContextFactory<PostgreSqlDbContext> dbFactory,
     IOptions<PatternRecognitionOptions> options) : IKnownParticipantSuggestionService
 {
     private readonly PatternRecognitionOptions _options = options.Value;
@@ -46,7 +47,7 @@ public sealed class KnownParticipantSuggestionService(
     /// Будує підказки по відомих особах безпосередньо з контексту групи та історії.
     /// </summary>
     internal async Task<IReadOnlyList<KnownParticipantSuggestionDto>> BuildKnownSuggestionsAsync(
-        AppDbContext db,
+        PostgreSqlDbContext db,
         ParticipantCandidateGroup group,
         int take,
         CancellationToken ct)

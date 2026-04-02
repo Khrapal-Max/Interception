@@ -8,7 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Interception.Common\Interception.Common.csproj" />
     <ProjectReference Include="..\Interception.Domain\Interception.Domain.csproj" />
-    <ProjectReference Include="..\Interception.Infrastructure\Interception.Infrastructure.csproj" />
+    <ProjectReference Include="..\Interception.Infrastructure.PostgreSql\Interception.Infrastructure.PostgreSql.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.5" />

@@ -5,6 +5,7 @@
 using Interception.Application.Registry.Abstractions;
 using Interception.Domain.Entities;
 using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Registry.Services;
@@ -18,7 +19,7 @@ namespace Interception.Application.Registry.Services;
 ///   — Домен відповідає за валідацію через Create() / Update().
 /// </summary>
 public sealed class InterceptionActionService(
-    IDbContextFactory<AppDbContext> dbFactory) : IInterceptionActionService
+    IDbContextFactory<PostgreSqlDbContext> dbFactory) : IInterceptionActionService
 {
     // -------------------------------------------------------------------------
     // Read

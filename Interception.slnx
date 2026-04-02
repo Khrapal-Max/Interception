@@ -4,7 +4,8 @@
     <Project Path="src/Interception.Common/Interception.Common.csproj" Id="b51daf68-24bb-4fc3-bf15-b96109c40988" />
     <Project Path="src/Interception.Desktop.Wpf/Interception.Desktop.Wpf.csproj" />
     <Project Path="src/Interception.Domain/Interception.Domain.csproj" />
-    <Project Path="src/Interception.Infrastructure/Interception.Infrastructure.csproj" />
+    <Project Path="src/Interception.Infrastructure.PostgreSql/Interception.Infrastructure.PostgreSql.csproj" />
+    <Project Path="src/Interception.Infrastructure.Sqlite/Interception.Infrastructure.Sqlite.csproj" Id="1301ee52-58f6-4422-bc46-6a8f7fb23a60" />
     <Project Path="src/Interception.Web.UI/Interception.Web.UI.csproj">
       <BuildDependency Project="src/Interception.Common/Interception.Common.csproj" />
     </Project>

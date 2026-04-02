@@ -43,7 +43,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Interception.Application\Interception.Application.csproj" />
-    <ProjectReference Include="..\Interception.Infrastructure\Interception.Infrastructure.csproj" />
+    <ProjectReference Include="..\Interception.Infrastructure.Sqlite\Interception.Infrastructure.Sqlite.csproj" />
   </ItemGroup>
 
 </Project>

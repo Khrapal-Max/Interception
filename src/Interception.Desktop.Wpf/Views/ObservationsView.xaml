@@ -4,8 +4,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DesignHeight="700"
-             d:DesignWidth="1100">
+             d:DesignHeight="760"
+             d:DesignWidth="1200">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
     </UserControl.Resources>
@@ -16,6 +16,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
@@ -23,20 +24,29 @@
                 <StackPanel Grid.Row="0">
                     <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitleTextStyle}" Foreground="#1F3D5A" />
                     <TextBlock Margin="0,6,0,0"
-                               Text="Операції винесено у модальні вікна: додавання, редагування, фільтр, імпорт та обробка текстового блоку."
+                               Text="Окремий desktop-контур тепер працює поверх application-сервісів: реєстр, форма, фільтр, Excel-імпорт і внесення з текстового блоку."
                                Style="{StaticResource PageDescriptionTextStyle}" />
                 </StackPanel>
 
-                <WrapPanel Grid.Row="1" Margin="0,14,0,14">
+                <Border Grid.Row="1"
+                        Margin="0,12,0,0"
+                        Padding="12,8"
+                        Background="#FFF6E8"
+                        CornerRadius="8"
+                        Visibility="{Binding HasServiceStatus, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TextBlock Text="{Binding ServiceStatus}" Foreground="#8A5A00" TextWrapping="Wrap" />
+                </Border>
+
+                <WrapPanel Grid.Row="2" Margin="0,14,0,14">
                     <Button Content="З тексту" Style="{StaticResource ObservationSecondaryToolbarButtonStyle}" Command="{Binding ToggleTextBlockCommand}" />
                     <Button Content="Додати" Style="{StaticResource ObservationToolbarButtonStyle}" Command="{Binding OpenCreateCommand}" />
                     <Button Content="Редагувати" Style="{StaticResource ObservationToolbarButtonStyle}" Command="{Binding EditSelectedCommand}" />
                     <Button Content="Видалити" Style="{StaticResource ObservationToolbarButtonStyle}" Command="{Binding DeleteSelectedCommand}" />
                     <Button Content="Фільтр" Style="{StaticResource ObservationSecondaryToolbarButtonStyle}" Command="{Binding ToggleFilterCommand}" />
-                    <Button Content="Імпорт" Style="{StaticResource ObservationSecondaryToolbarButtonStyle}" Command="{Binding ToggleImportCommand}" />
+                    <Button Content="Імпорт Excel" Style="{StaticResource ObservationSecondaryToolbarButtonStyle}" Command="{Binding ToggleImportCommand}" />
                 </WrapPanel>
 
-                <Border Grid.Row="2" CornerRadius="10" Background="#FFFFFFFF" BorderBrush="#D9E2EC" BorderThickness="1" Padding="10">
+                <Border Grid.Row="3" CornerRadius="10" Background="#FFFFFFFF" BorderBrush="#D9E2EC" BorderThickness="1" Padding="10">
                     <DataGrid AutoGenerateColumns="False"
                               IsReadOnly="True"
                               GridLinesVisibility="Horizontal"
@@ -44,20 +54,22 @@
                               RowBackground="#FFFDFEFF"
                               AlternatingRowBackground="#FFF4F8FD"
                               ItemsSource="{Binding PagedItems}"
-                              SelectedItem="{Binding SelectedObservation}">
+                              SelectedItem="{Binding SelectedObservation}"
+                              CanUserAddRows="False"
+                              SelectionMode="Single">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Дата / Час" Binding="{Binding ObservedDate, StringFormat=dd.MM.yy HH:mm}" Width="130" />
+                            <DataGridTextColumn Header="Дата / Час" Binding="{Binding ObservedDate, StringFormat=dd.MM.yy HH:mm}" Width="140" />
                             <DataGridTextColumn Header="Частота" Binding="{Binding Frequency}" Width="110" />
-                            <DataGridTextColumn Header="Р/М" Binding="{Binding Division}" Width="120" />
-                            <DataGridTextColumn Header="Вектор" Binding="{Binding VectorSignal}" Width="200" />
-                            <DataGridTextColumn Header="Учасники" Binding="{Binding ParticipantsDisplay}" Width="220" />
-                            <DataGridTextColumn Header="Дія" Binding="{Binding ActionName}" Width="130" />
-                            <DataGridTextColumn Header="Мітки" Binding="{Binding LabelsDisplay}" Width="140" />
+                            <DataGridTextColumn Header="Р/М" Binding="{Binding Division}" Width="150" />
+                            <DataGridTextColumn Header="Вектор" Binding="{Binding VectorSignal}" Width="220" />
+                            <DataGridTextColumn Header="Учасники" Binding="{Binding ParticipantsDisplay}" Width="260" />
+                            <DataGridTextColumn Header="Дія" Binding="{Binding ActionName}" Width="160" />
+                            <DataGridTextColumn Header="Мітки" Binding="{Binding LabelsDisplay}" Width="160" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </Border>
 
-                <DockPanel Grid.Row="3" Margin="0,14,0,0">
+                <DockPanel Grid.Row="4" Margin="0,14,0,0">
                     <Border CornerRadius="7" Background="#FFF6E8" Padding="10,6" DockPanel.Dock="Left"
                             Visibility="{Binding HasActiveFilter, Converter={StaticResource BoolToVisibilityConverter}}">
                         <TextBlock Text="Фільтр активний" Foreground="#8A5A00" FontWeight="SemiBold" />
@@ -73,11 +85,12 @@
             </Grid>
         </Border>
 
-        <Border Background="#880B1B2A"
+        <Border Panel.ZIndex="10"
+                Background="#880B1B2A"
                 Visibility="{Binding IsAnyModalOpen, Converter={StaticResource BoolToVisibilityConverter}}" />
 
-        <Grid Visibility="{Binding IsFormOpen, Converter={StaticResource BoolToVisibilityConverter}}">
-            <Border Style="{StaticResource ModalWindowBorderStyle}" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Grid Panel.ZIndex="11" Visibility="{Binding IsFormOpen, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Border Style="{StaticResource ModalWindowBorderStyle}" Width="900" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -92,29 +105,194 @@
 
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
-                            <TextBlock Text="Дата та час" />
-                            <DatePicker SelectedDate="{Binding FormObservedDate}" />
+                            <Border Margin="0,0,0,12"
+                                    Padding="10,8"
+                                    Background="#FFF4E5"
+                                    CornerRadius="8"
+                                    Visibility="{Binding HasFormStatus, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="{Binding FormStatus}" Foreground="#8A5A00" TextWrapping="Wrap" />
+                            </Border>
 
-                            <TextBlock Margin="0,10,0,4" Text="Частота" />
-                            <TextBox Text="{Binding FormFrequency, UpdateSourceTrigger=PropertyChanged}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
 
-                            <TextBlock Margin="0,10,0,4" Text="Р/М" />
-                            <TextBox Text="{Binding FormDivision, UpdateSourceTrigger=PropertyChanged}" />
+                                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
+                                    <TextBlock Text="Дата" />
+                                    <DatePicker SelectedDate="{Binding FormObservedDate}" />
+                                </StackPanel>
 
-                            <TextBlock Margin="0,10,0,4" Text="Вектор" />
-                            <TextBox Text="{Binding FormVectorSignal, UpdateSourceTrigger=PropertyChanged}" />
+                                <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,10">
+                                    <TextBlock Text="Час (HH:mm)" />
+                                    <TextBox Text="{Binding FormObservedTime, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
 
-                            <TextBlock Margin="0,10,0,4" Text="Учасники (через кому)" />
-                            <TextBox Text="{Binding FormParticipants, UpdateSourceTrigger=PropertyChanged}" />
+                                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
+                                    <TextBlock Text="Дія" />
+                                    <ComboBox ItemsSource="{Binding Actions}"
+                                              SelectedItem="{Binding SelectedAction}"
+                                              DisplayMemberPath="Name" />
+                                </StackPanel>
 
-                            <TextBlock Margin="0,10,0,4" Text="Дія" />
-                            <TextBox Text="{Binding FormActionName, UpdateSourceTrigger=PropertyChanged}" />
+                                <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,10">
+                                    <TextBlock Text="Точка перехвату" />
+                                    <TextBox Text="{Binding FormPointSignal, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
 
-                            <TextBlock Margin="0,10,0,4" Text="Мітки (через кому)" />
-                            <TextBox Text="{Binding FormLabels, UpdateSourceTrigger=PropertyChanged}" />
+                                <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,10">
+                                    <TextBlock Text="Частота" />
+                                    <TextBox Text="{Binding FormFrequency, UpdateSourceTrigger=PropertyChanged}" />
+                                    <Border Margin="0,6,0,0"
+                                            Padding="6"
+                                            BorderBrush="#D9E2EC"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Visibility="{Binding HasFrequencySuggestions, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <ListBox ItemsSource="{Binding FrequencySuggestions}"
+                                                 SelectedItem="{Binding SelectedFrequencySuggestion}"
+                                                 MaxHeight="120"
+                                                 BorderThickness="0">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Frequency}" FontFamily="Consolas" FontWeight="SemiBold" />
+                                                        <TextBlock Text="{Binding Division}" FontSize="11" Foreground="#4B5563" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Border>
+                                </StackPanel>
 
-                            <TextBlock Margin="0,10,0,4" Text="Нотатка" />
-                            <TextBox Text="{Binding FormNote, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="90" />
+                                <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,0,10">
+                                    <TextBlock Text="Р/М (підрозділ)" />
+                                    <TextBox Text="{Binding FormDivision, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="0,0,0,10">
+                                    <TextBlock Text="Вектор сигналу" />
+                                    <TextBox Text="{Binding FormVectorSignal, UpdateSourceTrigger=PropertyChanged}" />
+                                    <Border Margin="0,6,0,0"
+                                            Padding="6"
+                                            BorderBrush="#D9E2EC"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Visibility="{Binding HasVectorSuggestions, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <ListBox ItemsSource="{Binding VectorSuggestions}"
+                                                 SelectedItem="{Binding SelectedVectorSuggestion}"
+                                                 MaxHeight="120"
+                                                 BorderThickness="0" />
+                                    </Border>
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,10,10">
+                                    <TextBlock Text="Мітки (через кому)" />
+                                    <TextBox Text="{Binding FormLabels, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="4" Grid.Column="1" Margin="10,0,0,10">
+                                    <TextBlock Text="Нотатка" />
+                                    <TextBox Text="{Binding FormNote, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="70" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Border BorderBrush="#D9E2EC" BorderThickness="1" CornerRadius="8" Padding="10">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                                        <TextBlock Text="Учасники" FontSize="16" FontWeight="SemiBold" Foreground="#234D70" />
+                                        <Button Content="Додати учасника"
+                                                DockPanel.Dock="Right"
+                                                Style="{StaticResource ObservationSecondaryToolbarButtonStyle}"
+                                                Command="{Binding AddParticipantCommand}" />
+                                    </DockPanel>
+
+                                    <Grid Grid.Row="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <DataGrid Grid.Column="0"
+                                                  AutoGenerateColumns="False"
+                                                  CanUserAddRows="False"
+                                                  HeadersVisibility="Column"
+                                                  ItemsSource="{Binding ParticipantItems}"
+                                                  SelectedItem="{Binding SelectedParticipant}"
+                                                  RowHeaderWidth="0"
+                                                  MinHeight="180">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="#" Binding="{Binding Ordinal}" IsReadOnly="True" Width="40" />
+                                                <DataGridCheckBoxColumn Header="НВ" Binding="{Binding IsUnknown, UpdateSourceTrigger=PropertyChanged}" Width="55" />
+                                                <DataGridTemplateColumn Header="Особа / позивний" Width="*">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding Name}" />
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                                        <DataTemplate>
+                                                            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEditName}" />
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                                </DataGridTemplateColumn>
+                                                <DataGridTextColumn Header="Роль" Binding="{Binding Role, UpdateSourceTrigger=PropertyChanged}" Width="180" />
+                                                <DataGridTemplateColumn Header="" Width="70">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Button Content="Видалити"
+                                                                    Command="{Binding RemoveCommand}"
+                                                                    Padding="8,4" />
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+
+                                        <Border Grid.Column="1"
+                                                Margin="12,0,0,0"
+                                                Padding="8"
+                                                Background="#FFF9FCFF"
+                                                BorderBrush="#D9E2EC"
+                                                BorderThickness="1"
+                                                CornerRadius="8">
+                                            <StackPanel>
+                                                <TextBlock Text="Підказки по особі" FontWeight="SemiBold" Foreground="#234D70" />
+                                                <TextBlock Margin="0,4,0,8" FontSize="11" Foreground="#4B5563" Text="Виберіть рядок учасника і почніть вводити ім'я/позивний." />
+                                                <ListBox ItemsSource="{Binding ParticipantSuggestions}"
+                                                         SelectedItem="{Binding SelectedParticipantSuggestion}"
+                                                         MaxHeight="180"
+                                                         Visibility="{Binding HasParticipantSuggestions, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <ListBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                                <TextBlock Text="{Binding Role}" FontSize="11" Foreground="#4B5563" />
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
+                                                <Button Margin="0,8,0,0"
+                                                        Content="Застосувати вибрану підказку"
+                                                        Style="{StaticResource ObservationToolbarButtonStyle}"
+                                                        Command="{Binding ApplyParticipantSuggestionCommand}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </ScrollViewer>
 
@@ -126,7 +304,7 @@
             </Border>
         </Grid>
 
-        <Grid Visibility="{Binding IsFilterOpen, Converter={StaticResource BoolToVisibilityConverter}}">
+        <Grid Panel.ZIndex="11" Visibility="{Binding IsFilterOpen, Converter={StaticResource BoolToVisibilityConverter}}">
             <Border Style="{StaticResource ModalWindowBorderStyle}" Width="520" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -136,7 +314,7 @@
                     </Grid.RowDefinitions>
 
                     <DockPanel Grid.Row="0" Margin="0,0,0,12">
-                        <TextBlock Text="Фільтр спостережень" FontSize="20" FontWeight="SemiBold" Foreground="#4D2C78" />
+                        <TextBlock Text="Фільтр перехоплень" FontSize="20" FontWeight="SemiBold" Foreground="#4D2C78" />
                         <Button Content="✕" Width="28" Height="28" DockPanel.Dock="Right" Command="{Binding CloseFilterCommand}" />
                     </DockPanel>
 
@@ -169,8 +347,8 @@
             </Border>
         </Grid>
 
-        <Grid Visibility="{Binding IsImportOpen, Converter={StaticResource BoolToVisibilityConverter}}">
-            <Border Style="{StaticResource ModalWindowBorderStyle}" Width="700" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Grid Panel.ZIndex="11" Visibility="{Binding IsImportOpen, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Border Style="{StaticResource ModalWindowBorderStyle}" Width="720" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -179,14 +357,18 @@
                     </Grid.RowDefinitions>
 
                     <DockPanel Grid.Row="0" Margin="0,0,0,12">
-                        <TextBlock Text="Імпорт спостережень" FontSize="20" FontWeight="SemiBold" Foreground="#1D6B57" />
+                        <TextBlock Text="Імпорт перехоплень з Excel" FontSize="20" FontWeight="SemiBold" Foreground="#1D6B57" />
                         <Button Content="✕" Width="28" Height="28" DockPanel.Dock="Right" Command="{Binding CloseImportCommand}" />
                     </DockPanel>
 
                     <StackPanel Grid.Row="1">
-                        <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" Text="Формат: дата;частота;р/м;вектор;учасники(,);дія;мітки(,);нотатка" />
-                        <TextBox Text="{Binding ImportText, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="220" VerticalScrollBarVisibility="Auto" />
-                        <Border Margin="0,10,0,0" Background="#EAF7F2" CornerRadius="8" Padding="10">
+                        <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" Text="Підтримується той самий Excel-імпорт, що і у web-контурі. Оберіть .xlsx файл і система використає application-сервіс імпорту." />
+                        <DockPanel>
+                            <TextBox Text="{Binding ImportFilePath}" IsReadOnly="True" Margin="0,0,8,0" />
+                            <Button Content="Огляд…" DockPanel.Dock="Right" Command="{Binding BrowseImportFileCommand}" />
+                        </DockPanel>
+                        <Border Margin="0,10,0,0" Background="#EAF7F2" CornerRadius="8" Padding="10"
+                                Visibility="{Binding HasImportStatus, Converter={StaticResource BoolToVisibilityConverter}}">
                             <TextBlock Foreground="#1A5E22" TextWrapping="Wrap" Text="{Binding ImportStatus}" />
                         </Border>
                     </StackPanel>
@@ -199,8 +381,8 @@
             </Border>
         </Grid>
 
-        <Grid Visibility="{Binding IsTextBlockOpen, Converter={StaticResource BoolToVisibilityConverter}}">
-            <Border Style="{StaticResource ModalWindowBorderStyle}" Width="700" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Grid Panel.ZIndex="11" Visibility="{Binding IsTextBlockOpen, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Border Style="{StaticResource ModalWindowBorderStyle}" Width="760" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -209,14 +391,15 @@
                     </Grid.RowDefinitions>
 
                     <DockPanel Grid.Row="0" Margin="0,0,0,12">
-                        <TextBlock Text="Додати з тексту" FontSize="20" FontWeight="SemiBold" Foreground="#864E12" />
+                        <TextBlock Text="Додати з текстового блоку" FontSize="20" FontWeight="SemiBold" Foreground="#864E12" />
                         <Button Content="✕" Width="28" Height="28" DockPanel.Dock="Right" Command="{Binding CloseTextBlockCommand}" />
                     </DockPanel>
 
                     <StackPanel Grid.Row="1">
-                        <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" Text="Очікується блок: дата/час, частота, Р/М, ініціатор, відповідачі, далі діалог." />
-                        <TextBox Text="{Binding RawTextBlock, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="220" VerticalScrollBarVisibility="Auto" />
-                        <Border Margin="0,10,0,0" Background="#FFF4E5" CornerRadius="8" Padding="10">
+                        <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" Text="Очікуваний формат як у web-дравері: дата/час, частота, підрозділ, ініціатор, відповідачі, далі діалог. Після розбору відкриється звичайна форма з вибором дії." />
+                        <TextBox Text="{Binding RawTextBlock, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="240" VerticalScrollBarVisibility="Auto" />
+                        <Border Margin="0,10,0,0" Background="#FFF4E5" CornerRadius="8" Padding="10"
+                                Visibility="{Binding HasTextBlockStatus, Converter={StaticResource BoolToVisibilityConverter}}">
                             <TextBlock Foreground="#8A5A00" TextWrapping="Wrap" Text="{Binding TextBlockStatus}" />
                         </Border>
                     </StackPanel>

@@ -5,7 +5,7 @@
 using FluentAssertions;
 using Interception.Application.Analytics.Services;
 using Interception.Domain.Entities;
-using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -14,7 +14,7 @@ namespace Interception.Tests.Application.Analytics;
 public sealed class ParticipantCandidateAnalysisServiceTests
 {
     private static ParticipantCandidateAnalysisService CreateService(
-        IDbContextFactory<AppDbContext> factory,
+        IDbContextFactory<PostgreSqlDbContext> factory,
         PatternRecognitionOptions? options = null)
     {
         options ??= new PatternRecognitionOptions();

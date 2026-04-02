@@ -5,7 +5,7 @@
 using FluentAssertions;
 using Interception.Application.Analytics.Services;
 using Interception.Domain.Entities;
-using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests.Application.Analytics;
@@ -18,7 +18,7 @@ namespace Interception.Tests.Application.Analytics;
 /// </summary>
 public sealed class LinkMapServiceTests
 {
-    private static LinkMapService CreateService(IDbContextFactory<AppDbContext> factory)
+    private static LinkMapService CreateService(IDbContextFactory<PostgreSqlDbContext> factory)
         => new(factory);
 
     [Fact]
@@ -436,7 +436,7 @@ public sealed class LinkMapServiceTests
     }
 
     private static void SeedStableCoreOnFrequency(
-        AppDbContext db,
+        PostgreSqlDbContext db,
         InterceptionAction action,
         string frequency,
         DateTime baseTimeUtc)
@@ -453,7 +453,7 @@ public sealed class LinkMapServiceTests
     }
 
     private static void SeedTwoIndependentGroupsWithBridge(
-        AppDbContext db,
+        PostgreSqlDbContext db,
         InterceptionAction action,
         bool includeSecondBridgeFrequency)
     {
@@ -522,7 +522,7 @@ public sealed class LinkMapServiceTests
     }
 
     private static void SeedTwoIndependentGroupsWithBridgeActions(
-        AppDbContext db,
+        PostgreSqlDbContext db,
         InterceptionAction internalAction,
         InterceptionAction bridgeAction)
     {

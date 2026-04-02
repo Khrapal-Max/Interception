@@ -7,7 +7,7 @@ using Interception.Application.Registry.Dtos;
 using Interception.Application.Registry.Services;
 using Interception.Domain.Entities;
 using Interception.Domain.Records;
-using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests.Application.Registry;
@@ -17,7 +17,7 @@ namespace Interception.Tests.Application.Registry;
 /// </summary>
 public sealed class PersonRegistryServiceTests
 {
-    private static PersonRegistryService CreateService(IDbContextFactory<AppDbContext> factory)
+    private static PersonRegistryService CreateService(IDbContextFactory<PostgreSqlDbContext> factory)
         => new(factory);
 
     [Fact]

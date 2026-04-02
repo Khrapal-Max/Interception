@@ -7,18 +7,18 @@ using Interception.Application.Analytics.Dtos;
 using Interception.Application.Interceptions.Dtos;
 using Interception.Application.Interceptions.Services;
 using Interception.Domain.Entities;
-using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests.Application.Interceptions;
 
 public sealed class InterceptionCommandServiceTests
 {
-    private static InterceptionCommandService CreateService(IDbContextFactory<AppDbContext> factory)
+    private static InterceptionCommandService CreateService(IDbContextFactory<PostgreSqlDbContext> factory)
         => new(factory);
 
     private static async Task<InterceptionAction> SeedActionAsync(
-        IDbContextFactory<AppDbContext> factory,
+        IDbContextFactory<PostgreSqlDbContext> factory,
         string name = "координація дій",
         CancellationToken ct = default)
     {

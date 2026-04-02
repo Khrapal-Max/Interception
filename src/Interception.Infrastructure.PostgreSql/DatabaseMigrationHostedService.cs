@@ -2,11 +2,10 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Interception.Infrastructure;
+namespace Interception.Infrastructure.PostgreSql;
 
 /// <summary>
 /// Runs EF Core migrations and seed on host startup.

@@ -6,7 +6,7 @@ using FluentAssertions;
 using Interception.Application.Analytics.Services;
 using Interception.Domain.Entities;
 using Interception.Domain.Records;
-using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -241,10 +241,10 @@ public sealed class ContextSuggestionServiceTests
         result.Should().BeEmpty();
     }
 
-    private static ContextSuggestionService CreateService(IDbContextFactory<AppDbContext> factory)
+    private static ContextSuggestionService CreateService(IDbContextFactory<PostgreSqlDbContext> factory)
         => new(factory, Options.Create(new PatternRecognitionOptions()));
 
-    private static InterceptionAction SeedAction(AppDbContext db)
+    private static InterceptionAction SeedAction(PostgreSqlDbContext db)
     {
         var action = InterceptionAction.Create("координація дій", string.Empty);
         db.InterceptionActions.Add(action);
@@ -252,7 +252,7 @@ public sealed class ContextSuggestionServiceTests
     }
 
     private static (InterceptionMessage Message, InterceptionMessageParticipant Participant) SeedKnownMessage(
-        AppDbContext db,
+        PostgreSqlDbContext db,
         InterceptionAction action,
         DateTime observedDate,
         string name,
@@ -280,7 +280,7 @@ public sealed class ContextSuggestionServiceTests
     }
 
     private static (InterceptionMessage Message, InterceptionMessageParticipant Participant) SeedUnknownMessage(
-        AppDbContext db,
+        PostgreSqlDbContext db,
         InterceptionAction action,
         DateTime observedDate,
         string? role,

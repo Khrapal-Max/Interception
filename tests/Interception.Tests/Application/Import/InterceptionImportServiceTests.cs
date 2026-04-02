@@ -6,14 +6,14 @@ using ClosedXML.Excel;
 using FluentAssertions;
 using Interception.Application.Import.Services;
 using Interception.Domain.Entities;
-using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests.Application.Import;
 
 public sealed class InterceptionImportServiceTests
 {
-    private static InterceptionImportService CreateService(IDbContextFactory<AppDbContext> factory)
+    private static InterceptionImportService CreateService(IDbContextFactory<PostgreSqlDbContext> factory)
         => new(factory);
 
     [Fact]

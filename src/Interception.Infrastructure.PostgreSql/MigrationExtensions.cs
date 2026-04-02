@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
-namespace Interception.Infrastructure;
+namespace Interception.Infrastructure.PostgreSql;
 
 public static class MigrationExtensions
 {
@@ -68,7 +68,7 @@ public static class MigrationExtensions
             try
             {
                 await using var db = await scope.ServiceProvider
-                    .GetRequiredService<IDbContextFactory<AppDbContext>>()
+                    .GetRequiredService<IDbContextFactory<PostgreSqlDbContext>>()
                     .CreateDbContextAsync(ct);
                 await db.Database.MigrateAsync(ct);
                 logger.LogInformation("✅ Database migrated successfully.");
@@ -133,7 +133,7 @@ public static class MigrationExtensions
         CancellationToken ct)
     {
         await using var db = await scope.ServiceProvider
-            .GetRequiredService<IDbContextFactory<AppDbContext>>()
+            .GetRequiredService<IDbContextFactory<PostgreSqlDbContext>>()
             .CreateDbContextAsync(ct);
 
         var existingNames = await db.InterceptionActions
@@ -176,7 +176,7 @@ public static class MigrationExtensions
         CancellationToken ct)
     {
         await using var db = await scope.ServiceProvider
-            .GetRequiredService<IDbContextFactory<AppDbContext>>()
+            .GetRequiredService<IDbContextFactory<PostgreSqlDbContext>>()
             .CreateDbContextAsync(ct);
         var connStr = db.Database.GetDbConnection().ConnectionString;
 

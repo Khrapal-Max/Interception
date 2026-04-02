@@ -8,7 +8,8 @@ using Interception.Application.Analytics.Dtos;
 using Interception.Application.Analytics.Services.Builders;
 using Interception.Common.Extensions;
 using Interception.Domain.Entities;
-using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -18,7 +19,7 @@ namespace Interception.Application.Analytics.Services;
 /// Реалізація non-person suggestions: підрозділ / контекст / середовище групи.
 /// </summary>
 public sealed class ContextSuggestionService(
-    IDbContextFactory<AppDbContext> dbFactory,
+    IDbContextFactory<PostgreSqlDbContext> dbFactory,
     IOptions<PatternRecognitionOptions> options) : IContextSuggestionService
 {
     private readonly PatternRecognitionOptions _options = options.Value;
@@ -45,7 +46,7 @@ public sealed class ContextSuggestionService(
     /// Будує контекстні suggestions для конкретної групи кандидатів.
     /// </summary>
     internal async Task<IReadOnlyList<CandidateContextSuggestionDto>> BuildContextSuggestionsAsync(
-        AppDbContext db,
+        PostgreSqlDbContext db,
         ParticipantCandidateGroup group,
         int take,
         CancellationToken ct)
@@ -160,7 +161,7 @@ public sealed class ContextSuggestionService(
     /// <summary>
     /// Будує базові профілі контекстів із known та confirmed історії.
     /// </summary>
-    private async Task<IReadOnlyList<ContextProfile>> BuildContextProfilesAsync(AppDbContext db, CancellationToken ct)
+    private async Task<IReadOnlyList<ContextProfile>> BuildContextProfilesAsync(PostgreSqlDbContext db, CancellationToken ct)
     {
         var knownRows = await db.InterceptionMessageParticipants
             .Where(p => !p.IsUnknown && p.Name != null && p.InterceptionMessage.Division != null)

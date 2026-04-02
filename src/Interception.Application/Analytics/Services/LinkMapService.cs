@@ -7,6 +7,7 @@ using Interception.Application.Analytics.Dtos;
 using Interception.Application.Analytics.Services.Builders.LinkMap;
 using Interception.Domain.Entities;
 using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Analytics.Services;
@@ -17,10 +18,10 @@ namespace Interception.Application.Analytics.Services;
 /// для них робиться спроба вивести підрозділ та міжгрупові мости.
 /// Додатково агрегуються характерні дії групи й моста.
 /// </summary>
-public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFactory) : ILinkMapService
+public sealed partial class LinkMapService(IDbContextFactory<PostgreSqlDbContext> dbFactory) : ILinkMapService
 {
     private const string UnknownDivision = "НВ підрозділ";
-    private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
+    private readonly IDbContextFactory<PostgreSqlDbContext> _dbFactory = dbFactory;
 
     /// <inheritdoc />
     public async Task<LinkMapDto> BuildAsync(

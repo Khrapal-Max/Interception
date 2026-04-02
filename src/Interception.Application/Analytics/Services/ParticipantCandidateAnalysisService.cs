@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using Interception.Infrastructure;
 using Interception.Application.Analytics.Services.Builders;
 using Microsoft.EntityFrameworkCore;
+using Interception.Infrastructure.PostgreSql;
 
 namespace Interception.Application.Analytics.Services;
 
@@ -19,7 +20,7 @@ namespace Interception.Application.Analytics.Services;
 /// Основний сервіс аналізу невідомих учасників і побудови / збагачення open-груп.
 /// </summary>
 public sealed partial class ParticipantCandidateAnalysisService(
-    IDbContextFactory<AppDbContext> dbFactory,
+    IDbContextFactory<PostgreSqlDbContext> dbFactory,
     IKnownParticipantSuggestionService knownParticipantSuggestionService,
     IOptions<PatternRecognitionOptions> options) : IParticipantCandidateAnalysisService
 {

@@ -13,17 +13,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Interception.Application\Interception.Application.csproj" />
-    <ProjectReference Include="..\Interception.Infrastructure\Interception.Infrastructure.csproj" />
-    <ProjectReference Include="..\Interception.Domain\Interception.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Interception.Application\Interception.Application.csproj" />
+    <ProjectReference Include="..\Interception.Infrastructure.PostgreSql\Interception.Infrastructure.PostgreSql.csproj" />
   </ItemGroup>
 
 </Project>

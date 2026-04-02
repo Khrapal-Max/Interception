@@ -13,7 +13,7 @@ using Interception.Application.Registry.Services;
 using Interception.Application.Reports.Abstractions;
 using Interception.Application.Reports.Services;
 using Interception.Application.Toasts;
-using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Interception.Web.UI.Components;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +24,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(opt => { opt.DetailedErrors = true; });
 
-builder.Services.AddDbContextFactory<AppDbContext>(options =>
+builder.Services.AddDbContextFactory<PostgreSqlDbContext>(options =>
 {
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")); // або ваш провайдер
 });

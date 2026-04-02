@@ -5,7 +5,7 @@
 using FluentAssertions;
 using Interception.Application.Reports.Services;
 using Interception.Domain.Entities;
-using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests.Application.Reports;
@@ -18,7 +18,7 @@ namespace Interception.Tests.Application.Reports;
 /// </summary>
 public sealed class DayPictureServiceTests
 {
-    private static DayPictureService CreateService(IDbContextFactory<AppDbContext> factory)
+    private static DayPictureService CreateService(IDbContextFactory<PostgreSqlDbContext> factory)
         => new(factory);
 
     [Fact]

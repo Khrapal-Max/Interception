@@ -6,7 +6,7 @@ using Interception.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Interception.Infrastructure.Configurations;
+namespace Interception.Infrastructure.PostgreSql.Configurations;
 
 internal sealed class InterceptionMessageParticipantConfiguration
     : IEntityTypeConfiguration<InterceptionMessageParticipant>

@@ -1,9 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Interception.Web.UI.Migrations
+namespace Interception.Infrastructure.PostgreSql.Migrations
 {
     /// <inheritdoc />
     public partial class Initial : Migration

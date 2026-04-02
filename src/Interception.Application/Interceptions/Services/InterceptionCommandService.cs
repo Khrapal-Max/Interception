@@ -6,6 +6,7 @@ using Interception.Application.Interceptions.Abstractions;
 using Interception.Application.Interceptions.Dtos;
 using Interception.Domain.Entities;
 using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Interceptions.Services;
@@ -13,7 +14,7 @@ namespace Interception.Application.Interceptions.Services;
 /// <summary>
 /// Реалізація write-side сценаріїв для повідомлень перехоплення.
 /// </summary>
-public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> dbFactory) : IInterceptionCommandService
+public sealed class InterceptionCommandService(IDbContextFactory<PostgreSqlDbContext> dbFactory) : IInterceptionCommandService
 {
     /// <inheritdoc />
     public async Task<InterceptionMessage> CreateAsync(

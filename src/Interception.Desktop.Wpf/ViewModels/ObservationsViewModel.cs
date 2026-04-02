@@ -1,28 +1,58 @@
 using System.Collections.ObjectModel;
-using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Windows.Input;
+using Interception.Application.Analytics.Dtos;
+using Interception.Application.Import.Abstractions;
+using Interception.Application.Interceptions.Abstractions;
+using Interception.Application.Interceptions.Dtos;
+using Interception.Application.Interceptions.TextBlock;
+using Interception.Application.Registry.Abstractions;
+using Interception.Common.Extensions;
 using Interception.Desktop.Wpf.Infrastructure;
+using Interception.Domain.Entities;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Win32;
 
 namespace Interception.Desktop.Wpf.ViewModels;
 
 /// <summary>
-/// Модель представлення реєстру спостережень з локальними сценаріями:
-/// фільтрація, пагінація, створення/редагування, імпорт і додавання з текстового блоку.
+/// Модель представлення реєстру спостережень для WPF.
+/// Працює поверх application-сервісів, а не локальних тестових даних.
 /// </summary>
 public sealed class ObservationsViewModel : ViewModelBase
 {
-    private const int PageSize = 10;
+    private const int PageSize = 25;
 
-    private readonly ObservableCollection<ObservationRecord> _allItems = [];
+    private readonly IInterceptionQueryService? _queryService;
+    private readonly IInterceptionCommandService? _commandService;
+    private readonly IInterceptionSuggestionService? _suggestionService;
+    private readonly IInterceptionImportService? _importService;
+    private readonly IInterceptionActionService? _actionService;
+
     private readonly ObservableCollection<ObservationRecord> _pagedItems = [];
+    private readonly ObservableCollection<InterceptionAction> _actions = [];
+    private readonly ObservableCollection<FrequencySuggestionDto> _frequencySuggestions = [];
+    private readonly ObservableCollection<string> _vectorSuggestions = [];
+    private readonly ObservableCollection<ParticipantDraft> _participantItems = [];
+    private readonly ObservableCollection<ParticipantSuggestionDto> _participantSuggestions = [];
 
     private readonly RelayCommand _editSelectedCommand;
     private readonly RelayCommand _deleteSelectedCommand;
     private readonly RelayCommand _prevPageCommand;
     private readonly RelayCommand _nextPageCommand;
+    private readonly RelayCommand _applyParticipantSuggestionCommand;
 
     private ObservationRecord? _selectedObservation;
+    private ParticipantDraft? _selectedParticipant;
+    private ParticipantSuggestionDto? _selectedParticipantSuggestion;
+    private FrequencySuggestionDto? _selectedFrequencySuggestion;
+    private string? _selectedVectorSuggestion;
+    private InterceptionAction? _selectedAction;
+
     private int _currentPage = 1;
+    private int _totalCount;
+    private bool _loading;
 
     private DateTime? _filterDateFrom;
     private DateTime? _filterDateTo;
@@ -38,51 +68,81 @@ public sealed class ObservationsViewModel : ViewModelBase
 
     private Guid? _editingId;
     private DateTime _formObservedDate = DateTime.Now;
+    private string _formObservedTime = DateTime.Now.ToString("HH:mm");
     private string? _formFrequency;
     private string? _formDivision;
+    private string? _formPointSignal;
     private string? _formVectorSignal;
-    private string? _formParticipants;
-    private string? _formActionName;
     private string? _formLabels;
     private string? _formNote;
+    private string? _formStatus;
 
-    private string? _importText;
+    private string? _importFilePath;
     private string? _importStatus;
 
     private string? _rawTextBlock;
     private string? _textBlockStatus;
 
+    private string? _serviceStatus;
+
     public ObservationsViewModel()
     {
-        SeedRecords();
+        _queryService = App.Services.GetService<IInterceptionQueryService>();
+        _commandService = App.Services.GetService<IInterceptionCommandService>();
+        _suggestionService = App.Services.GetService<IInterceptionSuggestionService>();
+        _importService = App.Services.GetService<IInterceptionImportService>();
+        _actionService = App.Services.GetService<IInterceptionActionService>();
 
         OpenCreateCommand = new RelayCommand(OpenCreate);
-        _editSelectedCommand = new RelayCommand(OpenEditSelected, () => SelectedObservation is not null);
-        _deleteSelectedCommand = new RelayCommand(DeleteSelected, () => SelectedObservation is not null);
+        _editSelectedCommand = new RelayCommand(() => _ = OpenEditSelectedAsync(), () => SelectedObservation is not null && CanUseDataServices);
+        _deleteSelectedCommand = new RelayCommand(() => _ = DeleteSelectedAsync(), () => SelectedObservation is not null && CanUseDataServices);
 
-        ToggleFilterCommand = new RelayCommand(() => ToggleDrawer(DrawerMode.Filter));
-        ToggleImportCommand = new RelayCommand(() => ToggleDrawer(DrawerMode.Import));
-        ToggleTextBlockCommand = new RelayCommand(() => ToggleDrawer(DrawerMode.Text));
+        ToggleFilterCommand = new RelayCommand(() => ToggleModal(ModalMode.Filter));
+        ToggleImportCommand = new RelayCommand(() => ToggleModal(ModalMode.Import));
+        ToggleTextBlockCommand = new RelayCommand(() => ToggleModal(ModalMode.Text));
 
-        ApplyFilterCommand = new RelayCommand(ApplyFilter);
-        ResetFilterCommand = new RelayCommand(ResetFilter);
-        SaveObservationCommand = new RelayCommand(SaveObservation);
-        RunImportCommand = new RelayCommand(RunImport);
-        ParseTextBlockCommand = new RelayCommand(ParseTextBlock);
+        ApplyFilterCommand = new RelayCommand(() => _ = ApplyFilterAsync(), () => CanUseDataServices);
+        ResetFilterCommand = new RelayCommand(() => _ = ResetFilterAsync(), () => CanUseDataServices);
+        SaveObservationCommand = new RelayCommand(() => _ = SaveObservationAsync());
+        BrowseImportFileCommand = new RelayCommand(BrowseImportFile);
+        RunImportCommand = new RelayCommand(() => _ = RunImportAsync(), () => CanUseDataServices);
+        ParseTextBlockCommand = new RelayCommand(() => _ = ParseTextBlockAsync());
         CloseFormCommand = new RelayCommand(() => IsFormOpen = false);
         CloseFilterCommand = new RelayCommand(() => IsFilterOpen = false);
         CloseImportCommand = new RelayCommand(() => IsImportOpen = false);
         CloseTextBlockCommand = new RelayCommand(() => IsTextBlockOpen = false);
+        AddParticipantCommand = new RelayCommand(AddParticipant);
 
-        _prevPageCommand = new RelayCommand(() => GoToPage(CurrentPage - 1), () => CurrentPage > 1);
-        _nextPageCommand = new RelayCommand(() => GoToPage(CurrentPage + 1), () => CurrentPage < TotalPages);
+        _prevPageCommand = new RelayCommand(() => _ = GoToPageAsync(CurrentPage - 1), () => CurrentPage > 1 && CanUseDataServices);
+        _nextPageCommand = new RelayCommand(() => _ = GoToPageAsync(CurrentPage + 1), () => CurrentPage < TotalPages && CanUseDataServices);
+        _applyParticipantSuggestionCommand = new RelayCommand(ApplySelectedParticipantSuggestion, () => SelectedParticipant is not null && SelectedParticipantSuggestion is not null);
 
-        RefreshPage();
+        EnsureAtLeastOneParticipant();
+        _ = InitializeAsync();
     }
 
-    public string Title => "Реєстр спостережень";
-
+    public static string Title => "Реєстр перехоплень";
     public ObservableCollection<ObservationRecord> PagedItems => _pagedItems;
+    public ObservableCollection<InterceptionAction> Actions => _actions;
+    public ObservableCollection<FrequencySuggestionDto> FrequencySuggestions => _frequencySuggestions;
+    public ObservableCollection<string> VectorSuggestions => _vectorSuggestions;
+    public ObservableCollection<ParticipantDraft> ParticipantItems => _participantItems;
+    public ObservableCollection<ParticipantSuggestionDto> ParticipantSuggestions => _participantSuggestions;
+
+    public bool CanUseDataServices =>
+        _queryService is not null &&
+        _commandService is not null &&
+        _suggestionService is not null &&
+        _importService is not null &&
+        _actionService is not null;
+
+    public bool HasServiceStatus => !string.IsNullOrWhiteSpace(ServiceStatus);
+    public bool HasFormStatus => !string.IsNullOrWhiteSpace(FormStatus);
+    public bool HasImportStatus => !string.IsNullOrWhiteSpace(ImportStatus);
+    public bool HasTextBlockStatus => !string.IsNullOrWhiteSpace(TextBlockStatus);
+    public bool HasFrequencySuggestions => FrequencySuggestions.Count > 0;
+    public bool HasVectorSuggestions => VectorSuggestions.Count > 0;
+    public bool HasParticipantSuggestions => ParticipantSuggestions.Count > 0;
 
     public ObservationRecord? SelectedObservation
     {
@@ -90,13 +150,73 @@ public sealed class ObservationsViewModel : ViewModelBase
         set
         {
             if (!SetProperty(ref _selectedObservation, value))
-            {
                 return;
-            }
 
             _editSelectedCommand.RaiseCanExecuteChanged();
             _deleteSelectedCommand.RaiseCanExecuteChanged();
         }
+    }
+
+    public ParticipantDraft? SelectedParticipant
+    {
+        get => _selectedParticipant;
+        set
+        {
+            if (!SetProperty(ref _selectedParticipant, value))
+                return;
+
+            _ = LoadParticipantSuggestionsAsync(value);
+            _applyParticipantSuggestionCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public ParticipantSuggestionDto? SelectedParticipantSuggestion
+    {
+        get => _selectedParticipantSuggestion;
+        set
+        {
+            if (SetProperty(ref _selectedParticipantSuggestion, value))
+                _applyParticipantSuggestionCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public FrequencySuggestionDto? SelectedFrequencySuggestion
+    {
+        get => _selectedFrequencySuggestion;
+        set
+        {
+            if (!SetProperty(ref _selectedFrequencySuggestion, value) || value is null)
+                return;
+
+            FormFrequency = value.Frequency;
+            if (!string.IsNullOrWhiteSpace(value.Division))
+                FormDivision = value.Division;
+            if (!string.IsNullOrWhiteSpace(value.VectorSignal))
+                FormVectorSignal = value.VectorSignal;
+
+            FrequencySuggestions.Clear();
+            SelectedFrequencySuggestion = null;
+        }
+    }
+
+    public string? SelectedVectorSuggestion
+    {
+        get => _selectedVectorSuggestion;
+        set
+        {
+            if (!SetProperty(ref _selectedVectorSuggestion, value) || string.IsNullOrWhiteSpace(value))
+                return;
+
+            FormVectorSignal = value;
+            VectorSuggestions.Clear();
+            SelectedVectorSuggestion = null;
+        }
+    }
+
+    public InterceptionAction? SelectedAction
+    {
+        get => _selectedAction;
+        set => SetProperty(ref _selectedAction, value);
     }
 
     public int CurrentPage
@@ -105,17 +225,35 @@ public sealed class ObservationsViewModel : ViewModelBase
         private set
         {
             if (SetProperty(ref _currentPage, value))
+                OnPropertyChanged(nameof(PageSummary));
+        }
+    }
+
+    public int TotalCount
+    {
+        get => _totalCount;
+        private set
+        {
+            if (SetProperty(ref _totalCount, value))
             {
+                OnPropertyChanged(nameof(TotalPages));
                 OnPropertyChanged(nameof(PageSummary));
             }
         }
     }
 
-    public int TotalCount => GetFiltered().Count;
-
     public int TotalPages => Math.Max(1, (int)Math.Ceiling(TotalCount / (double)PageSize));
+    public string PageSummary => Loading ? "Завантаження…" : $"Сторінка {CurrentPage} з {TotalPages}. Записів: {TotalCount}";
 
-    public string PageSummary => $"Сторінка {CurrentPage} з {TotalPages}. Записів: {TotalCount}";
+    public bool Loading
+    {
+        get => _loading;
+        private set
+        {
+            if (SetProperty(ref _loading, value))
+                OnPropertyChanged(nameof(PageSummary));
+        }
+    }
 
     public bool HasActiveFilter =>
         FilterDateFrom.HasValue ||
@@ -133,9 +271,7 @@ public sealed class ObservationsViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _filterDateFrom, value))
-            {
                 OnPropertyChanged(nameof(HasActiveFilter));
-            }
         }
     }
 
@@ -145,9 +281,7 @@ public sealed class ObservationsViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _filterDateTo, value))
-            {
                 OnPropertyChanged(nameof(HasActiveFilter));
-            }
         }
     }
 
@@ -157,9 +291,7 @@ public sealed class ObservationsViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _filterFrequency, value))
-            {
                 OnPropertyChanged(nameof(HasActiveFilter));
-            }
         }
     }
 
@@ -169,9 +301,7 @@ public sealed class ObservationsViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _filterVectorSignal, value))
-            {
                 OnPropertyChanged(nameof(HasActiveFilter));
-            }
         }
     }
 
@@ -181,9 +311,7 @@ public sealed class ObservationsViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _filterParticipant, value))
-            {
                 OnPropertyChanged(nameof(HasActiveFilter));
-            }
         }
     }
 
@@ -193,9 +321,7 @@ public sealed class ObservationsViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _filterLabel, value))
-            {
                 OnPropertyChanged(nameof(HasActiveFilter));
-            }
         }
     }
 
@@ -205,9 +331,7 @@ public sealed class ObservationsViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _isFormOpen, value))
-            {
                 OnPropertyChanged(nameof(IsAnyModalOpen));
-            }
         }
     }
 
@@ -217,9 +341,7 @@ public sealed class ObservationsViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _isFilterOpen, value))
-            {
                 OnPropertyChanged(nameof(IsAnyModalOpen));
-            }
         }
     }
 
@@ -229,9 +351,7 @@ public sealed class ObservationsViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _isImportOpen, value))
-            {
                 OnPropertyChanged(nameof(IsAnyModalOpen));
-            }
         }
     }
 
@@ -241,13 +361,11 @@ public sealed class ObservationsViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _isTextBlockOpen, value))
-            {
                 OnPropertyChanged(nameof(IsAnyModalOpen));
-            }
         }
     }
 
-    public string FormMode => _editingId.HasValue ? "Редагування" : "Нове повідомлення";
+    public string FormMode => _editingId.HasValue ? "Редагування перехоплення" : "Нове перехоплення";
 
     public DateTime FormObservedDate
     {
@@ -255,10 +373,23 @@ public sealed class ObservationsViewModel : ViewModelBase
         set => SetProperty(ref _formObservedDate, value);
     }
 
+    public string FormObservedTime
+    {
+        get => _formObservedTime;
+        set => SetProperty(ref _formObservedTime, value);
+    }
+
     public string? FormFrequency
     {
         get => _formFrequency;
-        set => SetProperty(ref _formFrequency, value);
+        set
+        {
+            if (!SetProperty(ref _formFrequency, value))
+                return;
+
+            _ = RefreshFrequencySuggestionsAsync(value);
+            _ = RefreshVectorSuggestionsAsync(FormVectorSignal);
+        }
     }
 
     public string? FormDivision
@@ -267,22 +398,22 @@ public sealed class ObservationsViewModel : ViewModelBase
         set => SetProperty(ref _formDivision, value);
     }
 
+    public string? FormPointSignal
+    {
+        get => _formPointSignal;
+        set => SetProperty(ref _formPointSignal, value);
+    }
+
     public string? FormVectorSignal
     {
         get => _formVectorSignal;
-        set => SetProperty(ref _formVectorSignal, value);
-    }
+        set
+        {
+            if (!SetProperty(ref _formVectorSignal, value))
+                return;
 
-    public string? FormParticipants
-    {
-        get => _formParticipants;
-        set => SetProperty(ref _formParticipants, value);
-    }
-
-    public string? FormActionName
-    {
-        get => _formActionName;
-        set => SetProperty(ref _formActionName, value);
+            _ = RefreshVectorSuggestionsAsync(value);
+        }
     }
 
     public string? FormLabels
@@ -297,16 +428,30 @@ public sealed class ObservationsViewModel : ViewModelBase
         set => SetProperty(ref _formNote, value);
     }
 
-    public string? ImportText
+    public string? FormStatus
     {
-        get => _importText;
-        set => SetProperty(ref _importText, value);
+        get => _formStatus;
+        set
+        {
+            if (SetProperty(ref _formStatus, value))
+                OnPropertyChanged(nameof(HasFormStatus));
+        }
+    }
+
+    public string? ImportFilePath
+    {
+        get => _importFilePath;
+        set => SetProperty(ref _importFilePath, value);
     }
 
     public string? ImportStatus
     {
         get => _importStatus;
-        set => SetProperty(ref _importStatus, value);
+        set
+        {
+            if (SetProperty(ref _importStatus, value))
+                OnPropertyChanged(nameof(HasImportStatus));
+        }
     }
 
     public string? RawTextBlock
@@ -318,7 +463,21 @@ public sealed class ObservationsViewModel : ViewModelBase
     public string? TextBlockStatus
     {
         get => _textBlockStatus;
-        set => SetProperty(ref _textBlockStatus, value);
+        set
+        {
+            if (SetProperty(ref _textBlockStatus, value))
+                OnPropertyChanged(nameof(HasTextBlockStatus));
+        }
+    }
+
+    public string? ServiceStatus
+    {
+        get => _serviceStatus;
+        set
+        {
+            if (SetProperty(ref _serviceStatus, value))
+                OnPropertyChanged(nameof(HasServiceStatus));
+        }
     }
 
     public ICommand OpenCreateCommand { get; }
@@ -330,6 +489,7 @@ public sealed class ObservationsViewModel : ViewModelBase
     public ICommand ApplyFilterCommand { get; }
     public ICommand ResetFilterCommand { get; }
     public ICommand SaveObservationCommand { get; }
+    public ICommand BrowseImportFileCommand { get; }
     public ICommand RunImportCommand { get; }
     public ICommand ParseTextBlockCommand { get; }
     public ICommand PrevPageCommand => _prevPageCommand;
@@ -338,161 +498,273 @@ public sealed class ObservationsViewModel : ViewModelBase
     public ICommand CloseFilterCommand { get; }
     public ICommand CloseImportCommand { get; }
     public ICommand CloseTextBlockCommand { get; }
+    public ICommand AddParticipantCommand { get; }
+    public ICommand ApplyParticipantSuggestionCommand => _applyParticipantSuggestionCommand;
+
+    private async Task InitializeAsync()
+    {
+        if (!CanUseDataServices)
+        {
+            ServiceStatus = "Не налаштовано доступ до даних. Додайте змінну середовища INTERCEPTION_DESKTOP_CONNECTION_STRING або ConnectionStrings__DefaultConnection.";
+            return;
+        }
+
+        try
+        {
+            var actions = await _actionService!.GetAllAsync();
+            ReplaceCollection(_actions, actions);
+            await LoadPageAsync();
+        }
+        catch (Exception ex)
+        {
+            ServiceStatus = $"Помилка ініціалізації: {ex.Message}";
+        }
+    }
+
+    private async Task LoadPageAsync()
+    {
+        if (_queryService is null)
+            return;
+
+        Loading = true;
+        try
+        {
+            var filter = new InterceptionFilterDto
+            {
+                DateFrom = FilterDateFrom,
+                DateTo = FilterDateTo,
+                Frequency = Normalize(FilterFrequency),
+                VectorSignal = Normalize(FilterVectorSignal),
+                ParticipantName = Normalize(FilterParticipant),
+                LabelName = Normalize(FilterLabel)
+            };
+
+            var result = await _queryService.GetPagedAsync(filter, CurrentPage, PageSize);
+            TotalCount = result.TotalCount;
+            CurrentPage = Math.Clamp(1, 1, Math.Max(1, result.TotalPages));
+
+            ReplaceCollection(_pagedItems, result.Items.Select(MapRecord));
+            _prevPageCommand.RaiseCanExecuteChanged();
+            _nextPageCommand.RaiseCanExecuteChanged();
+        }
+        catch (Exception ex)
+        {
+            ServiceStatus = $"Помилка завантаження: {ex.Message}";
+        }
+        finally
+        {
+            Loading = false;
+        }
+    }
 
     private void OpenCreate()
     {
         _editingId = null;
-        FormObservedDate = DateTime.Now;
-        FormFrequency = string.Empty;
-        FormDivision = string.Empty;
-        FormVectorSignal = string.Empty;
-        FormParticipants = string.Empty;
-        FormActionName = string.Empty;
-        FormLabels = string.Empty;
-        FormNote = string.Empty;
-
-        ToggleDrawer(DrawerMode.Form);
+        ResetForm();
+        ToggleModal(ModalMode.Form);
         OnPropertyChanged(nameof(FormMode));
     }
 
-    private void OpenEditSelected()
+    private async Task OpenEditSelectedAsync()
     {
-        if (SelectedObservation is null)
-        {
+        if (_queryService is null || SelectedObservation is null)
             return;
-        }
 
-        _editingId = SelectedObservation.Id;
-        FormObservedDate = SelectedObservation.ObservedDate;
-        FormFrequency = SelectedObservation.Frequency;
-        FormDivision = SelectedObservation.Division;
-        FormVectorSignal = SelectedObservation.VectorSignal;
-        FormParticipants = string.Join(", ", SelectedObservation.Participants);
-        FormActionName = SelectedObservation.ActionName;
-        FormLabels = string.Join(", ", SelectedObservation.Labels);
-        FormNote = SelectedObservation.Note;
-
-        ToggleDrawer(DrawerMode.Form);
-        OnPropertyChanged(nameof(FormMode));
-    }
-
-    private void SaveObservation()
-    {
-        var participants = SplitCsv(FormParticipants);
-        var labels = SplitCsv(FormLabels);
-
-        if (_editingId.HasValue)
+        try
         {
-            var existing = _allItems.FirstOrDefault(x => x.Id == _editingId.Value);
-            if (existing is not null)
+            var message = await _queryService.GetByIdAsync(SelectedObservation.Id);
+            if (message is null)
             {
-                existing.ObservedDate = FormObservedDate;
-                existing.Frequency = FormFrequency;
-                existing.Division = FormDivision;
-                existing.VectorSignal = FormVectorSignal;
-                existing.Participants = participants;
-                existing.ActionName = FormActionName;
-                existing.Labels = labels;
-                existing.Note = FormNote;
+                FormStatus = "Перехоплення не знайдено.";
+                return;
             }
-        }
-        else
-        {
-            _allItems.Insert(0, new ObservationRecord
-            {
-                Id = Guid.NewGuid(),
-                ObservedDate = FormObservedDate,
-                Frequency = FormFrequency,
-                Division = FormDivision,
-                VectorSignal = FormVectorSignal,
-                Participants = participants,
-                ActionName = FormActionName,
-                Labels = labels,
-                Note = FormNote
-            });
-        }
 
-        IsFormOpen = false;
-        _editingId = null;
-        RefreshPage();
-        OnPropertyChanged(nameof(FormMode));
+            _editingId = message.Id;
+            var displayDate = ConverterDateTimeExtensions.ToDisplay(message.ObservedDate);
+            FormObservedDate = displayDate.Date;
+            FormObservedTime = displayDate.ToString("HH:mm");
+            FormFrequency = message.Frequency;
+            FormDivision = message.Division;
+            FormPointSignal = message.PointSignal;
+            FormVectorSignal = message.VectorSignal;
+            FormLabels = string.Join(", ", message.Labels.OrderBy(x => x.NameLabel).Select(x => x.NameLabel));
+            FormNote = message.Note;
+            SelectedAction = _actions.FirstOrDefault(x => x.Id == message.InterceptionActionId);
+            FormStatus = null;
+
+            _participantItems.Clear();
+            foreach (var participant in message.Participants.OrderBy(x => x.Ordinal))
+            {
+                _participantItems.Add(new ParticipantDraft(this)
+                {
+                    Ordinal = participant.Ordinal,
+                    Name = participant.Name,
+                    Role = participant.Role,
+                    IsUnknown = participant.IsUnknown
+                });
+            }
+
+            EnsureAtLeastOneParticipant();
+            ToggleModal(ModalMode.Form);
+            OnPropertyChanged(nameof(FormMode));
+        }
+        catch (Exception ex)
+        {
+            ServiceStatus = $"Помилка завантаження форми: {ex.Message}";
+        }
     }
 
-    private void DeleteSelected()
+    private async Task SaveObservationAsync()
     {
-        if (SelectedObservation is null)
+        if (_commandService is null)
         {
+            FormStatus = "Сервіс збереження недоступний.";
             return;
         }
 
-        _allItems.Remove(SelectedObservation);
-        SelectedObservation = null;
-        RefreshPage();
+        FormStatus = null;
+
+        if (SelectedAction is null || SelectedAction.Id == Guid.Empty)
+        {
+            FormStatus = "Оберіть дію з довідника.";
+            return;
+        }
+
+        if (!TimeSpan.TryParse(FormObservedTime, out var timeOfDay))
+        {
+            FormStatus = "Некоректний час. Очікується формат HH:mm.";
+            return;
+        }
+
+        var observedLocal = FormObservedDate.Date.Add(timeOfDay);
+        var participants = BuildParticipants();
+
+        if (participants.Count == 0)
+        {
+            FormStatus = "Додайте хоча б одного учасника.";
+            return;
+        }
+
+        var form = new InterceptionFormDto
+        {
+            ObservedDate = observedLocal,
+            Frequency = Normalize(FormFrequency),
+            Division = Normalize(FormDivision),
+            PointSignal = Normalize(FormPointSignal),
+            VectorSignal = Normalize(FormVectorSignal),
+            InterceptionActionId = SelectedAction.Id,
+            Note = Normalize(FormNote),
+            Participants = participants,
+            Labels = SplitCsv(FormLabels)
+        };
+
+        try
+        {
+            if (_editingId.HasValue)
+                await _commandService.UpdateAsync(_editingId.Value, form);
+            else
+                await _commandService.CreateAsync(form, "desktop-operator");
+
+            IsFormOpen = false;
+            _editingId = null;
+            await LoadPageAsync();
+            ResetForm();
+            OnPropertyChanged(nameof(FormMode));
+        }
+        catch (Exception ex)
+        {
+            FormStatus = ex.Message;
+        }
     }
 
-    private void ApplyFilter()
+    private async Task DeleteSelectedAsync()
+    {
+        if (_commandService is null || SelectedObservation is null)
+            return;
+
+        try
+        {
+            await _commandService.DeleteAsync(SelectedObservation.Id);
+            SelectedObservation = null;
+            await LoadPageAsync();
+        }
+        catch (Exception ex)
+        {
+            ServiceStatus = $"Помилка видалення: {ex.Message}";
+        }
+    }
+
+    private async Task ApplyFilterAsync()
     {
         CurrentPage = 1;
-        RefreshPage();
+        await LoadPageAsync();
         IsFilterOpen = false;
     }
 
-    private void ResetFilter()
+    private async Task ResetFilterAsync()
     {
         FilterDateFrom = null;
         FilterDateTo = null;
-        FilterFrequency = string.Empty;
-        FilterVectorSignal = string.Empty;
-        FilterParticipant = string.Empty;
-        FilterLabel = string.Empty;
+        FilterFrequency = null;
+        FilterVectorSignal = null;
+        FilterParticipant = null;
+        FilterLabel = null;
         CurrentPage = 1;
-        RefreshPage();
+        await LoadPageAsync();
         IsFilterOpen = false;
     }
 
-    private void RunImport()
+    private void BrowseImportFile()
     {
-        if (string.IsNullOrWhiteSpace(ImportText))
+        var dialog = new OpenFileDialog
         {
-            ImportStatus = "Немає даних для імпорту.";
+            Title = "Оберіть файл імпорту",
+            Filter = "Excel files (*.xlsx)|*.xlsx|All files (*.*)|*.*",
+            Multiselect = false
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            ImportFilePath = dialog.FileName;
+            ImportStatus = null;
+        }
+    }
+
+    private async Task RunImportAsync()
+    {
+        if (_importService is null)
+        {
+            ImportStatus = "Сервіс імпорту недоступний.";
             return;
         }
 
-        var imported = 0;
-        var skipped = 0;
-
-        var rows = ImportText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        foreach (var row in rows)
+        if (string.IsNullOrWhiteSpace(ImportFilePath) || !File.Exists(ImportFilePath))
         {
-            var cells = row.Split(';');
-            if (cells.Length < 7 || !DateTime.TryParse(cells[0], out var observedDate))
-            {
-                skipped++;
-                continue;
-            }
-
-            _allItems.Insert(0, new ObservationRecord
-            {
-                Id = Guid.NewGuid(),
-                ObservedDate = observedDate,
-                Frequency = cells.ElementAtOrDefault(1),
-                Division = cells.ElementAtOrDefault(2),
-                VectorSignal = cells.ElementAtOrDefault(3),
-                Participants = SplitCsv(cells.ElementAtOrDefault(4)),
-                ActionName = cells.ElementAtOrDefault(5),
-                Labels = SplitCsv(cells.ElementAtOrDefault(6)),
-                Note = cells.ElementAtOrDefault(7)
-            });
-
-            imported++;
+            ImportStatus = "Оберіть валідний файл .xlsx.";
+            return;
         }
 
-        ImportStatus = $"Імпортовано: {imported}, пропущено: {skipped}.";
-        RefreshPage();
-        IsImportOpen = false;
+        try
+        {
+            await using var stream = File.OpenRead(ImportFilePath);
+            var result = await _importService.ImportAsync(stream, "desktop-operator");
+
+            ImportStatus = $"Імпортовано: {result.ImportedCount}. Пропущено: {result.SkippedCount}.";
+            if (result.Errors.Count > 0)
+            {
+                var details = string.Join(Environment.NewLine, result.Errors.Take(5).Select(x => $"Рядок {x.RowNumber}: {x.Message}"));
+                ImportStatus += Environment.NewLine + details;
+            }
+
+            await LoadPageAsync();
+        }
+        catch (Exception ex)
+        {
+            ImportStatus = ex.Message;
+        }
     }
 
-    private void ParseTextBlock()
+    private async Task ParseTextBlockAsync()
     {
         if (string.IsNullOrWhiteSpace(RawTextBlock))
         {
@@ -500,184 +772,348 @@ public sealed class ObservationsViewModel : ViewModelBase
             return;
         }
 
-        var rows = RawTextBlock.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        if (rows.Length < 5)
+        var result = TextBlockParser.Parse(RawTextBlock);
+        if (!result.IsSuccess)
         {
-            TextBlockStatus = "Недостатньо рядків. Мінімум: дата/час, частота, Р/М, ініціатор, відповідач.";
+            TextBlockStatus = result.Error ?? "Не вдалося розібрати текстовий блок.";
             return;
         }
 
-        if (!DateTime.TryParse(rows[0], CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal, out var observedDate) &&
-            !DateTime.TryParse(rows[0], out observedDate))
+        ResetForm();
+
+        var observed = result.ObservedDate.HasValue
+            ? ConverterDateTimeExtensions.ToDisplay(ConverterDateTimeExtensions.ToUtc(result.ObservedDate.Value))
+            : DateTime.Now;
+
+        FormObservedDate = observed.Date;
+        FormObservedTime = observed.ToString("HH:mm");
+        FormFrequency = result.Frequency;
+        FormDivision = result.Division;
+        FormVectorSignal = result.VectorSignal;
+        FormNote = result.Note;
+
+        _participantItems.Clear();
+        var ordinal = 1;
+        _participantItems.Add(new ParticipantDraft(this)
         {
-            TextBlockStatus = "Не вдалося розпізнати дату і час у першому рядку.";
-            return;
+            Ordinal = ordinal++,
+            Name = result.Initiator,
+            IsUnknown = result.Initiator is null
+        });
+
+        foreach (var responder in result.Responders)
+        {
+            _participantItems.Add(new ParticipantDraft(this)
+            {
+                Ordinal = ordinal++,
+                Name = responder,
+                IsUnknown = responder is null
+            });
         }
 
-        _editingId = null;
-        FormObservedDate = observedDate;
-        FormFrequency = rows[1];
-        FormDivision = rows[2];
-        FormVectorSignal = rows[2];
-        FormParticipants = string.Join(", ", rows.Skip(3).Take(2));
-        FormActionName = string.Empty;
-        FormLabels = string.Empty;
-        FormNote = string.Join(Environment.NewLine, rows.Skip(5));
+        EnsureAtLeastOneParticipant();
+        await PopulateParticipantRolesAsync();
 
-        TextBlockStatus = "Текст розібрано. Перевірте поля та натисніть «Зберегти» у формі.";
+        TextBlockStatus = "Блок розібрано. Оберіть дію та перевірте форму перед збереженням.";
         IsTextBlockOpen = false;
-        ToggleDrawer(DrawerMode.Form);
+        IsFormOpen = true;
         OnPropertyChanged(nameof(FormMode));
     }
 
-    private void GoToPage(int page)
+    private async Task GoToPageAsync(int page)
     {
         CurrentPage = Math.Clamp(page, 1, TotalPages);
-        RefreshPage();
+        await LoadPageAsync();
     }
 
-    private void RefreshPage()
+    private void ToggleModal(ModalMode mode)
     {
-        var filtered = GetFiltered();
+        IsFormOpen = mode == ModalMode.Form && !IsFormOpen;
+        IsFilterOpen = mode == ModalMode.Filter && !IsFilterOpen;
+        IsImportOpen = mode == ModalMode.Import && !IsImportOpen;
+        IsTextBlockOpen = mode == ModalMode.Text && !IsTextBlockOpen;
 
-        if (CurrentPage > Math.Max(1, (int)Math.Ceiling(filtered.Count / (double)PageSize)))
-        {
-            CurrentPage = 1;
-        }
-
-        _pagedItems.Clear();
-        foreach (var item in filtered
-                     .OrderByDescending(x => x.ObservedDate)
-                     .Skip((CurrentPage - 1) * PageSize)
-                     .Take(PageSize))
-        {
-            _pagedItems.Add(item);
-        }
-
-        OnPropertyChanged(nameof(TotalCount));
-        OnPropertyChanged(nameof(TotalPages));
-        OnPropertyChanged(nameof(PageSummary));
-        _prevPageCommand.RaiseCanExecuteChanged();
-        _nextPageCommand.RaiseCanExecuteChanged();
+        if (mode == ModalMode.Form && IsFormOpen)
+            FormStatus = null;
+        if (mode == ModalMode.Import && IsImportOpen)
+            ImportStatus = null;
+        if (mode == ModalMode.Text && IsTextBlockOpen)
+            TextBlockStatus = null;
     }
 
-    private List<ObservationRecord> GetFiltered()
+    private void ResetForm()
     {
-        var query = _allItems.AsEnumerable();
-
-        if (FilterDateFrom.HasValue)
-        {
-            query = query.Where(x => x.ObservedDate >= FilterDateFrom.Value);
-        }
-
-        if (FilterDateTo.HasValue)
-        {
-            query = query.Where(x => x.ObservedDate <= FilterDateTo.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(FilterFrequency))
-        {
-            query = query.Where(x => ContainsIgnoreCase(x.Frequency, FilterFrequency));
-        }
-
-        if (!string.IsNullOrWhiteSpace(FilterVectorSignal))
-        {
-            query = query.Where(x => ContainsIgnoreCase(x.VectorSignal, FilterVectorSignal));
-        }
-
-        if (!string.IsNullOrWhiteSpace(FilterParticipant))
-        {
-            query = query.Where(x => x.Participants.Any(p => ContainsIgnoreCase(p, FilterParticipant)));
-        }
-
-        if (!string.IsNullOrWhiteSpace(FilterLabel))
-        {
-            query = query.Where(x => x.Labels.Any(l => ContainsIgnoreCase(l, FilterLabel)));
-        }
-
-        return query.ToList();
+        _editingId = null;
+        var now = DateTime.Now;
+        FormObservedDate = now.Date;
+        FormObservedTime = now.ToString("HH:mm");
+        FormFrequency = null;
+        FormDivision = null;
+        FormPointSignal = null;
+        FormVectorSignal = null;
+        FormLabels = null;
+        FormNote = null;
+        SelectedAction = null;
+        FormStatus = null;
+        FrequencySuggestions.Clear();
+        VectorSuggestions.Clear();
+        ParticipantSuggestions.Clear();
+        SelectedParticipant = null;
+        SelectedParticipantSuggestion = null;
+        _participantItems.Clear();
+        EnsureAtLeastOneParticipant();
     }
 
-    private static bool ContainsIgnoreCase(string? source, string? query)
+    private void AddParticipant()
     {
-        if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(query))
+        var ordinal = _participantItems.Count == 0 ? 1 : _participantItems.Max(x => x.Ordinal) + 1;
+        _participantItems.Add(new ParticipantDraft(this)
         {
-            return false;
+            Ordinal = ordinal,
+            IsUnknown = true
+        });
+    }
+
+    private void RemoveParticipant(ParticipantDraft draft)
+    {
+        if (_participantItems.Count <= 1)
+            return;
+
+        _participantItems.Remove(draft);
+        ReindexParticipants();
+        if (SelectedParticipant == draft)
+        {
+            SelectedParticipant = null;
+            ParticipantSuggestions.Clear();
+        }
+    }
+
+    internal async Task OnParticipantNameChangedAsync(ParticipantDraft draft)
+    {
+        if (_suggestionService is null)
+            return;
+
+        if (draft.IsUnknown || string.IsNullOrWhiteSpace(draft.Name))
+        {
+            if (SelectedParticipant == draft)
+                ParticipantSuggestions.Clear();
+            return;
         }
 
-        return source.Contains(query, StringComparison.OrdinalIgnoreCase);
+        var suggestions = await _suggestionService.GetParticipantSuggestionsAsync(draft.Name.Trim(), 8);
+        if (SelectedParticipant == draft)
+        {
+            ReplaceCollection(_participantSuggestions, suggestions);
+        }
+
+        var exact = suggestions.FirstOrDefault(x => string.Equals(x.Name, draft.Name.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (exact is not null && !string.IsNullOrWhiteSpace(exact.Role))
+            draft.Role = exact.Role;
     }
+
+    private async Task LoadParticipantSuggestionsAsync(ParticipantDraft? draft)
+    {
+        if (_suggestionService is null || draft is null || draft.IsUnknown || string.IsNullOrWhiteSpace(draft.Name))
+        {
+            ParticipantSuggestions.Clear();
+            return;
+        }
+
+        var suggestions = await _suggestionService.GetParticipantSuggestionsAsync(draft.Name.Trim(), 8);
+        ReplaceCollection(_participantSuggestions, suggestions);
+    }
+
+    private void ApplySelectedParticipantSuggestion()
+    {
+        if (SelectedParticipant is null || SelectedParticipantSuggestion is null)
+            return;
+
+        SelectedParticipant.IsUnknown = false;
+        SelectedParticipant.Name = SelectedParticipantSuggestion.Name;
+        SelectedParticipant.Role = SelectedParticipantSuggestion.Role;
+        ParticipantSuggestions.Clear();
+        SelectedParticipantSuggestion = null;
+    }
+
+    private async Task PopulateParticipantRolesAsync()
+    {
+        foreach (var participant in _participantItems.Where(x => !x.IsUnknown && !string.IsNullOrWhiteSpace(x.Name)))
+            await OnParticipantNameChangedAsync(participant);
+    }
+
+    private async Task RefreshFrequencySuggestionsAsync(string? query)
+    {
+        if (_suggestionService is null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < 2)
+        {
+            FrequencySuggestions.Clear();
+            return;
+        }
+
+        var suggestions = await _suggestionService.GetFrequencyWithDivisionAsync(query.Trim(), 8);
+        ReplaceCollection(_frequencySuggestions, suggestions);
+    }
+
+    private async Task RefreshVectorSuggestionsAsync(string? query)
+    {
+        if (_suggestionService is null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < 2)
+        {
+            VectorSuggestions.Clear();
+            return;
+        }
+
+        var suggestions = await _suggestionService.GetVectorSignalSuggestionsAsync(query.Trim(), Normalize(FormFrequency), 8);
+        ReplaceCollection(_vectorSuggestions, suggestions);
+    }
+
+    private List<ParticipantFormDto> BuildParticipants()
+    {
+        return [.. _participantItems
+            .OrderBy(x => x.Ordinal)
+            .Where(x => x.IsUnknown || !string.IsNullOrWhiteSpace(x.Name) || !string.IsNullOrWhiteSpace(x.Role))
+            .Select(x => new ParticipantFormDto
+            {
+                Ordinal = x.Ordinal,
+                Name = x.IsUnknown ? null : Normalize(x.Name),
+                Role = Normalize(x.Role),
+                IsUnknown = x.IsUnknown || string.IsNullOrWhiteSpace(x.Name)
+            })];
+    }
+
+    private void EnsureAtLeastOneParticipant()
+    {
+        if (_participantItems.Count > 0)
+            return;
+
+        _participantItems.Add(new ParticipantDraft(this) { Ordinal = 1, IsUnknown = false });
+        _participantItems.Add(new ParticipantDraft(this) { Ordinal = 2, IsUnknown = true });
+    }
+
+    private void ReindexParticipants()
+    {
+        var ordinal = 1;
+        foreach (var participant in _participantItems.OrderBy(x => x.Ordinal))
+            participant.Ordinal = ordinal++;
+    }
+
+    private static ObservationRecord MapRecord(InterceptionListItemDto item)
+        => new()
+        {
+            Id = item.Id,
+            ObservedDate = ConverterDateTimeExtensions.ToDisplay(item.ObservedDate),
+            Frequency = item.Frequency,
+            Division = item.Division,
+            VectorSignal = item.VectorSignal,
+            Participants = [.. item.Participants.Select(x => x.DisplayName)],
+            ActionName = item.ActionName,
+            Labels = [.. item.Labels]
+        };
+
+    private static void ReplaceCollection<T>(ObservableCollection<T> target, IEnumerable<T> items)
+    {
+        target.Clear();
+        foreach (var item in items)
+            target.Add(item);
+    }
+
+    private static string? Normalize(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static List<string> SplitCsv(string? value)
-    {
-        return value?
+        => value?
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList()
-            ?? [];
-    }
+           ?? [];
 
-    private void ToggleDrawer(DrawerMode mode)
-    {
-        IsFormOpen = mode == DrawerMode.Form && !IsFormOpen;
-        IsFilterOpen = mode == DrawerMode.Filter && !IsFilterOpen;
-        IsImportOpen = mode == DrawerMode.Import && !IsImportOpen;
-        IsTextBlockOpen = mode == DrawerMode.Text && !IsTextBlockOpen;
-    }
-
-    private void SeedRecords()
-    {
-        _allItems.Add(new ObservationRecord
-        {
-            Id = Guid.NewGuid(),
-            ObservedDate = DateTime.Now.AddHours(-3),
-            Frequency = "410.1370",
-            Division = "69 обрп",
-            VectorSignal = "Маліївка - Січневе",
-            Participants = ["ЗВЕЗДА", "ЦИГАН"],
-            ActionName = "Діалог",
-            Labels = ["укх", "голос"],
-            Note = "Тестовий запис для демонстрації."
-        });
-
-        _allItems.Add(new ObservationRecord
-        {
-            Id = Guid.NewGuid(),
-            ObservedDate = DateTime.Now.AddHours(-1),
-            Frequency = "303.500",
-            Division = "р/м 3",
-            VectorSignal = "Сектор північ",
-            Participants = ["ПАНДА", "НВ"],
-            ActionName = "Доповідь",
-            Labels = ["терміново"],
-            Note = "Коротка доповідь про рух техніки."
-        });
-    }
-
-    /// <summary>
-    /// Локальна модель рядка таблиці спостережень.
-    /// </summary>
     public sealed class ObservationRecord
     {
-        public Guid Id { get; set; }
-        public DateTime ObservedDate { get; set; }
-        public string? Frequency { get; set; }
-        public string? Division { get; set; }
-        public string? VectorSignal { get; set; }
-        public List<string> Participants { get; set; } = [];
-        public string? ActionName { get; set; }
-        public List<string> Labels { get; set; } = [];
-        public string? Note { get; set; }
+        public Guid Id { get; init; }
+        public DateTime ObservedDate { get; init; }
+        public string? Frequency { get; init; }
+        public string? Division { get; init; }
+        public string? VectorSignal { get; init; }
+        public IReadOnlyList<string> Participants { get; init; } = [];
+        public string? ActionName { get; init; }
+        public IReadOnlyList<string> Labels { get; init; } = [];
 
         public string ParticipantsDisplay => Participants.Count == 0 ? "—" : string.Join(", ", Participants);
         public string LabelsDisplay => Labels.Count == 0 ? "—" : string.Join(", ", Labels);
     }
 
-    private enum DrawerMode
+    public sealed class ParticipantDraft : ViewModelBase
+    {
+        private readonly ObservationsViewModel _owner;
+        private int _ordinal;
+        private string? _name;
+        private string? _role;
+        private bool _isUnknown;
+
+        public ParticipantDraft(ObservationsViewModel owner)
+        {
+            _owner = owner;
+            RemoveCommand = new RelayCommand(() => _owner.RemoveParticipant(this));
+        }
+
+        public int Ordinal
+        {
+            get => _ordinal;
+            set => SetProperty(ref _ordinal, value);
+        }
+
+        public string? Name
+        {
+            get => _name;
+            set
+            {
+                if (!SetProperty(ref _name, value))
+                    return;
+
+                _owner.SelectedParticipant = this;
+                _ = _owner.OnParticipantNameChangedAsync(this);
+            }
+        }
+
+        public string? Role
+        {
+            get => _role;
+            set => SetProperty(ref _role, value);
+        }
+
+        public bool IsUnknown
+        {
+            get => _isUnknown;
+            set
+            {
+                if (!SetProperty(ref _isUnknown, value))
+                    return;
+
+                OnPropertyChanged(nameof(CanEditName));
+                _owner.SelectedParticipant = this;
+                if (value)
+                {
+                    Name = null;
+                    Role = null;
+                }
+            }
+        }
+
+        public bool CanEditName => !IsUnknown;
+
+        public ICommand RemoveCommand { get; }
+    }
+
+    private enum ModalMode
     {
         Form,
         Filter,
         Import,
         Text
     }
-
 }

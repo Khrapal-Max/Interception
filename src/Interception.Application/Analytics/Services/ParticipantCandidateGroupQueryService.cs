@@ -10,6 +10,7 @@ using Interception.Common.Extensions;
 using Interception.Domain.Entities;
 using Interception.Domain.Enums;
 using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Analytics.Services;
@@ -17,7 +18,7 @@ namespace Interception.Application.Analytics.Services;
 /// <summary>
 /// Read-side сервіс для реєстру й деталей груп кандидатів.
 /// </summary>
-public sealed class ParticipantCandidateGroupQueryService(IDbContextFactory<AppDbContext> dbFactory) : IParticipantCandidateGroupQueryService
+public sealed class ParticipantCandidateGroupQueryService(IDbContextFactory<PostgreSqlDbContext> dbFactory) : IParticipantCandidateGroupQueryService
 {
     /// <inheritdoc />
     public async Task<PagedResultDto<CandidateGroupDto>> GetGroupsByStatusAsync(
@@ -62,7 +63,7 @@ public sealed class ParticipantCandidateGroupQueryService(IDbContextFactory<AppD
     /// Збагачує доменні групи observation-знімками для read-side.
     /// </summary>
     private static async Task<IReadOnlyList<CandidateGroupDto>> EnrichGroupsAsync(
-        AppDbContext db,
+        PostgreSqlDbContext db,
         List<ParticipantCandidateGroup> groups,
         CancellationToken ct)
     {

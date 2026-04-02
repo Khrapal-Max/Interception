@@ -26,6 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Interception.Infrastructure.PostgreSql\Interception.Infrastructure.PostgreSql.csproj" />
     <ProjectReference Include="..\..\src\Interception.Web.UI\Interception.Web.UI.csproj" />
   </ItemGroup>
 

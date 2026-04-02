@@ -5,14 +5,14 @@
 using FluentAssertions;
 using Interception.Application.Registry.Services;
 using Interception.Domain.Entities;
-using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests.Application.Registry;
 
 public sealed class FrequencyDivisionServiceTests
 {
-    private static FrequencyDivisionService CreateService(IDbContextFactory<AppDbContext> factory)
+    private static FrequencyDivisionService CreateService(IDbContextFactory<PostgreSqlDbContext> factory)
         => new(factory);
 
     [Fact]

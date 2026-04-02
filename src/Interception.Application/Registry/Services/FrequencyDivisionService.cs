@@ -5,6 +5,7 @@
 using Interception.Application.Analytics.Dtos;
 using Interception.Application.Registry.Abstractions;
 using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Registry.Services;
@@ -12,11 +13,11 @@ namespace Interception.Application.Registry.Services;
 /// <summary>
 /// Простий сервіс частот і закріплених за ними підрозділів.
 /// </summary>
-public sealed class FrequencyDivisionService(IDbContextFactory<AppDbContext> dbFactory)
+public sealed class FrequencyDivisionService(IDbContextFactory<PostgreSqlDbContext> dbFactory)
     : IFrequencyDivisionService
 {
     private const string UnknownDivision = "НВ підрозділ";
-    private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
+    private readonly IDbContextFactory<PostgreSqlDbContext> _dbFactory = dbFactory;
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<FrequencySuggestionDto>> GetAllAsync(CancellationToken ct = default)

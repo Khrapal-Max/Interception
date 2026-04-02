@@ -7,7 +7,7 @@ using Interception.Domain.Records;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Interception.Infrastructure.Configurations;
+namespace Interception.Infrastructure.PostgreSql.Configurations;
 
 internal sealed class ParticipantCandidateGroupConfiguration
     : IEntityTypeConfiguration<ParticipantCandidateGroup>

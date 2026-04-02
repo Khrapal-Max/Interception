@@ -7,6 +7,7 @@ using Interception.Application.Registry.Dtos;
 using Interception.Common.Extensions;
 using Interception.Domain.Entities;
 using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Registry.Services;
@@ -15,7 +16,7 @@ namespace Interception.Application.Registry.Services;
 /// Сервіс реєстру осіб.
 /// </summary>
 public sealed class PersonRegistryService(
-    IDbContextFactory<AppDbContext> dbFactory) : IPersonRegistryService
+    IDbContextFactory<PostgreSqlDbContext> dbFactory) : IPersonRegistryService
 {
     /// <inheritdoc />
     public async Task<IReadOnlyList<PersonRegistryItemDto>> GetAllAsync(CancellationToken ct = default)

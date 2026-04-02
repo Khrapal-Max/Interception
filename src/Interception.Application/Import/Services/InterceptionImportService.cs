@@ -7,12 +7,13 @@ using Interception.Application.Import.Dtos;
 using Interception.Common.Extensions;
 using Interception.Domain.Entities;
 using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Import.Services;
 
 public sealed class InterceptionImportService(
-    IDbContextFactory<AppDbContext> dbFactory) : IInterceptionImportService
+    IDbContextFactory<PostgreSqlDbContext> dbFactory) : IInterceptionImportService
 {
     public async Task<ImportResultDto> ImportAsync(
         Stream stream,

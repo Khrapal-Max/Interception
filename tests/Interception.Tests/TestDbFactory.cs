@@ -2,18 +2,18 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests;
 
 internal static class TestDbFactory
 {
-    public static IDbContextFactory<AppDbContext> CreateFactory(string? dbName = null)
+    public static IDbContextFactory<PostgreSqlDbContext> CreateFactory(string? dbName = null)
     {
         dbName ??= Guid.NewGuid().ToString("N");
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = new DbContextOptionsBuilder<PostgreSqlDbContext>()
             .UseInMemoryDatabase(dbName)
             .EnableSensitiveDataLogging()
             .Options;
@@ -21,10 +21,10 @@ internal static class TestDbFactory
         return new TestAppDbContextFactory(options);
     }
 
-    private sealed class TestAppDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
+    private sealed class TestAppDbContextFactory(DbContextOptions<PostgreSqlDbContext> options) : IDbContextFactory<PostgreSqlDbContext>
     {
-        private readonly DbContextOptions<AppDbContext> _options = options;
+        private readonly DbContextOptions<PostgreSqlDbContext> _options = options;
 
-        public AppDbContext CreateDbContext() => new(_options);
+        public PostgreSqlDbContext CreateDbContext() => new(_options);
     }
 }

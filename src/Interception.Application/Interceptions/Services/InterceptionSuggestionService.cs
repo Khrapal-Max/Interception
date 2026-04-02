@@ -5,6 +5,7 @@
 using Interception.Application.Analytics.Dtos;
 using Interception.Application.Interceptions.Abstractions;
 using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Interceptions.Services;
@@ -12,7 +13,7 @@ namespace Interception.Application.Interceptions.Services;
 /// <summary>
 /// Реалізація контекстних підказок для операторського вводу перехоплень.
 /// </summary>
-public sealed class InterceptionSuggestionService(IDbContextFactory<AppDbContext> dbFactory) : IInterceptionSuggestionService
+public sealed class InterceptionSuggestionService(IDbContextFactory<PostgreSqlDbContext> dbFactory) : IInterceptionSuggestionService
 {
     /// <inheritdoc />
     public async Task<IReadOnlyList<FrequencySuggestionDto>> GetFrequencyWithDivisionAsync(

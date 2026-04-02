@@ -6,6 +6,7 @@ using Interception.Application.Reports.Abstractions;
 using Interception.Application.Reports.Builders;
 using Interception.Application.Reports.Dtos;
 using Interception.Infrastructure;
+using Interception.Infrastructure.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Application.Reports.Services;
@@ -14,11 +15,11 @@ namespace Interception.Application.Reports.Services;
 /// Будує картину дня у моделі:
 /// підрозділ → епізоди дня → хронологічні записи.
 /// </summary>
-public sealed partial class DayPictureService(IDbContextFactory<AppDbContext> dbFactory) : IDayPictureService
+public sealed partial class DayPictureService(IDbContextFactory<PostgreSqlDbContext> dbFactory) : IDayPictureService
 {
     private const string UnknownDivision = "НВ підрозділ";
     private static readonly TimeSpan ConversationGap = TimeSpan.FromMinutes(10);
-    private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
+    private readonly IDbContextFactory<PostgreSqlDbContext> _dbFactory = dbFactory;
 
     /// <inheritdoc />
     public async Task<DayPictureDto> BuildAsync(DateOnly day, CancellationToken ct = default)
@@ -155,7 +156,7 @@ public sealed partial class DayPictureService(IDbContextFactory<AppDbContext> db
     /// Будує карту частота → домінуючий підрозділ за всіма наявними спостереженнями.
     /// </summary>
     private static async Task<Dictionary<string, string>> BuildFrequencyDivisionMapAsync(
-        AppDbContext db,
+        PostgreSqlDbContext db,
         CancellationToken ct)
     {
         var rows = await db.InterceptionMessages
