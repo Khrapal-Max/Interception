@@ -52,7 +52,9 @@ public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<Ap
         else
         {
             resolvedParticipant = await db.ResolvedParticipants
-                .FirstOrDefaultAsync(x => x.Name == normalizedName, ct);
+                .FirstOrDefaultAsync(x => x.Name == normalizedName, ct)
+                 ?? throw new InvalidOperationException(
+                    $"ResolvedParticipant '{normalizedName}' не знайдено."); ;
 
             if (resolvedParticipant is null)
             {
