@@ -24,10 +24,6 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        if (Database.IsNpgsql())
-            modelBuilder.HasPostgresExtension("btree_gist");
-
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 }

@@ -25,14 +25,24 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(opt => { opt.DetailedErrors = true; });
 
+var dataDir = Path.Combine(builder.Environment.ContentRootPath, "data");
+var keysDir = Path.Combine(dataDir, "keys");
+var dbPath = Path.Combine(dataDir, "interception.db");
+
+Directory.CreateDirectory(dataDir);
+Directory.CreateDirectory(keysDir);
+
+var sqliteConnection = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(sqliteConnection))
+    sqliteConnection = $"Data Source={dbPath}";
+
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
 {
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")); // або ваш провайдер
+    options.UseSqlite(sqliteConnection);
 });
 
-// DataProtection keys must survive restarts and be shared across instances
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo("/data-protection-keys"));
+    .PersistKeysToFileSystem(new DirectoryInfo(keysDir));
 
 builder.Services.AddScoped<ToastService>();
 
@@ -66,12 +76,10 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
 
+app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseAntiforgery();
 
 app.MapStaticAssets();
@@ -85,6 +93,5 @@ app.Use(async (ctx, next) =>
     await next();
 });
 
-// після Build(), до Run()
 await app.AddMigrationDb();
 app.Run();

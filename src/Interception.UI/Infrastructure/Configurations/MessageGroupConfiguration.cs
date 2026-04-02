@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Domain;
+using Interception.UI.Domain.Records;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -26,7 +27,7 @@ internal sealed class MessageGroupConfiguration
 
         builder.Property(x => x.GroupKey)
             .HasColumnName("group_key")
-            .HasMaxLength(200);
+            .HasMaxLength(300);
 
         builder.Property(x => x.CommonFrequency)
             .HasColumnName("common_frequency")
@@ -40,7 +41,6 @@ internal sealed class MessageGroupConfiguration
             .HasColumnName("common_division")
             .HasMaxLength(100);
 
-        // MessageGroupEntry зберігаємо як owned collection → окрема таблиця
         builder.OwnsMany(x => x.Entries, e =>
         {
             e.ToTable("message_group_entries");
@@ -56,6 +56,9 @@ internal sealed class MessageGroupConfiguration
                 .IsRequired();
 
             e.HasKey(x => new { x.MessageGroupId, x.MessageId });
+
+            e.HasIndex(x => x.MessageId)
+                .HasDatabaseName("ix_message_group_entries_message_id");
         });
 
         builder.HasIndex(x => x.DailyReportId)

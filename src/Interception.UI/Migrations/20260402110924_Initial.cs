@@ -1,6 +1,5 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -12,20 +11,17 @@ namespace Interception.UI.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AlterDatabase()
-                .Annotation("Npgsql:PostgresExtension:btree_gist", ",,");
-
             migrationBuilder.CreateTable(
                 name: "daily_reports",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    report_date = table.Column<DateOnly>(type: "date", nullable: false),
-                    total_messages = table.Column<int>(type: "integer", nullable: false),
-                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    generated_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    generated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    published_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    report_date = table.Column<DateOnly>(type: "TEXT", nullable: false),
+                    total_messages = table.Column<int>(type: "INTEGER", nullable: false),
+                    status = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    generated_by = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    generated_at = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    published_at = table.Column<DateTime>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -36,9 +32,9 @@ namespace Interception.UI.Migrations
                 name: "interception_actions",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false)
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -49,12 +45,12 @@ namespace Interception.UI.Migrations
                 name: "resolved_participants",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    role = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    division = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
-                    confirmed_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    confirmed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    role = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    division = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
+                    confirmed_by = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    confirmed_at = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -65,12 +61,12 @@ namespace Interception.UI.Migrations
                 name: "message_groups",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    daily_report_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    group_key = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    common_frequency = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    common_vector = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    common_division = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true)
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    daily_report_id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    group_key = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
+                    common_frequency = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
+                    common_vector = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
+                    common_division = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -87,8 +83,8 @@ namespace Interception.UI.Migrations
                 name: "participant_matrices",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    daily_report_id = table.Column<Guid>(type: "uuid", nullable: false)
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    daily_report_id = table.Column<Guid>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -105,23 +101,23 @@ namespace Interception.UI.Migrations
                 name: "interception_messages",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    observed_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    frequency = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    division = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    point_signal = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    vector_signal = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    interception_action_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    note = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
-                    created_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    observed_date = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    frequency = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
+                    division = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
+                    point_signal = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    vector_signal = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
+                    interception_action_id = table.Column<Guid>(type: "TEXT", nullable: true),
+                    note = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
+                    created_by = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    created_at = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_interception_messages", x => x.id);
                     table.ForeignKey(
-                        name: "FK_interception_messages_interception_actions_interception_act~",
+                        name: "FK_interception_messages_interception_actions_interception_action_id",
                         column: x => x.interception_action_id,
                         principalTable: "interception_actions",
                         principalColumn: "id",
@@ -132,29 +128,29 @@ namespace Interception.UI.Migrations
                 name: "participant_candidate_groups",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    confidence_score = table.Column<double>(type: "double precision", precision: 4, scale: 3, nullable: false),
-                    suggested_name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    suggested_role = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    suggested_division = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
-                    reason_same_frequency = table.Column<bool>(type: "boolean", nullable: false),
-                    reason_same_vector = table.Column<bool>(type: "boolean", nullable: false),
-                    reason_same_point_signal = table.Column<bool>(type: "boolean", nullable: false),
-                    reason_same_division = table.Column<bool>(type: "boolean", nullable: false),
-                    reason_close_in_time = table.Column<bool>(type: "boolean", nullable: false),
-                    reason_shared_partners = table.Column<bool>(type: "boolean", nullable: false),
-                    reason_shared_labels = table.Column<bool>(type: "boolean", nullable: false),
-                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    resolved_participant_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    resolved_by = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    resolved_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    confidence_score = table.Column<double>(type: "REAL", nullable: false),
+                    suggested_name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    suggested_role = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    suggested_division = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
+                    reason_same_frequency = table.Column<bool>(type: "INTEGER", nullable: false),
+                    reason_same_vector = table.Column<bool>(type: "INTEGER", nullable: false),
+                    reason_same_point_signal = table.Column<bool>(type: "INTEGER", nullable: false),
+                    reason_same_division = table.Column<bool>(type: "INTEGER", nullable: false),
+                    reason_close_in_time = table.Column<bool>(type: "INTEGER", nullable: false),
+                    reason_shared_partners = table.Column<bool>(type: "INTEGER", nullable: false),
+                    reason_shared_labels = table.Column<bool>(type: "INTEGER", nullable: false),
+                    status = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    resolved_participant_id = table.Column<Guid>(type: "TEXT", nullable: true),
+                    resolved_by = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    resolved_at = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    created_at = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_participant_candidate_groups", x => x.id);
                     table.ForeignKey(
-                        name: "FK_participant_candidate_groups_resolved_participants_resolved~",
+                        name: "FK_participant_candidate_groups_resolved_participants_resolved_participant_id",
                         column: x => x.resolved_participant_id,
                         principalTable: "resolved_participants",
                         principalColumn: "id",
@@ -165,8 +161,8 @@ namespace Interception.UI.Migrations
                 name: "message_group_entries",
                 columns: table => new
                 {
-                    message_group_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    message_id = table.Column<Guid>(type: "uuid", nullable: false)
+                    message_group_id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    message_id = table.Column<Guid>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -183,10 +179,10 @@ namespace Interception.UI.Migrations
                 name: "matrix_cells",
                 columns: table => new
                 {
-                    matrix_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    participant_a = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    participant_b = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    interaction_count = table.Column<int>(type: "integer", nullable: false)
+                    matrix_id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    participant_a = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    participant_b = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    interaction_count = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -203,15 +199,15 @@ namespace Interception.UI.Migrations
                 name: "interception_message_labels",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    name_label = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
-                    interception_message_id = table.Column<Guid>(type: "uuid", nullable: false)
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    name_label = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: false),
+                    interception_message_id = table.Column<Guid>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_interception_message_labels", x => x.id);
                     table.ForeignKey(
-                        name: "FK_interception_message_labels_interception_messages_intercept~",
+                        name: "FK_interception_message_labels_interception_messages_interception_message_id",
                         column: x => x.interception_message_id,
                         principalTable: "interception_messages",
                         principalColumn: "id",
@@ -222,18 +218,18 @@ namespace Interception.UI.Migrations
                 name: "interception_message_participants",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    interception_message_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    is_unknown = table.Column<bool>(type: "boolean", nullable: false),
-                    role = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    ordinal = table.Column<int>(type: "integer", nullable: false)
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    interception_message_id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    is_unknown = table.Column<bool>(type: "INTEGER", nullable: false),
+                    role = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
+                    ordinal = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_interception_message_participants", x => x.id);
                     table.ForeignKey(
-                        name: "FK_interception_message_participants_interception_messages_int~",
+                        name: "FK_interception_message_participants_interception_messages_interception_message_id",
                         column: x => x.interception_message_id,
                         principalTable: "interception_messages",
                         principalColumn: "id",
@@ -244,18 +240,18 @@ namespace Interception.UI.Migrations
                 name: "participant_candidate_group_refs",
                 columns: table => new
                 {
-                    id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    message_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    participant_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ordinal = table.Column<int>(type: "integer", nullable: false),
-                    candidate_group_id = table.Column<Guid>(type: "uuid", nullable: false)
+                    id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    message_id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    participant_id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ordinal = table.Column<int>(type: "INTEGER", nullable: false),
+                    candidate_group_id = table.Column<Guid>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_participant_candidate_group_refs", x => x.id);
                     table.ForeignKey(
-                        name: "FK_participant_candidate_group_refs_participant_candidate_grou~",
+                        name: "FK_participant_candidate_group_refs_participant_candidate_groups_candidate_group_id",
                         column: x => x.candidate_group_id,
                         principalTable: "participant_candidate_groups",
                         principalColumn: "id",
@@ -317,6 +313,11 @@ namespace Interception.UI.Migrations
                 columns: new[] { "matrix_id", "interaction_count" });
 
             migrationBuilder.CreateIndex(
+                name: "ix_message_group_entries_message_id",
+                table: "message_group_entries",
+                column: "message_id");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_message_groups_key",
                 table: "message_groups",
                 column: "group_key");
@@ -327,10 +328,15 @@ namespace Interception.UI.Migrations
                 column: "daily_report_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_participant_candidate_group_refs_candidate_group_id_partici~",
+                name: "ix_participant_candidate_group_refs_group_participant",
                 table: "participant_candidate_group_refs",
                 columns: new[] { "candidate_group_id", "participant_id" },
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_participant_candidate_group_refs_message_id",
+                table: "participant_candidate_group_refs",
+                column: "message_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_candidate_groups_confidence",

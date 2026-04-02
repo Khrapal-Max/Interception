@@ -5,58 +5,52 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
 namespace Interception.UI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260401113558_Initial")]
+    [Migration("20260402110924_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.5")
-                .HasAnnotation("Relational:MaxIdentifierLength", 63);
-
-            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "btree_gist");
-            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
 
             modelBuilder.Entity("Interception.UI.Domain.DailyReport", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<DateTime>("GeneratedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("TEXT")
                         .HasColumnName("generated_at");
 
                     b.Property<string>("GeneratedBy")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("generated_by");
 
                     b.Property<DateTime?>("PublishedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("TEXT")
                         .HasColumnName("published_at");
 
                     b.Property<DateOnly>("ReportDate")
-                        .HasColumnType("date")
+                        .HasColumnType("TEXT")
                         .HasColumnName("report_date");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("status");
 
                     b.Property<int>("TotalMessages")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("total_messages");
 
                     b.HasKey("Id");
@@ -70,19 +64,19 @@ namespace Interception.UI.Migrations
             modelBuilder.Entity("Interception.UI.Domain.InterceptionAction", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("description");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.HasKey("Id");
@@ -97,53 +91,53 @@ namespace Interception.UI.Migrations
             modelBuilder.Entity("Interception.UI.Domain.InterceptionMessage", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_at");
 
                     b.Property<string>("CreatedBy")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
                     b.Property<string>("Division")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("division");
 
                     b.Property<string>("Frequency")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("frequency");
 
                     b.Property<Guid?>("InterceptionActionId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("interception_action_id");
 
                     b.Property<string>("Note")
                         .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("note");
 
                     b.Property<DateTime>("ObservedDate")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("TEXT")
                         .HasColumnName("observed_date");
 
                     b.Property<string>("PointSignal")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("point_signal");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("TEXT")
                         .HasColumnName("updated_at");
 
                     b.Property<string>("VectorSignal")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("vector_signal");
 
                     b.HasKey("Id");
@@ -165,17 +159,17 @@ namespace Interception.UI.Migrations
             modelBuilder.Entity("Interception.UI.Domain.InterceptionMessageLabel", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<Guid>("InterceptionMessageId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("interception_message_id");
 
                     b.Property<string>("NameLabel")
                         .IsRequired()
                         .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name_label");
 
                     b.HasKey("Id");
@@ -190,29 +184,29 @@ namespace Interception.UI.Migrations
             modelBuilder.Entity("Interception.UI.Domain.InterceptionMessageParticipant", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<Guid>("InterceptionMessageId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("interception_message_id");
 
                     b.Property<bool>("IsUnknown")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_unknown");
 
                     b.Property<string>("Name")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<int>("Ordinal")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("ordinal");
 
                     b.Property<string>("Role")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("role");
 
                     b.HasKey("Id");
@@ -231,31 +225,31 @@ namespace Interception.UI.Migrations
             modelBuilder.Entity("Interception.UI.Domain.MessageGroup", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("CommonDivision")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("common_division");
 
                     b.Property<string>("CommonFrequency")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("common_frequency");
 
                     b.Property<string>("CommonVector")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("common_vector");
 
                     b.Property<Guid>("DailyReportId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("daily_report_id");
 
                     b.Property<string>("GroupKey")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT")
                         .HasColumnName("group_key");
 
                     b.HasKey("Id");
@@ -272,50 +266,49 @@ namespace Interception.UI.Migrations
             modelBuilder.Entity("Interception.UI.Domain.ParticipantCandidateGroup", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<double>("ConfidenceScore")
-                        .HasPrecision(4, 3)
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("confidence_score");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_at");
 
                     b.Property<DateTime?>("ResolvedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("TEXT")
                         .HasColumnName("resolved_at");
 
                     b.Property<string>("ResolvedBy")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("resolved_by");
 
                     b.Property<Guid?>("ResolvedParticipantId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("resolved_participant_id");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("status");
 
                     b.Property<string>("SuggestedDivision")
                         .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("suggested_division");
 
                     b.Property<string>("SuggestedName")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("suggested_name");
 
                     b.Property<string>("SuggestedRole")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("suggested_role");
 
                     b.HasKey("Id");
@@ -335,11 +328,11 @@ namespace Interception.UI.Migrations
             modelBuilder.Entity("Interception.UI.Domain.ParticipantMatrix", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<Guid>("DailyReportId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("daily_report_id");
 
                     b.HasKey("Id");
@@ -353,33 +346,33 @@ namespace Interception.UI.Migrations
             modelBuilder.Entity("Interception.UI.Domain.ResolvedParticipant", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<DateTime>("ConfirmedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("TEXT")
                         .HasColumnName("confirmed_at");
 
                     b.Property<string>("ConfirmedBy")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("confirmed_by");
 
                     b.Property<string>("Division")
                         .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("division");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<string>("Role")
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("role");
 
                     b.HasKey("Id");
@@ -432,15 +425,18 @@ namespace Interception.UI.Migrations
                     b.OwnsMany("Interception.UI.Domain.Records.MessageGroupEntry", "Entries", b1 =>
                         {
                             b1.Property<Guid>("MessageGroupId")
-                                .HasColumnType("uuid")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("message_group_id");
 
                             b1.Property<Guid>("MessageId")
                                 .ValueGeneratedOnAdd()
-                                .HasColumnType("uuid")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("message_id");
 
                             b1.HasKey("MessageGroupId", "MessageId");
+
+                            b1.HasIndex("MessageId")
+                                .HasDatabaseName("ix_message_group_entries_message_id");
 
                             b1.ToTable("message_group_entries", (string)null);
 
@@ -464,31 +460,33 @@ namespace Interception.UI.Migrations
                         {
                             b1.Property<int>("id")
                                 .ValueGeneratedOnAdd()
-                                .HasColumnType("integer")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("id");
 
-                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("id"));
-
                             b1.Property<Guid>("CandidateGroupId")
-                                .HasColumnType("uuid")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("candidate_group_id");
 
                             b1.Property<Guid>("MessageId")
-                                .HasColumnType("uuid")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("message_id");
 
                             b1.Property<int>("Ordinal")
-                                .HasColumnType("integer")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("ordinal");
 
                             b1.Property<Guid>("ParticipantId")
-                                .HasColumnType("uuid")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("participant_id");
 
                             b1.HasKey("id");
 
+                            b1.HasIndex("MessageId")
+                                .HasDatabaseName("ix_participant_candidate_group_refs_message_id");
+
                             b1.HasIndex("CandidateGroupId", "ParticipantId")
-                                .IsUnique();
+                                .IsUnique()
+                                .HasDatabaseName("ix_participant_candidate_group_refs_group_participant");
 
                             b1.ToTable("participant_candidate_group_refs", (string)null);
 
@@ -499,34 +497,34 @@ namespace Interception.UI.Migrations
                     b.OwnsOne("Interception.UI.Domain.PatternMatchReasons", "Reasons", b1 =>
                         {
                             b1.Property<Guid>("ParticipantCandidateGroupId")
-                                .HasColumnType("uuid");
+                                .HasColumnType("TEXT");
 
                             b1.Property<bool>("CloseInTime")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("reason_close_in_time");
 
                             b1.Property<bool>("SameDivision")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("reason_same_division");
 
                             b1.Property<bool>("SameFrequency")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("reason_same_frequency");
 
                             b1.Property<bool>("SamePointSignal")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("reason_same_point_signal");
 
                             b1.Property<bool>("SameVector")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("reason_same_vector");
 
                             b1.Property<bool>("SharedLabels")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("reason_shared_labels");
 
                             b1.Property<bool>("SharedPartners")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("reason_shared_partners");
 
                             b1.HasKey("ParticipantCandidateGroupId");
@@ -554,21 +552,21 @@ namespace Interception.UI.Migrations
                     b.OwnsMany("Interception.UI.Domain.Records.MatrixCell", "Cells", b1 =>
                         {
                             b1.Property<Guid>("MatrixId")
-                                .HasColumnType("uuid")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("matrix_id");
 
                             b1.Property<string>("ParticipantA")
                                 .HasMaxLength(200)
-                                .HasColumnType("character varying(200)")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("participant_a");
 
                             b1.Property<string>("ParticipantB")
                                 .HasMaxLength(200)
-                                .HasColumnType("character varying(200)")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("participant_b");
 
                             b1.Property<int>("InteractionCount")
-                                .HasColumnType("integer")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("interaction_count");
 
                             b1.HasKey("MatrixId", "ParticipantA", "ParticipantB");

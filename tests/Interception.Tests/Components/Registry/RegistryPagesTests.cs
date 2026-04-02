@@ -3,7 +3,6 @@
 //-----------------------------------------------------------------------------
 
 using Bunit;
-using Bunit.TestDoubles;
 using FluentAssertions;
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Registry.Abstractions;

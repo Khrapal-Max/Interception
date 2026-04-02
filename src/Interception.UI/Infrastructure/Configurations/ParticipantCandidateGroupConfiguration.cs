@@ -23,7 +23,6 @@ internal sealed class ParticipantCandidateGroupConfiguration
 
         builder.Property(x => x.ConfidenceScore)
             .HasColumnName("confidence_score")
-            .HasPrecision(4, 3)
             .IsRequired();
 
         builder.Property(x => x.SuggestedName)
@@ -58,9 +57,11 @@ internal sealed class ParticipantCandidateGroupConfiguration
             .HasColumnName("created_at")
             .IsRequired();
 
-        // PatternMatchReasons — owned entity в тій самій таблиці
         builder.OwnsOne(x => x.Reasons, r =>
         {
+            r.WithOwner();
+            r.Ignore(x => x.MatchCount);
+
             r.Property(x => x.SameFrequency)
                 .HasColumnName("reason_same_frequency")
                 .IsRequired();
@@ -90,16 +91,14 @@ internal sealed class ParticipantCandidateGroupConfiguration
                 .IsRequired();
         });
 
-        // ParticipantRefs — owned collection → окрема таблиця.
-        // Для EF InMemory та стабільного append/update краще використовувати технічний shadow key,
-        // а бізнес-унікальність пари (CandidateGroupId, ParticipantId) тримати через unique index.
         builder.OwnsMany(x => x.ParticipantRefs, pr =>
         {
             pr.ToTable("participant_candidate_group_refs");
 
             pr.WithOwner().HasForeignKey("CandidateGroupId");
             pr.Property<Guid>("CandidateGroupId")
-                .HasColumnName("candidate_group_id");
+                .HasColumnName("candidate_group_id")
+                .IsRequired();
 
             pr.Property<int>("id")
                 .HasColumnName("id")
@@ -120,7 +119,11 @@ internal sealed class ParticipantCandidateGroupConfiguration
             pr.HasKey("id");
 
             pr.HasIndex("CandidateGroupId", nameof(ParticipantRef.ParticipantId))
-                .IsUnique();
+                .IsUnique()
+                .HasDatabaseName("ix_participant_candidate_group_refs_group_participant");
+
+            pr.HasIndex(nameof(ParticipantRef.MessageId))
+                .HasDatabaseName("ix_participant_candidate_group_refs_message_id");
         });
 
         builder.HasOne<ResolvedParticipant>()
