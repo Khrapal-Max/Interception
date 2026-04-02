@@ -5,7 +5,8 @@
 using Interception.UI.Application.Analytics.Abstractions;
 using Interception.UI.Application.Analytics.Builders.Frequency;
 using Interception.UI.Application.Analytics.Dtos;
-using Interception.UI.Domain.Enums;
+using Interception.UI.Domain;
+using Interception.UI.Domain.Records;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -53,13 +54,12 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
                 x.InterceptionMessage.Division))
             .ToListAsync(ct);
 
-        var confirmedGroups = await db.ParticipantCandidateGroups
+        var candidateGroups = await db.ParticipantCandidateGroups
             .Include(x => x.ParticipantRefs)
             .AsNoTracking()
-            .Where(x => x.Status == CandidateGroupStatus.Confirmed && x.ResolvedParticipantId.HasValue)
             .ToListAsync(ct);
 
-        var resolvedParticipantIds = confirmedGroups
+        var resolvedParticipantIds = candidateGroups
             .Where(x => x.ResolvedParticipantId.HasValue)
             .Select(x => x.ResolvedParticipantId!.Value)
             .Distinct()
@@ -72,19 +72,28 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
             .ToListAsync(ct);
 
         var resolvedMap = resolvedParticipants.ToDictionary(x => x.Id);
-        var participantToResolvedMap = BuildParticipantToResolvedMap(confirmedGroups);
+        var participantToResolvedMap = BuildParticipantToResolvedMap(candidateGroups);
         var resolvedByNameMap = BuildResolvedByNameMap(resolvedParticipants);
-
         var participantsByMessageId = participants
             .GroupBy(x => x.MessageId)
             .ToDictionary(x => x.Key, x => x.ToList());
+        var participantsById = participants.ToDictionary(x => x.Id);
+        var participantToGroupMap = BuildParticipantToGroupMap(candidateGroups);
+        var groupDivisionMap = BuildGroupDivisionMap(
+            candidateGroups,
+            participantsById,
+            participantToResolvedMap,
+            resolvedMap,
+            resolvedByNameMap);
 
         var frequencies = messages
             .GroupBy(x => x.Frequency, StringComparer.OrdinalIgnoreCase)
             .Select(group => BuildFrequency(
                 group.Key,
-                group.ToList(),
+                [.. group],
                 participantsByMessageId,
+                participantToGroupMap,
+                groupDivisionMap,
                 participantToResolvedMap,
                 resolvedMap,
                 resolvedByNameMap))
@@ -94,10 +103,12 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
         return new FrequencyWeightReportDto(frequencies);
     }
 
-    private static FrequencyWeightFrequencyDto BuildFrequency(
+    private static FrequencyWeightDto BuildFrequency(
         string frequency,
         IReadOnlyList<FrequencyMessageRow> messages,
         IReadOnlyDictionary<Guid, List<FrequencyParticipantRow>> participantsByMessageId,
+        IReadOnlyDictionary<Guid, Guid> participantToGroupMap,
+        IReadOnlyDictionary<Guid, string?> groupDivisionMap,
         IReadOnlyDictionary<Guid, Guid> participantToResolvedMap,
         IReadOnlyDictionary<Guid, ResolvedRow> resolvedMap,
         IReadOnlyDictionary<string, Guid> resolvedByNameMap)
@@ -120,11 +131,23 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
 
             foreach (var participant in messageParticipants)
             {
-                var personKey = BuildPersonKey(participant, participantToResolvedMap, resolvedMap, resolvedByNameMap);
+                var personKey = BuildPersonKey(
+                    participant,
+                    participantToGroupMap,
+                    participantToResolvedMap,
+                    resolvedMap,
+                    resolvedByNameMap);
+
                 if (persons.ContainsKey(personKey))
                     continue;
 
-                persons[personKey] = BuildGroupName(participant, participantToResolvedMap, resolvedMap, resolvedByNameMap);
+                persons[personKey] = BuildGroupName(
+                    participant,
+                    participantToGroupMap,
+                    groupDivisionMap,
+                    participantToResolvedMap,
+                    resolvedMap,
+                    resolvedByNameMap);
             }
         }
 
@@ -141,18 +164,18 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
             .ThenBy(x => x.GroupName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        return new FrequencyWeightFrequencyDto(
+        return new FrequencyWeightDto(
             frequency,
             frequencyDivision,
             totalPersons,
             groups);
     }
 
-    private static Dictionary<Guid, Guid> BuildParticipantToResolvedMap(IReadOnlyList<Domain.ParticipantCandidateGroup> confirmedGroups)
+    private static Dictionary<Guid, Guid> BuildParticipantToResolvedMap(IReadOnlyList<ParticipantCandidateGroup> candidateGroups)
     {
         var map = new Dictionary<Guid, Guid>();
 
-        foreach (var group in confirmedGroups)
+        foreach (var group in candidateGroups)
         {
             if (!group.ResolvedParticipantId.HasValue)
                 continue;
@@ -172,7 +195,7 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
             .Select(x => new
             {
                 x.Id,
-                NormalizedName = StringTextNormExtensions.Normalize(x.Name)
+                NormalizedName = StringTextNormExtensions.NormalizeOption(x.Name)
             })
             .Where(x => !string.IsNullOrWhiteSpace(x.NormalizedName))
             .GroupBy(x => x.NormalizedName!, StringComparer.OrdinalIgnoreCase)
@@ -180,19 +203,108 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
             .ToDictionary(x => x.Key, x => x.First().Id, StringComparer.OrdinalIgnoreCase);
     }
 
-    private static string BuildPersonKey(
+    private static Dictionary<Guid, Guid> BuildParticipantToGroupMap(IReadOnlyList<ParticipantCandidateGroup> candidateGroups)
+    {
+        return candidateGroups
+            .SelectMany(group => group.ParticipantRefs.Select(participantRef => new
+            {
+                participantRef.ParticipantId,
+                GroupId = group.Id
+            }))
+            .GroupBy(x => x.ParticipantId)
+            .Where(x => x.Select(v => v.GroupId).Distinct().Count() == 1)
+            .ToDictionary(x => x.Key, x => x.First().GroupId);
+    }
+
+    private static Dictionary<Guid, string?> BuildGroupDivisionMap(
+        IReadOnlyList<ParticipantCandidateGroup> candidateGroups,
+        IReadOnlyDictionary<Guid, FrequencyParticipantRow> participantsById,
+        IReadOnlyDictionary<Guid, Guid> participantToResolvedMap,
+        IReadOnlyDictionary<Guid, ResolvedRow> resolvedMap,
+        IReadOnlyDictionary<string, Guid> resolvedByNameMap)
+    {
+        var map = new Dictionary<Guid, string?>();
+
+        foreach (var group in candidateGroups)
+        {
+            var divisions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (group.ResolvedParticipantId.HasValue && resolvedMap.TryGetValue(group.ResolvedParticipantId.Value, out var resolvedGroupParticipant))
+            {
+                var resolvedDivision = NormalizeKnownDivision(resolvedGroupParticipant.Division);
+                if (!string.IsNullOrWhiteSpace(resolvedDivision))
+                    divisions.Add(resolvedDivision);
+            }
+
+            foreach (var participantRef in group.ParticipantRefs)
+            {
+                if (!participantsById.TryGetValue(participantRef.ParticipantId, out var participant))
+                    continue;
+
+                var division = ResolveDivisionForGroupMember(
+                    participant,
+                    participantToResolvedMap,
+                    resolvedMap,
+                    resolvedByNameMap);
+
+                if (!string.IsNullOrWhiteSpace(division))
+                    divisions.Add(division);
+            }
+
+            map[group.Id] = divisions.Count == 1
+                ? divisions.First()
+                : null;
+        }
+
+        return map;
+    }
+
+    private static string? ResolveDivisionForGroupMember(
         FrequencyParticipantRow participant,
         IReadOnlyDictionary<Guid, Guid> participantToResolvedMap,
         IReadOnlyDictionary<Guid, ResolvedRow> resolvedMap,
         IReadOnlyDictionary<string, Guid> resolvedByNameMap)
     {
-        if (participantToResolvedMap.TryGetValue(participant.Id, out var resolvedId)
-            && resolvedMap.ContainsKey(resolvedId))
+        if (participantToResolvedMap.TryGetValue(participant.Id, out var directResolvedId)
+            && resolvedMap.TryGetValue(directResolvedId, out var directResolvedParticipant))
         {
-            return $"resolved:{resolvedId}";
+            var confirmedDivision = NormalizeKnownDivision(directResolvedParticipant.Division);
+            if (!string.IsNullOrWhiteSpace(confirmedDivision))
+                return confirmedDivision;
         }
 
-        var normalizedName = StringTextNormExtensions.Normalize(participant.Name);
+        var normalizedName = StringTextNormExtensions.NormalizeOption(participant.Name);
+        if (!string.IsNullOrWhiteSpace(normalizedName)
+            && resolvedByNameMap.TryGetValue(normalizedName, out var resolvedIdByName)
+            && resolvedMap.TryGetValue(resolvedIdByName, out var resolvedByNameParticipant))
+        {
+            var confirmedDivision = NormalizeKnownDivision(resolvedByNameParticipant.Division);
+            if (!string.IsNullOrWhiteSpace(confirmedDivision))
+                return confirmedDivision;
+        }
+
+        return NormalizeKnownDivision(participant.MessageDivision);
+    }
+
+    private static string BuildPersonKey(
+        FrequencyParticipantRow participant,
+        IReadOnlyDictionary<Guid, Guid> participantToGroupMap,
+        IReadOnlyDictionary<Guid, Guid> participantToResolvedMap,
+        IReadOnlyDictionary<Guid, ResolvedRow> resolvedMap,
+        IReadOnlyDictionary<string, Guid> resolvedByNameMap)
+    {
+        if (participantToResolvedMap.TryGetValue(participant.Id, out var directResolvedId)
+            && resolvedMap.ContainsKey(directResolvedId))
+        {
+            return $"resolved:{directResolvedId}";
+        }
+
+        if (participantToGroupMap.TryGetValue(participant.Id, out var groupId))
+        {
+            return $"group:{groupId}";
+        }
+
+        var normalizedName = StringTextNormExtensions.NormalizeOption(participant.Name);
         if (!string.IsNullOrWhiteSpace(normalizedName)
             && resolvedByNameMap.TryGetValue(normalizedName, out var resolvedIdByName)
             && resolvedMap.ContainsKey(resolvedIdByName))
@@ -212,38 +324,44 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
 
     private static string BuildGroupName(
         FrequencyParticipantRow participant,
+        IReadOnlyDictionary<Guid, Guid> participantToGroupMap,
+        IReadOnlyDictionary<Guid, string?> groupDivisionMap,
         IReadOnlyDictionary<Guid, Guid> participantToResolvedMap,
         IReadOnlyDictionary<Guid, ResolvedRow> resolvedMap,
         IReadOnlyDictionary<string, Guid> resolvedByNameMap)
     {
-        Guid? resolvedId = null;
-
         if (participantToResolvedMap.TryGetValue(participant.Id, out var directResolvedId)
-            && resolvedMap.ContainsKey(directResolvedId))
+            && resolvedMap.TryGetValue(directResolvedId, out var directResolvedParticipant))
         {
-            resolvedId = directResolvedId;
-        }
-        else
-        {
-            var normalizedName = StringTextNormExtensions.Normalize(participant.Name);
-            if (!string.IsNullOrWhiteSpace(normalizedName)
-                && resolvedByNameMap.TryGetValue(normalizedName, out var resolvedIdByName)
-                && resolvedMap.ContainsKey(resolvedIdByName))
-            {
-                resolvedId = resolvedIdByName;
-            }
-        }
-
-        if (resolvedId.HasValue && resolvedMap.TryGetValue(resolvedId.Value, out var resolvedParticipant))
-        {
-            var confirmedDivision = NormalizeKnownDivision(resolvedParticipant.Division);
+            var confirmedDivision = NormalizeKnownDivision(directResolvedParticipant.Division);
             if (!string.IsNullOrWhiteSpace(confirmedDivision))
                 return confirmedDivision;
         }
 
-        var messageDivision = NormalizeKnownDivision(participant.MessageDivision);
-        if (!string.IsNullOrWhiteSpace(messageDivision))
-            return messageDivision;
+        if (participantToGroupMap.TryGetValue(participant.Id, out var groupId))
+        {
+            if (groupDivisionMap.TryGetValue(groupId, out var groupDivision)
+                && !string.IsNullOrWhiteSpace(groupDivision))
+            {
+                return groupDivision;
+            }
+
+            return UnknownGroup;
+        }
+
+        var normalizedName = StringTextNormExtensions.NormalizeOption(participant.Name);
+        if (!string.IsNullOrWhiteSpace(normalizedName)
+            && resolvedByNameMap.TryGetValue(normalizedName, out var resolvedIdByName)
+            && resolvedMap.TryGetValue(resolvedIdByName, out var resolvedByNameParticipant))
+        {
+            var confirmedDivision = NormalizeKnownDivision(resolvedByNameParticipant.Division);
+            if (!string.IsNullOrWhiteSpace(confirmedDivision))
+                return confirmedDivision;
+        }
+
+        var observationDivision = NormalizeKnownDivision(participant.MessageDivision);
+        if (!string.IsNullOrWhiteSpace(observationDivision))
+            return observationDivision;
 
         return UnknownGroup;
     }

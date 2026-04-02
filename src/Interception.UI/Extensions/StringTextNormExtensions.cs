@@ -25,4 +25,13 @@ public static partial class StringTextNormExtensions
 
     [GeneratedRegex(@"\s+", RegexOptions.Compiled)]
     private static partial Regex MyRegex();
+
+    public static string? NormalizeOption(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        // Trim, collapse whitespace, and lower-case for grouping/searching
+        return MultiWs.Replace(value.Trim(), " ");
+    }
 }

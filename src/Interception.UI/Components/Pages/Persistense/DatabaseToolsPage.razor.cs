@@ -25,7 +25,6 @@ public partial class DatabaseToolsPage : ComponentBase
     private IBrowserFile? _selectedFile;
     private string? _selectedFileName;
     private string _clearConfirmation = string.Empty;
-    private string? _lastBackupPath;
 
     private bool CanClear => string.Equals(_clearConfirmation?.Trim(), "ОЧИСТИТИ", StringComparison.Ordinal);
 
@@ -83,7 +82,6 @@ public partial class DatabaseToolsPage : ComponentBase
 
             _selectedFile = null;
             _selectedFileName = null;
-            _lastBackupPath = null;
 
             await LoadAsync();
         }
@@ -123,7 +121,6 @@ public partial class DatabaseToolsPage : ComponentBase
             _clearConfirmation = string.Empty;
             _selectedFile = null;
             _selectedFileName = null;
-            _lastBackupPath = null;
 
             await LoadAsync();
         }

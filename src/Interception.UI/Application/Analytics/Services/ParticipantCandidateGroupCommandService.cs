@@ -4,7 +4,6 @@
 
 using Interception.UI.Application.Analytics.Abstractions;
 using Interception.UI.Domain;
-using Interception.UI.Domain.Enums;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -12,76 +11,87 @@ using Microsoft.EntityFrameworkCore;
 namespace Interception.UI.Application.Analytics.Services;
 
 /// <summary>
-/// Реалізація write-side сценаріїв для життєвого циклу груп кандидатів.
+/// Командний сервіс для підтвердження або відхилення груп кандидатів.
 /// </summary>
-public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<AppDbContext> dbFactory)
-    : IParticipantCandidateGroupCommandService
+public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<AppDbContext> dbFactory) : IParticipantCandidateGroupCommandService
 {
-    /// <inheritdoc />
+    private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
+
+    /// <summary>
+    /// Підтверджує групу, зв'язуючи її з <see cref="ResolvedParticipant"/>.
+    /// Якщо встановлена особа з таким ім'ям вже існує — використовує її,
+    /// інакше створює новий запис.
+    /// </summary>
     public async Task ConfirmAsync(
         Guid groupId,
         string resolvedName,
         string resolvedBy,
-        string? role = null,
-        string? division = null,
+        string? role,
+        string? division,
         CancellationToken ct = default)
     {
-        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        var normalizedName = StringTextNormExtensions.NormalizeOption(resolvedName);
+        var normalizedResolvedBy = StringTextNormExtensions.NormalizeRequired(resolvedBy);
+        var normalizedRole = StringTextNormExtensions.NormalizeOption(role);
+        var normalizedDivision = StringTextNormExtensions.NormalizeOption(division);
+
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
         var group = await db.ParticipantCandidateGroups
-            .FirstOrDefaultAsync(g => g.Id == groupId && g.Status == CandidateGroupStatus.Open, ct)
-            ?? throw new InvalidOperationException($"Open-групу '{groupId}' не знайдено.");
+            .SingleOrDefaultAsync(x => x.Id == groupId, ct)
+            ?? throw new InvalidOperationException($"ParticipantCandidateGroup '{groupId}' не знайдено.");
 
-        var normalizedName = SemanticValueExtensions.NormalizeMeaningfulOrNull(resolvedName)
-            ?? throw new ArgumentException("Ім'я для підтвердження обов'язкове.", nameof(resolvedName));
+        var normalizedLookupName = StringTextNormExtensions.NormalizeOption(normalizedName);
 
-        var normalizedRole = SemanticValueExtensions.NormalizeMeaningfulOrNull(role);
-        var normalizedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(division);
+        var resolved = await db.ResolvedParticipants
+            .AsTracking()
+            .SingleOrDefaultAsync(
+                x => x.Name != null && StringTextNormExtensions.NormalizeOption(x.Name) == normalizedLookupName,
+                ct);
 
-        ResolvedParticipant resolvedParticipant;
-
-        if (group.ResolvedParticipantId.HasValue)
+        if (resolved is null)
         {
-            resolvedParticipant = await db.ResolvedParticipants
-                .FirstOrDefaultAsync(x => x.Id == group.ResolvedParticipantId.Value, ct)
-                ?? throw new InvalidOperationException(
-                    $"ResolvedParticipant '{group.ResolvedParticipantId.Value}' не знайдено.");
+            resolved = ResolvedParticipant.Create(
+                normalizedName!,
+                normalizedResolvedBy,
+                normalizedRole,
+                normalizedDivision);
 
-            resolvedParticipant.Update(normalizedName, normalizedRole, normalizedDivision);
+            db.ResolvedParticipants.Add(resolved);
         }
         else
         {
-            resolvedParticipant = await db.ResolvedParticipants
-                .FirstOrDefaultAsync(x => x.Name == normalizedName, ct)
-                 ?? throw new InvalidOperationException(
-                    $"ResolvedParticipant '{normalizedName}' не знайдено."); ;
-
-            if (resolvedParticipant is null)
-            {
-                resolvedParticipant = ResolvedParticipant.Create(normalizedName, resolvedBy, normalizedRole, normalizedDivision);
-                db.ResolvedParticipants.Add(resolvedParticipant);
-            }
-            else
-            {
-                resolvedParticipant.Update(normalizedName, normalizedRole, normalizedDivision);
-            }
+            // Upsert-by-name: оновлюємо існуючий запис без створення дубліката.
+            var entry = db.Entry(resolved);
+            entry.Property(nameof(ResolvedParticipant.Name)).CurrentValue = normalizedName;
+            entry.Property(nameof(ResolvedParticipant.Role)).CurrentValue = normalizedRole;
+            entry.Property(nameof(ResolvedParticipant.Division)).CurrentValue = normalizedDivision;
+            entry.Property(nameof(ResolvedParticipant.ConfirmedBy)).CurrentValue = normalizedResolvedBy;
         }
 
-        group.Confirm(normalizedName, resolvedBy, resolvedParticipant.Id);
+        group.Confirm(normalizedName!, normalizedResolvedBy, resolved.Id);
 
         await db.SaveChangesAsync(ct);
     }
 
-    /// <inheritdoc />
-    public async Task DismissAsync(Guid groupId, string resolvedBy, CancellationToken ct = default)
+    /// <summary>
+    /// Відхиляє групу кандидатів.
+    /// </summary>
+    public async Task DismissAsync(
+        Guid groupId,
+        string resolvedBy,
+        CancellationToken ct = default)
     {
-        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        var normalizedResolvedBy = StringTextNormExtensions.NormalizeRequired(resolvedBy);
+
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
         var group = await db.ParticipantCandidateGroups
-            .FirstOrDefaultAsync(g => g.Id == groupId && g.Status == CandidateGroupStatus.Open, ct)
-            ?? throw new InvalidOperationException($"Open-групу '{groupId}' не знайдено.");
+            .SingleOrDefaultAsync(x => x.Id == groupId, ct)
+            ?? throw new InvalidOperationException($"ParticipantCandidateGroup '{groupId}' не знайдено.");
 
-        group.Dismiss(resolvedBy);
+        group.Dismiss(normalizedResolvedBy);
+
         await db.SaveChangesAsync(ct);
     }
 }

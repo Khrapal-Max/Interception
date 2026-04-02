@@ -18,8 +18,8 @@ public sealed class CandidatesToolbarTests : BunitContext
         var cut = Render<CandidatesToolbar>();
 
         var links = cut.FindAll("a.registry-nav-link");
-        links.Should().HaveCount(2);
-        links.Select(l => l.GetAttribute("href")).Should().Contain(["/analytics/candidates", "/analytics/link-map"]);
+        links.Should().HaveCount(3);
+        links.Select(l => l.GetAttribute("href")).Should().Contain(["/analytics/candidates", "/analytics/link-map", "/analytics/frequency-weights"]);
     }
 
     [Fact]

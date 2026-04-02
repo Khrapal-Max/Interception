@@ -8,4 +8,4 @@ namespace Interception.UI.Application.Analytics.Dtos;
 /// Загальний звіт по частотах та вагам підрозділів.
 /// </summary>
 public sealed record FrequencyWeightReportDto(
-    IReadOnlyList<FrequencyWeightFrequencyDto> Frequencies);
+    IReadOnlyList<FrequencyWeightDto> Frequencies);
