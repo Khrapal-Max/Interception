@@ -2,6 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
+using System.Globalization;
 using Interception.UI.Application.Analytics.Abstractions;
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Toasts;
@@ -52,7 +53,7 @@ public partial class LinkMapPage : ComponentBase
         {
             if (_dateFrom.HasValue && _dateTo.HasValue && _dateFrom.Value.Date > _dateTo.Value.Date)
             {
-                Toasts.Error("Некоректний період", "Дата «від» не може бути пізніше за дату «до».");
+                Toasts.Error("Некоректний період", "Дата «від» не може бути пізніше за дату «до»." );
                 _map = null;
                 _selectedGroup = null;
                 return;
@@ -134,12 +135,44 @@ public partial class LinkMapPage : ComponentBase
         _drawerOpen = true;
     }
 
+    protected void OpenGroupDrawer(LinkMapGroupDto group)
+    {
+        _drawerGroup = group;
+        _drawerOpen = true;
+    }
+
     protected Task CloseDrawerAsync()
     {
         _drawerOpen = false;
         _drawerGroup = null;
         return Task.CompletedTask;
     }
+
+    protected static string PrimaryFrequency(LinkMapGroupDto group)
+        => group.Frequencies.FirstOrDefault() ?? "—";
+
+    protected static string FriendlyAction(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "дія не визначена" : value;
+
+    protected static string FriendlyDivision(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "НВ підрозділ" : value;
+
+    internal static decimal GetNormalizedSharePercent(FocusedLinkDto item, IReadOnlyList<FocusedLinkDto> links)
+    {
+        var totalWeight = links.Sum(x => x.Bridge.Weight);
+        if (totalWeight <= 0)
+            return 0m;
+
+        return Math.Round(item.Bridge.Weight * 100m / totalWeight, 1);
+    }
+
+    protected static string GetBridgeBarClass(decimal percent)
+        => percent switch
+        {
+            >= 50m => "is-strong",
+            >= 20m => "is-medium",
+            _ => "is-weak"
+        };
 
     private static List<LinkMapGroupDto> BuildVisibleGroups(
         LinkMapDto? map,
