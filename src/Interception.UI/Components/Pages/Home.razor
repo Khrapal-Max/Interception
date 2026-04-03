@@ -1,59 +1,106 @@
-﻿@page "/"
+@page "/"
 
 <PageTitle>Головна</PageTitle>
 
 <div class="page-shell">
-    <div class="page-panel panel-scroll p-3 p-md-4 d-flex flex-column gap-2">
-        <div class="d-flex align-items-center justify-content-between">
-            <h1 class="h4 mb-0">Меню системи</h1>
+    <div class="page-panel panel-scroll p-3 p-md-4 d-flex flex-column gap-3">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+                <h1 class="h4 mb-1">Головна</h1>
+                <div class="text-muted small">Швидкий перехід до всіх основних напрямків системи.</div>
+            </div>
         </div>
 
-        <p class="text-muted small mb-2">Оберіть потрібний модуль. Блоки мають різні розміри для швидкої візуальної орієнтації.</p>
+        <div class="home-columns" aria-label="Основні напрямки системи">
+            <section class="home-column" aria-labelledby="home-observations">
+                <div class="home-column-header">
+                    <h2 id="home-observations" class="home-column-title">Спостереження</h2>
+                </div>
 
-        <nav class="system-blocks" aria-label="Меню системи">
-            <a class="menu-block size-lg tone-observations" href="observations">
-                <span class="menu-title">Спостереження</span>
-                <small>Реєстр спостережень</small>
-            </a>
+                <div class="home-column-links">
+                    <a class="home-tile tile-observations-main" href="observations">
+                        <span class="home-tile-title">Реєстр спостережень</span>
+                        <span class="home-tile-meta">Усі записи, пошук, перегляд</span>
+                    </a>
+                </div>
+            </section>
 
-            <a class="menu-block size-md tone-candidates" href="analytics/candidates">
-                <span class="menu-title">Групи на розгляд</span>
-                <small>Аналітика</small>
-            </a>
+            <section class="home-column" aria-labelledby="home-analytics">
+                <div class="home-column-header">
+                    <h2 id="home-analytics" class="home-column-title">Аналітика</h2>
+                </div>
 
-            <a class="menu-block size-sm tone-linkmap" href="analytics/link-map">
-                <span class="menu-title">Карта зв'язків</span>
-                <small>Аналітика</small>
-            </a>
+                <div class="home-column-links">
+                    <a class="home-tile tile-analytics-candidates" href="analytics/candidates">
+                        <span class="home-tile-title">Кандидати</span>
+                        <span class="home-tile-meta">Черга аналізу та відбір</span>
+                    </a>
 
-            <a class="menu-block size-md tone-divisions" href="reports/divisions">
-                <span class="menu-title">Звіт по підрозділах</span>
-                <small>Звіти</small>
-            </a>
+                    <a class="home-tile tile-analytics-linkmap" href="analytics/link-map">
+                        <span class="home-tile-title">Карта зв'язків</span>
+                        <span class="home-tile-meta">Групи, мости, центральні особи</span>
+                    </a>
 
-            <a class="menu-block size-sm tone-day" href="reports/day-picture">
-                <span class="menu-title">Картина дня</span>
-                <small>Звіти</small>
-            </a>
+                    <a class="home-tile tile-analytics-weights" href="analytics/frequency-weights">
+                        <span class="home-tile-title">Вага підрозділів</span>
+                        <span class="home-tile-meta">Частота → групи → відсоток</span>
+                    </a>
+                </div>
+            </section>
 
-            <a class="menu-block size-sm tone-registry" href="registries/divisions">
-                <span class="menu-title">Підрозділи</span>
-                <small>Регістри</small>
-            </a>
+            <section class="home-column" aria-labelledby="home-reports">
+                <div class="home-column-header">
+                    <h2 id="home-reports" class="home-column-title">Звіти</h2>
+                </div>
 
-            <a class="menu-block size-sm tone-registry" href="registries/persons">
-                <span class="menu-title">Особи</span>
-                <small>Регістри</small>
-            </a>
+                <div class="home-column-links">
+                    <a class="home-tile tile-reports-divisions" href="reports/divisions">
+                        <span class="home-tile-title">Підрозділи</span>
+                        <span class="home-tile-meta">Звіт по підрозділах</span>
+                    </a>
 
-            <a class="menu-block size-sm tone-registry" href="registries/actions">
-                <span class="menu-title">Довідник дій</span>
-                <small>Регістри</small>
-            </a>
-            <a class="menu-block size-sm tone-registry" href="system/database">
-                <span class="menu-title">База даних</span>
-                <small>Сервіс</small>
-            </a>
-        </nav>
+                    <a class="home-tile tile-reports-day" href="reports/day-picture">
+                        <span class="home-tile-title">Картина дня</span>
+                        <span class="home-tile-meta">Операційна картина за день</span>
+                    </a>
+                </div>
+            </section>
+
+            <section class="home-column" aria-labelledby="home-registries">
+                <div class="home-column-header">
+                    <h2 id="home-registries" class="home-column-title">Регістри</h2>
+                </div>
+
+                <div class="home-column-links">
+                    <a class="home-tile tile-registry-divisions" href="registries/divisions">
+                        <span class="home-tile-title">Частоти / підрозділи</span>
+                        <span class="home-tile-meta">Відповідність частот і підрозділів</span>
+                    </a>
+
+                    <a class="home-tile tile-registry-persons" href="registries/persons">
+                        <span class="home-tile-title">Особи</span>
+                        <span class="home-tile-meta">Реєстр встановлених осіб</span>
+                    </a>
+
+                    <a class="home-tile tile-registry-actions" href="registries/actions">
+                        <span class="home-tile-title">Довідник дій</span>
+                        <span class="home-tile-meta">Каталог типових дій</span>
+                    </a>
+                </div>
+            </section>
+
+            <section class="home-column" aria-labelledby="home-system">
+                <div class="home-column-header">
+                    <h2 id="home-system" class="home-column-title">Система</h2>
+                </div>
+
+                <div class="home-column-links">
+                    <a class="home-tile tile-system-db" href="system/database">
+                        <span class="home-tile-title">База даних</span>
+                        <span class="home-tile-meta">Імпорт, експорт, обслуговування</span>
+                    </a>
+                </div>
+            </section>
+        </div>
     </div>
 </div>

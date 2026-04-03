@@ -1,72 +1,100 @@
-.system-blocks {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: auto;
+.home-columns {
     display: grid;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    grid-auto-rows: minmax(84px, auto);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 1rem;
+    min-height: 0;
+}
+
+.home-column {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
     gap: .75rem;
 }
 
-.menu-block {
+.home-column-header {
+    padding-bottom: .25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.home-column-title {
+    margin: 0;
+    font-size: .95rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    color: #dce4eb;
+}
+
+.home-column-links {
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    gap: .75rem;
+}
+
+.home-tile {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     gap: .2rem;
-    padding: .75rem .85rem;
-    border-radius: .55rem;
-    border: 1px solid #45515d;
-    color: #e8edf2;
+    min-height: 96px;
+    padding: .85rem .95rem;
+    border-radius: .45rem;
+    border: 1px solid rgba(255, 255, 255, .08);
     text-decoration: none;
-    background: #2b3239;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
-    transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+    color: #f3f6f8;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+    transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease, filter .12s ease;
 }
 
-.menu-block:hover {
+.home-tile:hover {
     transform: translateY(-1px);
-    border-color: #6a7785;
-    box-shadow: 0 5px 16px rgba(0, 0, 0, .2);
-    color: #f4f7fa;
+    border-color: rgba(255, 255, 255, .18);
+    box-shadow: 0 6px 16px rgba(0,0,0,.16);
+    color: #ffffff;
+    filter: brightness(1.03);
 }
 
-.menu-title {
+.home-tile-title {
+    font-size: .98rem;
     font-weight: 700;
-    line-height: 1.2;
+    line-height: 1.25;
 }
 
-.menu-block small {
-    color: #c5ced7;
+.home-tile-meta {
+    font-size: .78rem;
+    color: rgba(255,255,255,.82);
+    line-height: 1.3;
 }
 
-.size-lg { grid-column: span 6; grid-row: span 2; }
-.size-md { grid-column: span 4; grid-row: span 2; }
-.size-sm { grid-column: span 3; grid-row: span 1; }
+.tile-observations-main { background: linear-gradient(180deg, #2e6f8f, #285c78); }
+.tile-analytics-candidates { background: linear-gradient(180deg, #6f4d8b, #5a3f73); }
+.tile-analytics-linkmap { background: linear-gradient(180deg, #2f7a6e, #286459); }
+.tile-analytics-weights { background: linear-gradient(180deg, #7b6740, #665435); }
+.tile-reports-divisions { background: linear-gradient(180deg, #7a5c35, #644b2c); }
+.tile-reports-day { background: linear-gradient(180deg, #5f7336, #4f612f); }
+.tile-registry-divisions { background: linear-gradient(180deg, #35637f, #2d5269); }
+.tile-registry-persons { background: linear-gradient(180deg, #7a4f5b, #653f4a); }
+.tile-registry-actions { background: linear-gradient(180deg, #4f6b87, #425873); }
+.tile-system-db { background: linear-gradient(180deg, #4f5966, #444c57); }
 
-.tone-observations { background: #325067; border-color: #44749d; }
-.tone-candidates { background: #5a4769; border-color: #8f63a7; }
-.tone-linkmap { background: #3a5861; border-color: #4b7d8a; }
-.tone-divisions { background: #6d5730; border-color: #ae8a46; }
-.tone-day { background: #4e5b34; border-color: #7a9a47; }
-.tone-registry { background: #2e5a52; border-color: #2f8b7d; }
-.tone-system { background: #4e5762; border-color: #7b8591; }
+@media (max-width: 1400px) {
+    .home-columns {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
 
-@media (max-width: 992px) {
-    .size-lg,
-    .size-md { grid-column: span 6; }
-
-    .size-sm { grid-column: span 6; }
+@media (max-width: 900px) {
+    .home-columns {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 576px) {
-    .system-blocks {
-        grid-template-columns: repeat(1, minmax(0, 1fr));
+    .home-columns {
+        grid-template-columns: 1fr;
     }
 
-    .size-lg,
-    .size-md,
-    .size-sm {
-        grid-column: span 1;
-        grid-row: span 1;
+    .home-tile {
+        min-height: 88px;
     }
 }
