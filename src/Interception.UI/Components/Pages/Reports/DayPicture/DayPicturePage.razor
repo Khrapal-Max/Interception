@@ -1,6 +1,7 @@
 @page "/reports/day-picture"
 @using Interception.UI.Application.Exports.Models
 @using Interception.UI.Components.Pages.Reports.Toolbar
+@using Interception.UI.Extensions
 
 <PageTitle>Картина дня</PageTitle>
 
@@ -82,7 +83,7 @@
                                     @foreach (var entry in entries)
                                     {
                                         <tr>
-                                            <td class="text-nowrap">@entry.ObservedDate.ToLocalTime().ToString("HH:mm")</td>
+                                            <td class="text-nowrap">@ConverterDateTimeExtensions.ToDisplay(entry.ObservedDate).ToString("HH:mm")</td>
                                             <td class="text-nowrap">@(entry.Frequency ?? "—")</td>
                                             <td>@(entry.ActionName ?? "—")</td>
                                             <td>

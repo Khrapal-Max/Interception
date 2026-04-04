@@ -1,3 +1,5 @@
+@using Interception.UI.Extensions
+
 @if (IsOpen && Group is not null)
 {
     <div class="drawer-backdrop show" @onclick="CloseAsync"></div>
@@ -84,7 +86,7 @@
                                         <td>@(string.IsNullOrWhiteSpace(member.Role) ? "—" : member.Role)</td>
                                         <td>@member.MentionCount</td>
                                         <td>@member.UniquePartnerCount</td>
-                                        <td>@member.LastSeenAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                                        <td>@ConverterDateTimeExtensions.ToDisplay(member.LastSeenAt).ToString("dd.MM.yyyy HH:mm")</td>
                                     </tr>
                                 }
                             </tbody>
