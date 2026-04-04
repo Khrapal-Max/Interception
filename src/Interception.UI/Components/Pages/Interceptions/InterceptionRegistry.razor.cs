@@ -7,6 +7,7 @@ using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Registry.Abstractions;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Domain;
+using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.UI.Components.Pages.Interceptions;
@@ -181,7 +182,7 @@ public partial class InterceptionRegistry : ComponentBase
         try
         {
             await InterceptionCommandService.DeleteAsync(id);
-            Toasts.Success("Видалено", $"Запис від {observedDate:dd.MM HH:mm} видалено.");
+            Toasts.Success("Видалено", $"Запис від {ConverterDateTimeExtensions.ToDisplay(observedDate):dd.MM HH:mm} видалено.");
             await LoadPageAsync();
         }
         catch (Exception ex)

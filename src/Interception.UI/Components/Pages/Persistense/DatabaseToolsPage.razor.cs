@@ -5,6 +5,7 @@
 using Interception.UI.Application.Database.Abstractions;
 using Interception.UI.Application.Database.Dtos;
 using Interception.UI.Application.Toasts;
+using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 
@@ -154,7 +155,7 @@ public partial class DatabaseToolsPage : ComponentBase
     }
 
     private static string FormatDate(DateTime? utc)
-        => utc is null ? "—" : utc.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss");
+        => utc is null ? "—" : ConverterDateTimeExtensions.ToDisplay(utc.Value).ToString("dd.MM.yyyy HH:mm:ss");
 
     private static string FormatBool(bool value)
         => value ? "так" : "ні";

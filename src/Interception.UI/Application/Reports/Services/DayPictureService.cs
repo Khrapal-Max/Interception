@@ -5,6 +5,7 @@
 using Interception.UI.Application.Reports.Abstractions;
 using Interception.UI.Application.Reports.Builders;
 using Interception.UI.Application.Reports.Dtos;
+using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,7 +26,7 @@ public sealed partial class DayPictureService(IDbContextFactory<AppDbContext> db
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
-        var fromUtc = day.ToUniversalTime();
+        var fromUtc = ConverterDateTimeExtensions.ToUtc(day);
         var toUtc = fromUtc.AddDays(1);
 
         var messages = await db.InterceptionMessages

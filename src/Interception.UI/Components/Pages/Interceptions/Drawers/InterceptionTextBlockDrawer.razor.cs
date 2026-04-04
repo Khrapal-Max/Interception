@@ -251,7 +251,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         try
         {
             await InterceptionCommandService.CreateAsync(_form, "operator");
-            Toasts.Success("Збережено", $"Запис від {_form.ObservedDate:dd.MM HH:mm} створено.");
+            Toasts.Success("Збережено", $"Запис від {ConverterDateTimeExtensions.ToDisplay(_form.ObservedDate):dd.MM HH:mm} створено.");
 
             ResetState();
             await CloseAsync();

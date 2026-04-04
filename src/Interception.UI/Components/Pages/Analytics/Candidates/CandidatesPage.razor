@@ -2,6 +2,7 @@
 @using Interception.UI.Components.Pages.Analytics.Candidates.Drawers
 @using Interception.UI.Components.Pages.Analytics.Toolbar
 @using Interception.UI.Domain.Enums
+@using Interception.UI.Extensions
 
 <PageTitle>Групи на розгляд</PageTitle>
 
@@ -141,7 +142,7 @@
                                 <td class="small text-muted">@group.Refs.Count</td>
                                 @if (_activeTab != CandidateGroupStatus.Open)
                                 {
-                                    <td class="small text-muted text-nowrap">@group.ResolvedBy · @group.ResolvedAt?.ToString("dd.MM.yy")</td>
+                                    <td class="small text-muted text-nowrap">@group.ResolvedBy · @(group.ResolvedAt is null ? "—" : ConverterDateTimeExtensions.ToDisplay(group.ResolvedAt.Value).ToString("dd.MM.yy"))</td>
                                 }
                                 <td class="text-end p-2 text-nowrap">
                                     <button class="btn btn-secondary btn-sm"
