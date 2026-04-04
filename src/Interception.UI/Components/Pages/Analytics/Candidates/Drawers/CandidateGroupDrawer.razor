@@ -1,4 +1,5 @@
 @using Interception.UI.Domain.Enums
+@using Interception.UI.Extensions
 
 <Drawer IsOpen="@IsOpen"
         IsOpenChanged="IsOpenChanged"
@@ -37,7 +38,7 @@
                         @if (Group.ResolvedBy is not null)
                         {
                             <span class="text-muted ms-1">
-                                — @Group.ResolvedBy · @Group.ResolvedAt?.ToString("dd.MM.yy HH:mm")
+                                — @Group.ResolvedBy · @(Group.ResolvedAt is null ? "—" : ConverterDateTimeExtensions.ToDisplay(Group.ResolvedAt.Value).ToString("dd.MM.yy HH:mm"))
                             </span>
                         }
                         @if (Group.Status == CandidateGroupStatus.Confirmed)
@@ -253,14 +254,14 @@
                                     <td class="text-nowrap text-muted">
                                         @if (r.FirstObservedDate == r.LastObservedDate)
                                         {
-                                            @r.FirstObservedDate.ToString("dd.MM.yy HH:mm")
+                                            @ConverterDateTimeExtensions.ToDisplay(r.FirstObservedDate).ToString("dd.MM.yy HH:mm")
                                         }
                                         else
                                         {
                                             <span>
-                                                @r.FirstObservedDate.ToString("dd.MM.yy HH:mm")
+                                                @ConverterDateTimeExtensions.ToDisplay(r.FirstObservedDate).ToString("dd.MM.yy HH:mm")
                                                 —
-                                                @r.LastObservedDate.ToString("dd.MM.yy HH:mm")
+                                                @ConverterDateTimeExtensions.ToDisplay(r.LastObservedDate).ToString("dd.MM.yy HH:mm")
                                             </span>
                                         }
                                     </td>

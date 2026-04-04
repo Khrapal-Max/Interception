@@ -182,12 +182,12 @@ public partial class InterceptionFormDrawer : ComponentBase
             if (EditingId.HasValue)
             {
                 await InterceptionCommandService.UpdateAsync(EditingId.Value, _form);
-                Toasts.Success("Оновлено", $"Запис від {_form.ObservedDate:dd.MM HH:mm} оновлено.");
+                Toasts.Success("Оновлено", $"Запис від {ConverterDateTimeExtensions.ToDisplay(_form.ObservedDate):dd.MM HH:mm} оновлено.");
             }
             else
             {
                 await InterceptionCommandService.CreateAsync(_form, "operator");
-                Toasts.Success("Збережено", $"Запис від {_form.ObservedDate:dd.MM HH:mm} створено.");
+                Toasts.Success("Збережено", $"Запис від {ConverterDateTimeExtensions.ToDisplay(_form.ObservedDate):dd.MM HH:mm} створено.");
             }
 
             await CloseAsync();

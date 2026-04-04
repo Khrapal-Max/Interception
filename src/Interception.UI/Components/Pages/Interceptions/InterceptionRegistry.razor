@@ -1,6 +1,7 @@
 @page "/observations"
 @using Interception.UI.Application.Exports.Models
 @using Interception.UI.Components.Pages.Interceptions.Drawers
+@using Interception.UI.Extensions
 
 <PageTitle>Реєстр спостережень</PageTitle>
 
@@ -82,7 +83,7 @@
                         @foreach (var item in _pagedResult.Items)
                         {
                             <tr>
-                                <td class="text-nowrap">@item.ObservedDate.ToString("dd.MM.yy HH:mm")</td>
+                                <td class="text-nowrap">@ConverterDateTimeExtensions.ToDisplay(item.ObservedDate).ToString("dd.MM.yy HH:mm")</td>
                                 <td>@(item.Frequency ?? "—")</td>
                                 <td>@(item.Division ?? "—")</td>
                                 <td>

@@ -26,8 +26,8 @@ public partial class InterceptionFilterDrawer : ComponentBase
     private bool _freqOpen;
     private bool _vecOpen;
 
-    private string? DateFromStr => _model.DateFrom?.ToString("yyyy-MM-ddTHH:mm");
-    private string? DateToStr => _model.DateTo?.ToString("yyyy-MM-ddTHH:mm");
+    private string? DateFromStr => _model.DateFrom.HasValue ? ConverterDateTimeExtensions.Format(_model.DateFrom.Value) : null;
+    private string? DateToStr => _model.DateTo.HasValue ? ConverterDateTimeExtensions.Format(_model.DateTo.Value) : null;
 
     protected override async Task OnParametersSetAsync()
     {

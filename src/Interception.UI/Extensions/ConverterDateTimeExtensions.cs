@@ -38,9 +38,7 @@ public static class ConverterDateTimeExtensions
     /// Конвертує UTC значення з БД в локальний час для відображення у datetime-local інпуті.
     /// </summary>
     public static DateTime ToDisplay(DateTime utcValue)
-        => utcValue.Kind == DateTimeKind.Utc
-            ? utcValue.ToLocalTime()
-            : utcValue;
+        => ToUtc(utcValue).ToLocalTime();
 
     /// <summary>
     /// Форматує DateTime для datetime-local інпута (yyyy-MM-ddTHH:mm).
