@@ -4,6 +4,7 @@
 
 using Interception.UI.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Interception.UI.Infrastructure;
 
@@ -25,5 +26,36 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        ApplyUtcDateTimeConverters(modelBuilder);
     }
+
+    private static void ApplyUtcDateTimeConverters(ModelBuilder modelBuilder)
+    {
+        var utcConverter = new ValueConverter<DateTime, DateTime>(
+            toDb => ToUtc(toDb),
+            fromDb => DateTime.SpecifyKind(fromDb, DateTimeKind.Utc));
+
+        var nullableUtcConverter = new ValueConverter<DateTime?, DateTime?>(
+            toDb => toDb.HasValue ? ToUtc(toDb.Value) : toDb,
+            fromDb => fromDb.HasValue ? DateTime.SpecifyKind(fromDb.Value, DateTimeKind.Utc) : fromDb);
+
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateTime))
+                    property.SetValueConverter(utcConverter);
+                else if (property.ClrType == typeof(DateTime?))
+                    property.SetValueConverter(nullableUtcConverter);
+            }
+        }
+    }
+
+    private static DateTime ToUtc(DateTime value) => value.Kind switch
+    {
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        DateTimeKind.Unspecified => DateTime.SpecifyKind(value, DateTimeKind.Local).ToUniversalTime(),
+        _ => value.ToUniversalTime()
+    };
 }
