@@ -322,6 +322,46 @@ public sealed class LinkMapServiceTests
     }
 
     [Fact]
+    public async Task BuildAsync_DoesNotBuildBridge_WhenObservationHasCenterToForeignMember()
+    {
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+        var ct = TestContext.Current.CancellationToken;
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var action = InterceptionAction.Create("доповідь", string.Empty);
+            db.InterceptionActions.Add(action);
+
+            SeedTwoIndependentGroupsWithBridge(db, action, includeSecondBridgeFrequency: false);
+
+            var centerToMember = CreateMessage(
+                action,
+                new DateTime(2026, 03, 28, 12, 7, 0, DateTimeKind.Utc),
+                division: null,
+                frequency: "401.2000");
+            centerToMember.AddParticipant("А-ЦЕНТР", false, "координатор", 1);
+            centerToMember.AddParticipant("Б-1", false, "оператор", 2);
+
+            db.InterceptionMessages.Add(centerToMember);
+            await db.SaveChangesAsync(ct);
+        }
+
+        var result = await service.BuildAsync(ct: CancellationToken.None);
+
+        result.Groups.Should().HaveCount(2);
+
+        var groupA = result.Groups.Single(x => x.KeyPersonName == "А-ЦЕНТР");
+        var groupB = result.Groups.Single(x => x.KeyPersonName == "Б-ЦЕНТР");
+
+        groupA.Bridges.Should().ContainSingle("міст має враховувати лише observation, де присутні центри обох груп");
+        groupB.Bridges.Should().ContainSingle("міст має враховувати лише observation, де присутні центри обох груп");
+
+        groupA.Bridges.Single().Weight.Should().Be(2);
+        groupB.Bridges.Single().Weight.Should().Be(2);
+    }
+
+    [Fact]
     public async Task BuildAsync_ReturnsPrimaryActionForGroup_WhenGroupHasDominantAction()
     {
         var factory = TestDbFactory.CreateFactory();

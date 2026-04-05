@@ -285,6 +285,13 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
                 x => x.Select(y => y.GroupKey).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
                 StringComparer.OrdinalIgnoreCase);
 
+        var groupCenterByKey = groups.Values
+            .Where(group => !string.IsNullOrWhiteSpace(group.KeyPersonName))
+            .ToDictionary(
+                group => group.GroupKey,
+                group => group.KeyPersonName,
+                StringComparer.OrdinalIgnoreCase);
+
         var bridgeMap = new Dictionary<string, PairBridgeAccumulator>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var row in messageRows)
@@ -302,6 +309,12 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
 
                 foreach (var groupKey in groupKeys)
                 {
+                    if (!groupCenterByKey.TryGetValue(groupKey, out var groupCenter)
+                        || !string.Equals(participant.Name, groupCenter, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
                     if (!groupContacts.TryGetValue(groupKey, out var contacts))
                     {
                         contacts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
