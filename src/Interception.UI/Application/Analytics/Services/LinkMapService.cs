@@ -221,9 +221,14 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
                     .Select(name => people[name])
                     .ToList();
 
+                var explicitCenterCount = componentPeople
+                    .Count(person => person.Name.Contains("ЦЕНТР", StringComparison.OrdinalIgnoreCase));
+                if (explicitCenterCount > 1)
+                    continue;
+
                 var centerCandidateCount = componentPeople
                     .Count(person => IsCenterCandidate(person.Name, person.Role));
-                if (centerCandidateCount > 1)
+                if (explicitCenterCount == 0 && centerCandidateCount > 1)
                     continue;
 
                 var inferredDivision = componentRows
