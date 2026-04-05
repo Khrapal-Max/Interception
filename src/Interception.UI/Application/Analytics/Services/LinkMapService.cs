@@ -221,6 +221,11 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
                     .Select(name => people[name])
                     .ToList();
 
+                var centerCandidateCount = componentPeople
+                    .Count(person => IsCenterCandidate(person.Name, person.Role));
+                if (centerCandidateCount > 1)
+                    continue;
+
                 var inferredDivision = componentRows
                     .Where(row => row.KnownParticipants.Any(p => component.Contains(p.Name)))
                     .Select(row => row.EffectiveDivision)
