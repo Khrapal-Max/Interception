@@ -30,9 +30,12 @@ public interface IInterceptionSuggestionService
 
     /// <summary>
     /// Повертає підказки для відомих учасників.
+    /// Мінімальний профіль ризику: частота + name + division.
     /// </summary>
     Task<IReadOnlyList<ParticipantSuggestionDto>> GetParticipantSuggestionsAsync(
         string? query = null,
+        string? frequency = null,
+        string? division = null,
         int take = 15,
         CancellationToken ct = default);
 }

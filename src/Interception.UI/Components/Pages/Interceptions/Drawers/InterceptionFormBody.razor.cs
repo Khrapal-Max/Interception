@@ -13,10 +13,6 @@ namespace Interception.UI.Components.Pages.Interceptions.Drawers;
 
 public partial class InterceptionFormBody : ComponentBase
 {
-    // -------------------------------------------------------------------------
-    // Parameters
-    // -------------------------------------------------------------------------
-
     [Parameter, EditorRequired]
     public InterceptionFormDto Form { get; set; } = default!;
 
@@ -27,24 +23,13 @@ public partial class InterceptionFormBody : ComponentBase
     [Parameter] public EventCallback<string?> OnFrequencySearch { get; set; }
     [Parameter] public EventCallback<FrequencySuggestionDto> OnFrequencySelected { get; set; }
     [Parameter] public EventCallback<string?> OnVectorSearch { get; set; }
-    [Parameter] public Func<string?, Task<IReadOnlyList<ParticipantSuggestionDto>>>? OnParticipantSearch { get; set; }
-
-    // -------------------------------------------------------------------------
-    // Стан autocomplete
-    // -------------------------------------------------------------------------
+    [Parameter] public Func<string?, string?, string?, Task<IReadOnlyList<ParticipantSuggestionDto>>>? OnParticipantSearch { get; set; }
 
     private bool _freqOpen;
     private bool _vecOpen;
-
-    // Які поля імені учасників зараз відкриті (ключ = Ordinal)
     private readonly HashSet<int> _participantOpen = [];
-
     private readonly Dictionary<int, IReadOnlyList<ParticipantSuggestionDto>> _participantSuggestions = [];
     private string? _newLabel;
-
-    // -------------------------------------------------------------------------
-    // Дата
-    // -------------------------------------------------------------------------
 
     private void OnObservedDateChange(ChangeEventArgs e)
     {
@@ -53,19 +38,11 @@ public partial class InterceptionFormBody : ComponentBase
             Form.ObservedDate = parsed.Value;
     }
 
-    // -------------------------------------------------------------------------
-    // Дія
-    // -------------------------------------------------------------------------
-
     private void OnActionChange(ChangeEventArgs e)
     {
         if (Guid.TryParse(e.Value?.ToString(), out var id))
             Form.InterceptionActionId = id;
     }
-
-    // -------------------------------------------------------------------------
-    // Частота
-    // -------------------------------------------------------------------------
 
     private async Task OnFrequencyInput(ChangeEventArgs e)
     {
@@ -94,10 +71,6 @@ public partial class InterceptionFormBody : ComponentBase
         await OnFrequencySelected.InvokeAsync(s);
     }
 
-    // -------------------------------------------------------------------------
-    // Вектор
-    // -------------------------------------------------------------------------
-
     private async Task OnVectorInput(ChangeEventArgs e)
     {
         Form.VectorSignal = e.Value?.ToString();
@@ -112,10 +85,6 @@ public partial class InterceptionFormBody : ComponentBase
     }
 
     private void OnVectorBlur() => _vecOpen = false;
-
-    // -------------------------------------------------------------------------
-    // Учасники — autocomplete
-    // -------------------------------------------------------------------------
 
     private void AddParticipant()
     {
@@ -155,7 +124,7 @@ public partial class InterceptionFormBody : ComponentBase
             return;
         }
 
-        _participantSuggestions[p.Ordinal] = await OnParticipantSearch(value);
+        _participantSuggestions[p.Ordinal] = await OnParticipantSearch(value, Form.Frequency, Form.Division);
         _participantOpen.Add(p.Ordinal);
     }
 
@@ -166,12 +135,46 @@ public partial class InterceptionFormBody : ComponentBase
         if (OnParticipantSearch is null || string.IsNullOrWhiteSpace(value) || p.IsUnknown)
             return;
 
-        var suggestions = await OnParticipantSearch(value);
-        var matched = suggestions.FirstOrDefault(x =>
-            string.Equals(x.Name, value.Trim(), StringComparison.OrdinalIgnoreCase));
+        var suggestions = await OnParticipantSearch(value, Form.Frequency, Form.Division);
+        _participantSuggestions[p.Ordinal] = suggestions;
 
-        if (matched is not null && !string.IsNullOrWhiteSpace(matched.Role))
-            p.Role = matched.Role;
+        var typedName = value.Trim();
+
+        var exact = suggestions
+            .Where(x => string.Equals(x.Name, typedName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var exactWithContext = exact
+            .Where(x => ContextMatchesSuggestion(x, Form.Frequency, Form.Division))
+            .ToList();
+
+        if (exactWithContext.Count == 1)
+        {
+            ApplyParticipantSuggestion(p, exactWithContext[0]);
+            return;
+        }
+
+        if (exactWithContext.Count == 0 && exact.Count == 1)
+        {
+            ApplyParticipantSuggestion(p, exact[0]);
+            return;
+        }
+
+        if (exact.Count > 1 || exactWithContext.Count > 1)
+            _participantOpen.Add(p.Ordinal);
+    }
+
+    private static bool ContextMatchesSuggestion(ParticipantSuggestionDto suggestion, string? frequency, string? division)
+    {
+        if (!string.IsNullOrWhiteSpace(frequency)
+            && !string.Equals(suggestion.Frequency, frequency, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(division)
+            && !string.Equals(suggestion.Division, division, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return true;
     }
 
     private void CloseParticipantSuggestions(int ordinal)
@@ -182,13 +185,16 @@ public partial class InterceptionFormBody : ComponentBase
         p.Name = s.Name;
         p.Role = s.Role;
         p.IsUnknown = false;
+
+        if (string.IsNullOrWhiteSpace(Form.Division) && !string.IsNullOrWhiteSpace(s.Division))
+            Form.Division = s.Division;
+
+        if (string.IsNullOrWhiteSpace(Form.Frequency) && !string.IsNullOrWhiteSpace(s.Frequency))
+            Form.Frequency = s.Frequency;
+
         _participantSuggestions.Remove(p.Ordinal);
         _participantOpen.Remove(p.Ordinal);
     }
-
-    // -------------------------------------------------------------------------
-    // Мітки
-    // -------------------------------------------------------------------------
 
     private void AddLabel()
     {

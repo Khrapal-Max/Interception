@@ -158,8 +158,8 @@ public partial class InterceptionFormDrawer : ComponentBase
         await InvokeAsync(StateHasChanged);
     }
 
-    internal Task<IReadOnlyList<ParticipantSuggestionDto>> SearchParticipantsAsync(string? query)
-        => InterceptionSuggestionService.GetParticipantSuggestionsAsync(query);
+    internal Task<IReadOnlyList<ParticipantSuggestionDto>> SearchParticipantsAsync(string? query, string? frequency, string? division)
+        => InterceptionSuggestionService.GetParticipantSuggestionsAsync(query, frequency, division);
 
     // -------------------------------------------------------------------------
     // Save / Close

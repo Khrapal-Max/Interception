@@ -149,9 +149,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         if (participant.IsUnknown || string.IsNullOrWhiteSpace(value))
             return;
 
-        var suggestions = await InterceptionSuggestionService.GetParticipantSuggestionsAsync(value.Trim());
-        var matched = suggestions.FirstOrDefault(x =>
-            string.Equals(x.Name, value.Trim(), StringComparison.OrdinalIgnoreCase));
+        var matched = await ResolveParticipantSuggestionAsync(value.Trim());
 
         if (matched is not null && !string.IsNullOrWhiteSpace(matched.Role))
             participant.Role = matched.Role;
@@ -224,12 +222,47 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         if (string.IsNullOrWhiteSpace(participant.Name))
             return;
 
-        var suggestions = await InterceptionSuggestionService.GetParticipantSuggestionsAsync(participant.Name.Trim());
-        var matched = suggestions.FirstOrDefault(x =>
-            string.Equals(x.Name, participant.Name.Trim(), StringComparison.OrdinalIgnoreCase));
+        var matched = await ResolveParticipantSuggestionAsync(participant.Name.Trim());
 
         if (matched is not null && !string.IsNullOrWhiteSpace(matched.Role))
             participant.Role = matched.Role;
+    }
+
+    private async Task<ParticipantSuggestionDto?> ResolveParticipantSuggestionAsync(string name)
+    {
+        var suggestions = await InterceptionSuggestionService.GetParticipantSuggestionsAsync(
+            name,
+            _form?.Frequency,
+            _form?.Division);
+
+        var exact = suggestions
+            .Where(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var exactWithContext = exact
+            .Where(x => ContextMatchesSuggestion(x, _form?.Frequency, _form?.Division))
+            .ToList();
+
+        if (exactWithContext.Count == 1)
+            return exactWithContext[0];
+
+        if (exactWithContext.Count == 0 && exact.Count == 1)
+            return exact[0];
+
+        return null;
+    }
+
+    private static bool ContextMatchesSuggestion(ParticipantSuggestionDto suggestion, string? frequency, string? division)
+    {
+        if (!string.IsNullOrWhiteSpace(frequency)
+            && !string.Equals(suggestion.Frequency, frequency, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(division)
+            && !string.Equals(suggestion.Division, division, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return true;
     }
 
     // -------------------------------------------------------------------------

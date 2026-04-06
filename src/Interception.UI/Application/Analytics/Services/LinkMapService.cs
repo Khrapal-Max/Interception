@@ -270,6 +270,7 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
     /// <summary>
     /// Додає міжгрупові мости через observation, у яких одночасно присутні учасники з різних груп.
     /// </summary>
+    // Replace only ApplyBridges(...) in LinkMapService.cs with this version.
     private static void ApplyBridges(
         IReadOnlyDictionary<string, GroupAccumulator> groups,
         IReadOnlyList<MessageRow> messageRows)
@@ -277,20 +278,15 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
         if (groups.Count < 2)
             return;
 
-        var personToGroupKeys = groups.Values
-            .SelectMany(group => group.Members.Select(member => new { Member = member, group.GroupKey }))
-            .GroupBy(x => x.Member, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                x => x.Key,
-                x => x.Select(y => y.GroupKey).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
-                StringComparer.OrdinalIgnoreCase);
-
-        var groupCenterByKey = groups.Values
+        var bridgeGroups = groups.Values
             .Where(group => !string.IsNullOrWhiteSpace(group.KeyPersonName))
-            .ToDictionary(
-                group => group.GroupKey,
-                group => group.KeyPersonName,
-                StringComparer.OrdinalIgnoreCase);
+            .Select(group => new
+            {
+                group.GroupKey,
+                group.Division,
+                CenterName = group.KeyPersonName.Trim()
+            })
+            .ToList();
 
         var bridgeMap = new Dictionary<string, PairBridgeAccumulator>(StringComparer.OrdinalIgnoreCase);
 
@@ -300,33 +296,18 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
             if (frequency is null)
                 continue;
 
-            var groupContacts = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            var centerParticipantsInRow = row.KnownParticipants
+                .Where(p => IsCenterCandidate(p.Name, p.Role))
+                .Select(p => p.Name)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var participant in row.KnownParticipants)
-            {
-                if (!personToGroupKeys.TryGetValue(participant.Name, out var groupKeys))
-                    continue;
+            if (centerParticipantsInRow.Count < 2)
+                continue;
 
-                foreach (var groupKey in groupKeys)
-                {
-                    if (!groupCenterByKey.TryGetValue(groupKey, out var groupCenter)
-                        || !string.Equals(participant.Name, groupCenter, StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    if (!groupContacts.TryGetValue(groupKey, out var contacts))
-                    {
-                        contacts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                        groupContacts[groupKey] = contacts;
-                    }
-
-                    contacts.Add(participant.Name);
-                }
-            }
-
-            var representedGroups = groupContacts.Keys
-                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            var representedGroups = bridgeGroups
+                .Where(group => centerParticipantsInRow.Contains(group.CenterName))
+                .OrderBy(group => group.GroupKey, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
             if (representedGroups.Count < 2)
@@ -336,19 +317,19 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
             {
                 for (var j = i + 1; j < representedGroups.Count; j++)
                 {
-                    var leftGroupKey = representedGroups[i];
-                    var rightGroupKey = representedGroups[j];
+                    var left = representedGroups[i];
+                    var right = representedGroups[j];
 
-                    if (!groups.TryGetValue(leftGroupKey, out var leftGroup)
-                        || !groups.TryGetValue(rightGroupKey, out var rightGroup))
+                    if (!groups.TryGetValue(left.GroupKey, out var leftGroup)
+                        || !groups.TryGetValue(right.GroupKey, out var rightGroup))
                     {
                         continue;
                     }
 
-                    var pairKey = BuildPairKey(leftGroupKey, rightGroupKey);
+                    var pairKey = BuildPairKey(left.GroupKey, right.GroupKey);
                     if (!bridgeMap.TryGetValue(pairKey, out var pairAccumulator))
                     {
-                        pairAccumulator = new PairBridgeAccumulator(leftGroupKey, rightGroupKey);
+                        pairAccumulator = new PairBridgeAccumulator(left.GroupKey, right.GroupKey);
                         bridgeMap[pairKey] = pairAccumulator;
                     }
 
@@ -362,12 +343,8 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
                     }
 
                     frequencyAccumulator.Weight++;
-
-                    foreach (var name in groupContacts[leftGroupKey])
-                        frequencyAccumulator.LeftContacts.Increment(name);
-
-                    foreach (var name in groupContacts[rightGroupKey])
-                        frequencyAccumulator.RightContacts.Increment(name);
+                    frequencyAccumulator.LeftContacts.Increment(left.CenterName);
+                    frequencyAccumulator.RightContacts.Increment(right.CenterName);
                 }
             }
         }
@@ -579,5 +556,27 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
         return name.Contains("ЦЕНТР", StringComparison.OrdinalIgnoreCase)
             || (!string.IsNullOrWhiteSpace(role)
                 && role.Contains("координ", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string? ExtractCenterFromGroupKey(string? groupKey)
+    {
+        if (string.IsNullOrWhiteSpace(groupKey))
+            return null;
+
+        var stablePart = groupKey;
+        var frequencySeparator = stablePart.IndexOf("::", StringComparison.Ordinal);
+        if (frequencySeparator >= 0)
+            stablePart = stablePart[(frequencySeparator + 2)..];
+
+        var firstPipe = stablePart.IndexOf('|');
+        if (firstPipe < 0)
+            return null;
+
+        var secondPipe = stablePart.IndexOf('|', firstPipe + 1);
+        if (secondPipe < 0)
+            return null;
+
+        var center = stablePart.Substring(firstPipe + 1, secondPipe - firstPipe - 1).Trim();
+        return string.IsNullOrWhiteSpace(center) ? null : center;
     }
 }

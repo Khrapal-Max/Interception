@@ -165,11 +165,23 @@
                                 <li class="autocomplete-item"
                                     @onmousedown:preventDefault
                                     @onmousedown="() => ApplyParticipantSuggestion(participant, s)">
-                                    <span class="font-monospace fw-semibold">@s.Name</span>
-                                    @if (!string.IsNullOrWhiteSpace(s.Role))
-                                    {
-                                        <span class="font-monospace fw-semibold ms-2">@s.Role</span>
-                                    }
+                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                        <div class="d-flex flex-column">
+                                            <span class="font-monospace fw-semibold">@s.Name</span>
+                                            <small class="text-muted">
+                                                @(string.IsNullOrWhiteSpace(s.Frequency) ? "частота не вказана" : s.Frequency)
+                                                @if (!string.IsNullOrWhiteSpace(s.Division))
+                                                {
+                                                    <span> · @s.Division</span>
+                                                }
+                                                @if (!string.IsNullOrWhiteSpace(s.Role))
+                                                {
+                                                    <span> · @s.Role</span>
+                                                }
+                                            </small>
+                                        </div>
+                                        <small class="text-muted text-nowrap">@s.SeenCount</small>
+                                    </div>
                                 </li>
                             }
                         </ul>

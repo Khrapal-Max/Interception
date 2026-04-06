@@ -322,7 +322,7 @@ public sealed class LinkMapServiceTests
     }
 
     [Fact]
-    public async Task BuildAsync_DoesNotBuildBridge_WhenObservationHasCenterToForeignMember()
+    public async Task BuildAsync_DoesNotCreateBridge_WhenOnlyCenterToForeignMemberExists()
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
@@ -333,32 +333,63 @@ public sealed class LinkMapServiceTests
             var action = InterceptionAction.Create("доповідь", string.Empty);
             db.InterceptionActions.Add(action);
 
-            SeedTwoIndependentGroupsWithBridge(db, action, includeSecondBridgeFrequency: false);
+            var a1 = CreateMessage(
+                action,
+                new DateTime(2026, 03, 28, 12, 0, 0, DateTimeKind.Utc),
+                division: null,
+                frequency: "402.0000");
+            a1.AddParticipant("А-ЦЕНТР", false, "координатор", 1);
+            a1.AddParticipant("А-1", false, "оператор", 2);
 
-            var centerToMember = CreateMessage(
+            var a2 = CreateMessage(
+                action,
+                new DateTime(2026, 03, 28, 12, 1, 0, DateTimeKind.Utc),
+                division: null,
+                frequency: "402.0000");
+            a2.AddParticipant("А-ЦЕНТР", false, "координатор", 1);
+            a2.AddParticipant("А-2", false, "оператор", 2);
+
+            var b1 = CreateMessage(
+                action,
+                new DateTime(2026, 03, 28, 12, 2, 0, DateTimeKind.Utc),
+                division: null,
+                frequency: "145.1000");
+            b1.AddParticipant("Б-ЦЕНТР", false, "координатор", 1);
+            b1.AddParticipant("Б-1", false, "оператор", 2);
+
+            var b2 = CreateMessage(
+                action,
+                new DateTime(2026, 03, 28, 12, 3, 0, DateTimeKind.Utc),
+                division: null,
+                frequency: "145.1000");
+            b2.AddParticipant("Б-ЦЕНТР", false, "координатор", 1);
+            b2.AddParticipant("Б-2", false, "оператор", 2);
+
+            var centerToForeignMember = CreateMessage(
                 action,
                 new DateTime(2026, 03, 28, 12, 7, 0, DateTimeKind.Utc),
                 division: null,
                 frequency: "401.2000");
-            centerToMember.AddParticipant("А-ЦЕНТР", false, "координатор", 1);
-            centerToMember.AddParticipant("Б-1", false, "оператор", 2);
+            centerToForeignMember.AddParticipant("А-ЦЕНТР", false, "координатор", 1);
+            centerToForeignMember.AddParticipant("Б-1", false, "оператор", 2);
 
-            db.InterceptionMessages.Add(centerToMember);
+            db.InterceptionMessages.AddRange(a1, a2, b1, b2, centerToForeignMember);
             await db.SaveChangesAsync(ct);
         }
 
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
-        result.Groups.Should().HaveCount(2);
+        result.Groups.Should().HaveCount(2,
+            "контакт центру однієї групи зі звичайним учасником іншої не створює окремий міжгруповий міст");
 
         var groupA = result.Groups.Single(x => x.KeyPersonName == "А-ЦЕНТР");
         var groupB = result.Groups.Single(x => x.KeyPersonName == "Б-ЦЕНТР");
 
-        groupA.Bridges.Should().ContainSingle("міст має враховувати лише observation, де присутні центри обох груп");
-        groupB.Bridges.Should().ContainSingle("міст має враховувати лише observation, де присутні центри обох груп");
+        groupA.Bridges.Should().BeEmpty(
+            "міст між групами можливий лише коли є observation з центрами обох груп");
 
-        groupA.Bridges.Single().Weight.Should().Be(2);
-        groupB.Bridges.Single().Weight.Should().Be(2);
+        groupB.Bridges.Should().BeEmpty(
+            "міст між групами можливий лише коли є observation з центрами обох груп");
     }
 
     [Fact]

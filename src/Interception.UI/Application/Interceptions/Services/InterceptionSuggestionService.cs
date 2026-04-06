@@ -83,6 +83,8 @@ public sealed class InterceptionSuggestionService(IDbContextFactory<AppDbContext
     /// <inheritdoc />
     public async Task<IReadOnlyList<ParticipantSuggestionDto>> GetParticipantSuggestionsAsync(
         string? query = null,
+        string? frequency = null,
+        string? division = null,
         int take = 15,
         CancellationToken ct = default)
     {
@@ -94,18 +96,82 @@ public sealed class InterceptionSuggestionService(IDbContextFactory<AppDbContext
         if (!string.IsNullOrWhiteSpace(query))
             q = q.Where(p => p.Name!.StartsWith(query));
 
-        return await q
-            .GroupBy(p => p.Name!)
-            .OrderByDescending(g => g.Count())
-            .Take(take)
-            .Select(g => new ParticipantSuggestionDto
-            {
-                Name = g.Key,
-                Role = g.Where(p => p.Role != null)
-                    .OrderByDescending(p => p.InterceptionMessage.ObservedDate)
-                    .Select(p => p.Role)
-                    .FirstOrDefault()
-            })
+        var rows = await q
+            .Select(p => new ParticipantSuggestionRow(
+                p.Name!,
+                p.Role,
+                p.InterceptionMessage.Frequency,
+                p.InterceptionMessage.Division,
+                p.InterceptionMessage.ObservedDate))
             .ToListAsync(ct);
+
+        var normalizedFrequency = NormalizeKey(frequency);
+        var normalizedDivision = NormalizeKey(division);
+
+        return [.. rows
+            .GroupBy(x => new ParticipantSuggestionKey(
+                NormalizeKey(x.Name),
+                NormalizeKey(x.Frequency),
+                NormalizeKey(x.Division)))
+            .Select(g =>
+            {
+                var role = g.Where(x => !string.IsNullOrWhiteSpace(x.Role))
+                    .GroupBy(x => NormalizeKey(x.Role))
+                    .OrderByDescending(x => x.Count())
+                    .ThenByDescending(x => x.Max(v => v.ObservedDate))
+                    .Select(x => x.First().Role)
+                    .FirstOrDefault();
+
+                var latestObservedDate = g.Max(x => x.ObservedDate);
+                var contextScore = 0;
+
+                if (!string.IsNullOrWhiteSpace(normalizedFrequency)
+                    && string.Equals(g.Key.Frequency, normalizedFrequency, StringComparison.Ordinal))
+                    contextScore += 2;
+
+                if (!string.IsNullOrWhiteSpace(normalizedDivision)
+                    && string.Equals(g.Key.Division, normalizedDivision, StringComparison.Ordinal))
+                    contextScore += 1;
+
+                return new ParticipantSuggestionProjection(
+                    new ParticipantSuggestionDto
+                    {
+                        Name = g.First().Name,
+                        Frequency = g.First().Frequency,
+                        Division = g.First().Division,
+                        Role = role,
+                        SeenCount = g.Count()
+                    },
+                    contextScore,
+                    latestObservedDate);
+            })
+            .OrderByDescending(x => x.ContextScore)
+            .ThenByDescending(x => x.Dto.SeenCount)
+            .ThenByDescending(x => x.LatestObservedDate)
+            .ThenBy(x => x.Dto.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Dto.Frequency, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Dto.Division, StringComparer.OrdinalIgnoreCase)
+            .Take(take)
+            .Select(x => x.Dto)];
     }
+
+    private static string NormalizeKey(string? value)
+        => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().ToUpperInvariant();
+
+    private sealed record ParticipantSuggestionRow(
+        string Name,
+        string? Role,
+        string? Frequency,
+        string? Division,
+        DateTime ObservedDate);
+
+    private sealed record ParticipantSuggestionKey(
+        string Name,
+        string Frequency,
+        string Division);
+
+    private sealed record ParticipantSuggestionProjection(
+        ParticipantSuggestionDto Dto,
+        int ContextScore,
+        DateTime LatestObservedDate);
 }
