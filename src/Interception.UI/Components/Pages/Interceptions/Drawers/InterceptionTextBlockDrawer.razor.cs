@@ -35,6 +35,8 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
     private InterceptionFormDto? _form = null;
     private string? _newLabel = null;
     private bool _saving;
+    private readonly HashSet<int> _participantOpen = [];
+    private readonly Dictionary<int, IReadOnlyList<ParticipantSuggestionDto>> _participantSuggestions = [];
 
     // -------------------------------------------------------------------------
     // Lifecycle
@@ -60,6 +62,8 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         _parsed = result;
         _form = BuildForm(result);
         _newLabel = null;
+        _participantOpen.Clear();
+        _participantSuggestions.Clear();
 
         await PopulateParticipantRolesAsync(_form);
     }
@@ -132,14 +136,40 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
             _form.InterceptionActionId = id;
     }
 
-    private static void OnUnknownToggle(ParticipantFormDto p, bool isUnknown)
+    private void OnUnknownToggle(ParticipantFormDto p, bool isUnknown)
     {
         p.IsUnknown = isUnknown;
         if (isUnknown)
         {
             p.Name = null;
             p.Role = null;
+            _participantSuggestions.Remove(p.Ordinal);
+            _participantOpen.Remove(p.Ordinal);
         }
+    }
+
+    private async Task OnParticipantNameInput(ParticipantFormDto participant, string? value)
+    {
+        participant.Name = value;
+
+        if (participant.IsUnknown || string.IsNullOrWhiteSpace(value))
+        {
+            _participantSuggestions.Remove(participant.Ordinal);
+            _participantOpen.Remove(participant.Ordinal);
+            return;
+        }
+
+        var suggestions = await InterceptionSuggestionService.GetParticipantSuggestionsAsync(
+            value,
+            _form?.Frequency,
+            _form?.Division);
+
+        _participantSuggestions[participant.Ordinal] = suggestions;
+
+        if (suggestions.Count > 0)
+            _participantOpen.Add(participant.Ordinal);
+        else
+            _participantOpen.Remove(participant.Ordinal);
     }
 
     private async Task OnParticipantNameChangedAsync(ParticipantFormDto participant, string? value)
@@ -149,10 +179,23 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         if (participant.IsUnknown || string.IsNullOrWhiteSpace(value))
             return;
 
-        var matched = await ResolveParticipantSuggestionAsync(value.Trim());
+        var suggestions = await InterceptionSuggestionService.GetParticipantSuggestionsAsync(
+            value.Trim(),
+            _form?.Frequency,
+            _form?.Division);
 
-        if (matched is not null && !string.IsNullOrWhiteSpace(matched.Role))
-            participant.Role = matched.Role;
+        _participantSuggestions[participant.Ordinal] = suggestions;
+
+        var matched = ResolveParticipantSuggestion(value.Trim(), suggestions);
+
+        if (matched is not null)
+        {
+            ApplyParticipantSuggestion(participant, matched);
+            return;
+        }
+
+        if (suggestions.Count > 0)
+            _participantOpen.Add(participant.Ordinal);
     }
 
     private void AddParticipant()
@@ -165,6 +208,16 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
             : _form.Participants.Max(p => p.Ordinal) + 1;
 
         _form.Participants.Add(new ParticipantFormDto { Ordinal = next, IsUnknown = true });
+    }
+
+    private void RemoveParticipant(ParticipantFormDto participant)
+    {
+        if (_form is null)
+            return;
+
+        _form.Participants.Remove(participant);
+        _participantSuggestions.Remove(participant.Ordinal);
+        _participantOpen.Remove(participant.Ordinal);
     }
 
     private void AddLabel()
@@ -222,47 +275,84 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         if (string.IsNullOrWhiteSpace(participant.Name))
             return;
 
-        var matched = await ResolveParticipantSuggestionAsync(participant.Name.Trim());
-
-        if (matched is not null && !string.IsNullOrWhiteSpace(matched.Role))
-            participant.Role = matched.Role;
-    }
-
-    private async Task<ParticipantSuggestionDto?> ResolveParticipantSuggestionAsync(string name)
-    {
         var suggestions = await InterceptionSuggestionService.GetParticipantSuggestionsAsync(
-            name,
+            participant.Name.Trim(),
             _form?.Frequency,
             _form?.Division);
 
+        _participantSuggestions[participant.Ordinal] = suggestions;
+
+        var matched = ResolveParticipantSuggestion(participant.Name.Trim(), suggestions);
+
+        if (matched is not null)
+        {
+            ApplyParticipantSuggestion(participant, matched);
+            return;
+        }
+
+        if (suggestions.Count > 0)
+            _participantOpen.Add(participant.Ordinal);
+    }
+
+    private ParticipantSuggestionDto? ResolveParticipantSuggestion(string name, IReadOnlyList<ParticipantSuggestionDto> suggestions)
+    {
         var exact = suggestions
             .Where(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        var exactWithContext = exact
-            .Where(x => ContextMatchesSuggestion(x, _form?.Frequency, _form?.Division))
+        var exactByFrequency = exact
+            .Where(x => FrequencyMatchesSuggestion(x, _form?.Frequency))
             .ToList();
 
-        if (exactWithContext.Count == 1)
-            return exactWithContext[0];
+        var exactByFullContext = exactByFrequency
+            .Where(x => DivisionMatchesSuggestion(x, _form?.Division))
+            .ToList();
 
-        if (exactWithContext.Count == 0 && exact.Count == 1)
+        if (exactByFullContext.Count == 1)
+            return exactByFullContext[0];
+
+        if (exactByFullContext.Count == 0 && exactByFrequency.Count == 1)
+            return exactByFrequency[0];
+
+        if (exactByFullContext.Count == 0 && exactByFrequency.Count == 0 && exact.Count == 1)
             return exact[0];
 
         return null;
     }
 
-    private static bool ContextMatchesSuggestion(ParticipantSuggestionDto suggestion, string? frequency, string? division)
+    private static bool FrequencyMatchesSuggestion(ParticipantSuggestionDto suggestion, string? frequency)
     {
-        if (!string.IsNullOrWhiteSpace(frequency)
-            && !string.Equals(suggestion.Frequency, frequency, StringComparison.OrdinalIgnoreCase))
-            return false;
+        if (string.IsNullOrWhiteSpace(frequency))
+            return true;
 
-        if (!string.IsNullOrWhiteSpace(division)
-            && !string.Equals(suggestion.Division, division, StringComparison.OrdinalIgnoreCase))
-            return false;
+        return string.Equals(suggestion.Frequency, frequency, StringComparison.OrdinalIgnoreCase);
+    }
 
-        return true;
+    private static bool DivisionMatchesSuggestion(ParticipantSuggestionDto suggestion, string? division)
+    {
+        if (string.IsNullOrWhiteSpace(division))
+            return true;
+
+        return string.Equals(suggestion.Division, division, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void CloseParticipantSuggestions(int ordinal)
+        => _participantOpen.Remove(ordinal);
+
+    private void ApplyParticipantSuggestion(ParticipantFormDto participant, ParticipantSuggestionDto suggestion)
+    {
+        participant.Name = suggestion.Name;
+        participant.Role = suggestion.Role;
+        participant.IsUnknown = false;
+
+        if (string.IsNullOrWhiteSpace(_form?.Division) && !string.IsNullOrWhiteSpace(suggestion.Division))
+            _form!.Division = suggestion.Division;
+
+        if (string.IsNullOrWhiteSpace(_form?.Frequency) && !string.IsNullOrWhiteSpace(suggestion.Frequency))
+            _form!.Frequency = suggestion.Frequency;
+
+        _participantSuggestions.Remove(participant.Ordinal);
+        _participantOpen.Remove(participant.Ordinal);
     }
 
     // -------------------------------------------------------------------------
@@ -307,6 +397,8 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         _parsed = null;
         _form = null;
         _newLabel = null;
+        _participantOpen.Clear();
+        _participantSuggestions.Clear();
     }
 
     private async Task CloseAsync()

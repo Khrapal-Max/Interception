@@ -1,130 +1,95 @@
 @using Interception.UI.Application.Interceptions.Dtos
-@using Interception.UI.Application.Interceptions.TextBlock
 @using Interception.UI.Components.Shared.Drawer
-@using Interception.UI.Domain
 @using Interception.UI.Extensions
-@namespace Interception.UI.Components.Pages.Interceptions.Drawers
+@using Interception.UI.Domain
+@using Microsoft.AspNetCore.Components.Web
 
-<Drawer IsOpen="@IsOpen"
-        IsOpenChanged="IsOpenChanged"
-        Title="Додати з тексту"
-        DisableClose="@_saving"
+<Drawer Title="Імпорт з тексту"
+        IsOpen="@IsOpen"
+        IsOpenChanged="@IsOpenChanged"
+        OnClosed="OnDrawerClosed"
+        Width="DrawerWidth.Large"
+        VerticalScroll="true"
         CloseOnBackdrop="true"
-        CloseOnEscape="true"
-        OnClosed="OnDrawerClosed">
+        CloseOnEscape="true">
+
     <ChildContent>
 
         @if (_parsed is null)
         {
-            <!-- Крок 1: вставка тексту -->
-            <div class="d-flex flex-column gap-3">
-                <div>
-                    <label class="form-label form-label-sm">Вставте текстовий блок</label>
-                    <textarea class="form-control font-monospace"
-                              rows="12"
-                              placeholder="21.03.2026, 09:15:50&#10;410.1370&#10;УКХ р/м ім. 3 кулб 69 обрп (р-н Маліївка - Січневе)&#10;ЗВЕЗДА&#10;ЦЫГАН, ПАНДА&#10;— діалог..."
-                              value="@_rawText"
-                              @oninput="e => { _rawText = e.Value?.ToString(); _parseError = null; }">
-                    </textarea>
-                    @if (_parseError is not null)
-                    {
-                        <div class="text-danger small mt-1">
-                            <i class="bi bi-exclamation-triangle me-1"></i>@_parseError
-                        </div>
-                    }
-                </div>
-                <div class="alert alert-light border small py-2 px-3 mb-0">
-                    <div class="fw-semibold mb-1">Очікуваний формат:</div>
-                    <div class="text-muted">
-                        Рядок 1: Дата, час &nbsp;·&nbsp;
-                        Рядок 2: Частота &nbsp;·&nbsp;
-                        Рядок 3: Р/М (вектор) &nbsp;·&nbsp;
-                        Рядок 4: Ініціатор &nbsp;·&nbsp;
-                        Рядок 5+: Відповідачі &nbsp;·&nbsp;
-                        Далі: діалог
-                    </div>
-                </div>
+            <div class="mb-2 small text-muted">
+                Вставте сирий текст перехоплення. Парсер спробує витягнути дату, частоту,
+                напрямок/вектор, можливий підрозділ та учасників.
             </div>
+
+            <textarea class="form-control font-monospace mb-2"
+                      rows="12"
+                      @bind="_rawText"></textarea>
+
+            @if (!string.IsNullOrWhiteSpace(_parseError))
+            {
+                <div class="alert alert-danger py-2 mb-0">@_parseError</div>
+            }
         }
-        else
+        else if (_form is not null)
         {
-            <!-- Крок 2: перевірка розпізнаного + вибір дії -->
             <div class="row g-2">
 
-                <div class="col-12">
-                    <button class="btn btn-link btn-sm p-0 text-muted"
-                            @onclick="() => _parsed = null">
-                        <i class="bi bi-arrow-left me-1"></i>Назад до тексту
-                    </button>
-                </div>
-
-                <!-- Дата та час -->
-                <div class="col-6">
-                    <label class="form-label form-label-sm">Дата та час</label>
-                    <input type="datetime-local" class="form-control form-control-sm"
-                           value="@(_form!.ObservedDate != default ? ConverterDateTimeExtensions.Format(_form.ObservedDate) : "")"
+                <!-- Дата/час -->
+                <div class="col-4">
+                    <label class="form-label form-label-sm">Дата/час</label>
+                    <input type="datetime-local"
+                           class="form-control form-control-sm"
+                           value="@ConverterDateTimeExtensions.ToInputString(_form.ObservedDate)"
                            @onchange="OnObservedDateChange" />
                 </div>
 
-                <!-- Дія — вводить оператор -->
-                <div class="col-6">
-                    <label class="form-label form-label-sm">
-                        Дія <span class="text-danger">*</span>
-                    </label>
-                    @if (Actions.Count == 0)
-                    {
-                        <div class="form-control form-control-sm text-muted"
-                             style="background:var(--bs-secondary-bg)">
-                            <span class="spinner-border spinner-border-sm me-1"></span>Завантаження…
-                        </div>
-                    }
-                    else
-                    {
-                        <select class="form-select form-select-sm"
-                                value="@_form.InterceptionActionId"
-                                @onchange="OnActionChange">
-                            <option value="@Guid.Empty">— оберіть дію —</option>
-                            @foreach (var action in Actions)
-                            {
-                                <option value="@action.Id">@action.Name</option>
-                            }
-                        </select>
-                    }
+                <!-- Дія -->
+                <div class="col-5">
+                    <label class="form-label form-label-sm">Дія</label>
+                    <select class="form-select form-select-sm"
+                            value="@_form.InterceptionActionId"
+                            @onchange="OnActionChange">
+                        <option value="@Guid.Empty">— оберіть дію —</option>
+                        @foreach (var action in Actions)
+                        {
+                            <option value="@action.Id">@action.Name</option>
+                        }
+                    </select>
                 </div>
 
                 <!-- Частота -->
-                <div class="col-6">
+                <div class="col-3">
                     <label class="form-label form-label-sm">Частота</label>
-                    <input type="text" class="form-control form-control-sm font-monospace"
+                    <input class="form-control form-control-sm"
                            value="@_form.Frequency"
                            @oninput="e => _form.Frequency = e.Value?.ToString()" />
                 </div>
 
-                <!-- Р/М -->
+                <!-- Підрозділ -->
                 <div class="col-6">
                     <label class="form-label form-label-sm">Р/М (підрозділ)</label>
-                    <input type="text" class="form-control form-control-sm"
+                    <input class="form-control form-control-sm"
                            value="@_form.Division"
                            @oninput="e => _form.Division = e.Value?.ToString()" />
                 </div>
 
                 <!-- Вектор -->
-                <div class="col-12">
+                <div class="col-6">
                     <label class="form-label form-label-sm">Вектор сигналу</label>
-                    <input type="text" class="form-control form-control-sm"
+                    <input class="form-control form-control-sm"
                            value="@_form.VectorSignal"
                            @oninput="e => _form.VectorSignal = e.Value?.ToString()" />
                 </div>
 
-                <!-- Учасники — показуємо розпізнаних, можна редагувати -->
                 <div class="col-12 mt-1">
-                        <div class="d-flex align-items-center justify-content-between mb-1">
-                            <label class="form-label form-label-sm mb-1">Учасники</label>
-                            <button type="button" class="btn btn-warning btn-sm py-0 mt-1"
-                                    @onclick="AddParticipant">
-                                <i class="bi bi-person-plus me-1"></i>Додати
-                            </button>
-                        </div>
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <label class="form-label form-label-sm mb-1">Учасники</label>
+                        <button type="button" class="btn btn-warning btn-sm py-0 mt-1"
+                                @onclick="AddParticipant">
+                            <i class="bi bi-person-plus me-1"></i>Додати
+                        </button>
+                    </div>
                     @foreach (var pt in _form.Participants.OrderBy(p => p.Ordinal))
                     {
                         var participant = pt;
@@ -139,13 +104,48 @@
                                            @onchange="e => OnUnknownToggle(participant, (bool)(e.Value ?? false))" />
                                 </div>
                             </div>
-                            <div class="col">
+                            <div class="col autocomplete-wrap">
                                 <input type="text" class="form-control form-control-sm"
                                        placeholder="@(participant.IsUnknown ? "НВ" : "Позивний")"
                                        disabled="@participant.IsUnknown"
                                        value="@participant.Name"
-                                       @oninput="e => participant.Name = e.Value?.ToString()"
-                                       @onchange="e => OnParticipantNameChangedAsync(participant, e.Value?.ToString())" />
+                                       autocomplete="off"
+                                       @oninput="e => OnParticipantNameInput(participant, e.Value?.ToString())"
+                                       @onchange="e => OnParticipantNameChangedAsync(participant, e.Value?.ToString())"
+                                       @onblur="() => CloseParticipantSuggestions(participant.Ordinal)" />
+
+                                @if (_participantOpen.Contains(participant.Ordinal)
+                                     && _participantSuggestions.TryGetValue(participant.Ordinal, out var sugs)
+                                     && sugs.Count > 0 && !participant.IsUnknown)
+                                {
+                                    <ul class="autocomplete-list">
+                                        @foreach (var suggestion in sugs.Take(6))
+                                        {
+                                            var item = suggestion;
+                                            <li class="autocomplete-item"
+                                                @onmousedown:preventDefault
+                                                @onmousedown="() => ApplyParticipantSuggestion(participant, item)">
+                                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                                    <div class="d-flex flex-column">
+                                                        <span class="font-monospace fw-semibold">@item.Name</span>
+                                                        <small class="text-muted">
+                                                            @(string.IsNullOrWhiteSpace(item.Frequency) ? "частота не вказана" : item.Frequency)
+                                                            @if (!string.IsNullOrWhiteSpace(item.Division))
+                                                            {
+                                                                <span> · @item.Division</span>
+                                                            }
+                                                            @if (!string.IsNullOrWhiteSpace(item.Role))
+                                                            {
+                                                                <span> · @item.Role</span>
+                                                            }
+                                                        </small>
+                                                    </div>
+                                                    <small class="text-muted text-nowrap">@item.SeenCount</small>
+                                                </div>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
                             </div>
                             <div class="col">
                                 <input type="text" class="form-control form-control-sm"
@@ -156,13 +156,13 @@
                             <div class="col-auto">
                                 <button type="button"
                                         class="btn btn-outline-danger btn-sm py-0 px-1"
-                                        @onclick="() => _form.Participants.Remove(participant)"
+                                        @onclick="() => RemoveParticipant(participant)"
                                         disabled="@(_form.Participants.Count <= 1)">
                                     <i class="bi bi-x"></i>
                                 </button>
                             </div>
                         </div>
-                    }                  
+                    }
                 </div>
 
                 <!-- Нотатка -->
@@ -173,43 +173,43 @@
                               @oninput="e => _form.Note = e.Value?.ToString()"></textarea>
                 </div>
 
-                    <!-- Мітки -->
-                    <div class="col-12 mt-1">
-                        <label class="form-label form-label-sm mb-1">Мітки</label>
+                <!-- Мітки -->
+                <div class="col-12 mt-1">
+                    <label class="form-label form-label-sm mb-1">Мітки</label>
 
-                        <div class="input-group input-group-sm mb-2">
-                            <input type="text"
-                                   class="form-control"
-                                   placeholder="Додати мітку"
-                                   value="@_newLabel"
-                                   @oninput="e => _newLabel = e.Value?.ToString()"
-                                   @onkeydown="OnLabelKeyDown" />
-                            <button type="button"
-                                    class="btn btn-outline-secondary"
-                                    @onclick="AddLabel"
-                                    disabled="@string.IsNullOrWhiteSpace(_newLabel)">
-                                <i class="bi bi-plus-lg me-1"></i>Додати
-                            </button>
-                        </div>
-
-                        @if (_form.Labels.Count > 0)
-                        {
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach (var label in _form.Labels)
-                                {
-                                    <span class="badge text-bg-secondary d-inline-flex align-items-center gap-1 px-2 py-2">
-                                        <span>@label</span>
-                                        <button type="button"
-                                                class="btn btn-sm btn-link text-white text-decoration-none p-0 border-0"
-                                                title="Видалити мітку"
-                                                @onclick="() => RemoveLabel(label)">
-                                            <i class="bi bi-x-lg"></i>
-                                        </button>
-                                    </span>
-                                }
-                            </div>
-                        }
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text"
+                               class="form-control"
+                               placeholder="Додати мітку"
+                               value="@_newLabel"
+                               @oninput="e => _newLabel = e.Value?.ToString()"
+                               @onkeydown="OnLabelKeyDown" />
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                @onclick="AddLabel"
+                                disabled="@string.IsNullOrWhiteSpace(_newLabel)">
+                            <i class="bi bi-plus-lg me-1"></i>Додати
+                        </button>
                     </div>
+
+                    @if (_form.Labels.Count > 0)
+                    {
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var label in _form.Labels)
+                            {
+                                <span class="badge text-bg-secondary d-inline-flex align-items-center gap-1 px-2 py-2">
+                                    <span>@label</span>
+                                    <button type="button"
+                                            class="btn btn-sm btn-link text-white text-decoration-none p-0 border-0"
+                                            title="Видалити мітку"
+                                            @onclick="() => RemoveLabel(label)">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </span>
+                            }
+                        </div>
+                    }
+                </div>
 
             </div>
         }
