@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Domain.Enums;
+using Interception.UI.Domain.Topology;
 using Interception.UI.Extensions;
 
 namespace Interception.UI.Domain;

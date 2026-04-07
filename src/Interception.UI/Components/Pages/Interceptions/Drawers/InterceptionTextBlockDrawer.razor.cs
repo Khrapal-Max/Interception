@@ -25,10 +25,6 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
     [Parameter] public IReadOnlyList<InterceptionAction> Actions { get; set; } = [];
     [Parameter] public EventCallback OnSaved { get; set; }
 
-    // -------------------------------------------------------------------------
-    // Стан
-    // -------------------------------------------------------------------------
-
     private string? _rawText = null;
     private string? _parseError = null;
     private TextBlockParseResult? _parsed = null;
@@ -38,24 +34,19 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
     private readonly HashSet<int> _participantOpen = [];
     private readonly Dictionary<int, IReadOnlyList<ParticipantSuggestionDto>> _participantSuggestions = [];
 
-    // -------------------------------------------------------------------------
-    // Lifecycle
-    // -------------------------------------------------------------------------
-
     private void OnDrawerClosed() => ResetState();
-
-    // -------------------------------------------------------------------------
-    // Крок 1 — парсинг
-    // -------------------------------------------------------------------------
 
     private async Task ParseAsync()
     {
         _parseError = null;
+
         var result = TextBlockParser.Parse(_rawText);
 
         if (!result.IsSuccess)
         {
             _parseError = result.Error;
+            _parsed = null;
+            _form = null;
             return;
         }
 
@@ -99,7 +90,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
 
         var observedDate = r.ObservedDate.HasValue
             ? ConverterDateTimeExtensions.ToUtc(r.ObservedDate.Value)
-            : ConverterDateTimeExtensions.ToDisplay(ConverterDateTimeExtensions.Now);
+            : ConverterDateTimeExtensions.Now;
 
         return new InterceptionFormDto
         {
@@ -112,10 +103,6 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
             Participants = participants,
         };
     }
-
-    // -------------------------------------------------------------------------
-    // Крок 2 — редагування форми
-    // -------------------------------------------------------------------------
 
     private void OnObservedDateChange(ChangeEventArgs e)
     {
@@ -136,15 +123,16 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
             _form.InterceptionActionId = id;
     }
 
-    private void OnUnknownToggle(ParticipantFormDto p, bool isUnknown)
+    private void OnUnknownToggle(ParticipantFormDto participant, bool isUnknown)
     {
-        p.IsUnknown = isUnknown;
+        participant.IsUnknown = isUnknown;
+
         if (isUnknown)
         {
-            p.Name = null;
-            p.Role = null;
-            _participantSuggestions.Remove(p.Ordinal);
-            _participantOpen.Remove(p.Ordinal);
+            participant.Name = null;
+            participant.Role = null;
+            _participantSuggestions.Remove(participant.Ordinal);
+            _participantOpen.Remove(participant.Ordinal);
         }
     }
 
@@ -187,7 +175,6 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         _participantSuggestions[participant.Ordinal] = suggestions;
 
         var matched = ResolveParticipantSuggestion(value.Trim(), suggestions);
-
         if (matched is not null)
         {
             ApplyParticipantSuggestion(participant, matched);
@@ -207,7 +194,11 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
             ? 1
             : _form.Participants.Max(p => p.Ordinal) + 1;
 
-        _form.Participants.Add(new ParticipantFormDto { Ordinal = next, IsUnknown = true });
+        _form.Participants.Add(new ParticipantFormDto
+        {
+            Ordinal = next,
+            IsUnknown = true
+        });
     }
 
     private void RemoveParticipant(ParticipantFormDto participant)
@@ -283,7 +274,6 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         _participantSuggestions[participant.Ordinal] = suggestions;
 
         var matched = ResolveParticipantSuggestion(participant.Name.Trim(), suggestions);
-
         if (matched is not null)
         {
             ApplyParticipantSuggestion(participant, matched);
@@ -294,7 +284,9 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
             _participantOpen.Add(participant.Ordinal);
     }
 
-    private ParticipantSuggestionDto? ResolveParticipantSuggestion(string name, IReadOnlyList<ParticipantSuggestionDto> suggestions)
+    private ParticipantSuggestionDto? ResolveParticipantSuggestion(
+        string name,
+        IReadOnlyList<ParticipantSuggestionDto> suggestions)
     {
         var exact = suggestions
             .Where(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase))
@@ -355,10 +347,6 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         _participantOpen.Remove(participant.Ordinal);
     }
 
-    // -------------------------------------------------------------------------
-    // Збереження
-    // -------------------------------------------------------------------------
-
     private async Task SaveAsync()
     {
         if (_form is null)
@@ -374,7 +362,9 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         try
         {
             await InterceptionCommandService.CreateAsync(_form, "operator");
-            Toasts.Success("Збережено", $"Запис від {ConverterDateTimeExtensions.ToDisplay(_form.ObservedDate):dd.MM HH:mm} створено.");
+            Toasts.Success(
+                "Збережено",
+                $"Запис від {ConverterDateTimeExtensions.ToDisplay(_form.ObservedDate):dd.MM HH:mm} створено.");
 
             ResetState();
             await CloseAsync();

@@ -7,6 +7,7 @@ using Interception.UI.Application.Analytics.Builders.LinkMap;
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
+using Interception.UI.Domain.Topology;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;

@@ -21,17 +21,6 @@ public static class MigrationExtensions
         var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var db = await factory.CreateDbContextAsync(ct);
 
-        if (db.Database.IsSqlite())
-        {
-            // Для SQLite-гілки bootstrap робимо без залежності від старих PostgreSQL migrations.
-            // Якщо в проекті лишився старий ModelSnapshot/Migrations, Migrate() може не створити таблиці.
-            await db.Database.EnsureCreatedAsync(ct);
-            logger.LogInformation("SQLite schema ensured successfully.");
-
-            await DatabaseSeedDefaults.EnsureActionSeedAsync(db, logger, ct);
-            return;
-        }
-
         var pending = await db.Database.GetPendingMigrationsAsync(ct);
         if (pending.Any())
         {
@@ -46,5 +35,4 @@ public static class MigrationExtensions
 
         await DatabaseSeedDefaults.EnsureActionSeedAsync(db, logger, ct);
     }
-
 }

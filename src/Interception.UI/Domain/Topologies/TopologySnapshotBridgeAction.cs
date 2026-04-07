@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Domain;
+namespace Interception.UI.Domain.Topology;
 
 /// <summary>
 /// Дія мосту snapshot-груп.

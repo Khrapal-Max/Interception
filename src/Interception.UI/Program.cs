@@ -66,6 +66,7 @@ builder.Services.AddScoped<IFrequencyDivisionService, FrequencyDivisionService>(
 // Нові candidate-сервіси
 builder.Services.AddScoped<ITopologySnapshotBuilder, TopologySnapshotBuilder>();
 builder.Services.AddScoped<ILinkMapService, LinkMapService>();
+builder.Services.AddScoped<IGroupHierarchyService, GroupHierarchyService>();
 builder.Services.AddScoped<IContextSuggestionService, ContextSuggestionService>();
 builder.Services.AddScoped<IFrequencyWeightReportService, FrequencyWeightReportService>();
 builder.Services.AddScoped<IKnownParticipantSuggestionService, KnownParticipantSuggestionService>();

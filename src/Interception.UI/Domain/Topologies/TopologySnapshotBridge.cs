@@ -4,7 +4,7 @@
 
 using Interception.UI.Extensions;
 
-namespace Interception.UI.Domain;
+namespace Interception.UI.Domain.Topology;
 
 /// <summary>
 /// Міст між двома snapshot-групами.

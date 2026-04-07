@@ -2,28 +2,30 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Domain;
+namespace Interception.UI.Domain.Topology;
 
 /// <summary>
-/// Частота snapshot-групи.
+/// Дія snapshot-групи.
 /// </summary>
-public sealed class TopologySnapshotGroupFrequency
+public sealed class TopologySnapshotGroupAction
 {
     public Guid Id { get; private set; } = Guid.NewGuid();
     public Guid GroupId { get; private set; }
     public TopologySnapshotGroup? Group { get; private set; }
-    public string Frequency { get; private set; } = string.Empty;
+    public string Name { get; private set; } = string.Empty;
+    public bool IsPrimary { get; private set; }
     public int SortOrder { get; private set; }
 
-    public static TopologySnapshotGroupFrequency Create(Guid groupId, string frequency, int sortOrder)
+    public static TopologySnapshotGroupAction Create(Guid groupId, string name, bool isPrimary, int sortOrder)
     {
-        if (string.IsNullOrWhiteSpace(frequency))
-            throw new ArgumentException("Frequency обов'язкова.", nameof(frequency));
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name обов'язкове.", nameof(name));
 
-        return new TopologySnapshotGroupFrequency
+        return new TopologySnapshotGroupAction
         {
             GroupId = groupId,
-            Frequency = frequency.Trim(),
+            Name = name.Trim(),
+            IsPrimary = isPrimary,
             SortOrder = sortOrder
         };
     }

@@ -68,7 +68,8 @@
 
 .tile-observations-main { background: linear-gradient(180deg, #2e6f8f, #285c78); }
 .tile-analytics-candidates { background: linear-gradient(180deg, #6f4d8b, #5a3f73); }
-.tile-analytics-linkmap { background: linear-gradient(180deg, #2f7a6e, #286459); }
+.tile-analytics-hierarchy{ background: linear-gradient(180deg, #4f6b87, #425873); }
+.tile-analytics-linkmap { background: linear-gradient(180deg, #2f7a6e, #286459);}
 .tile-analytics-weights { background: linear-gradient(180deg, #7b6740, #665435); }
 .tile-reports-divisions { background: linear-gradient(180deg, #7a5c35, #644b2c); }
 .tile-reports-day { background: linear-gradient(180deg, #5f7336, #4f612f); }

@@ -1,0 +1,280 @@
+@page "/analytics/group-hierarchy"
+@using Interception.UI.Components.Pages.Analytics.Toolbar
+
+<PageTitle>Аналітика — Ієрархія груп</PageTitle>
+
+<div class="page-shell group-hierarchy-page-shell">
+    <CandidatesToolbar ActiveSection="group-hierarchy">
+        <MetaContent>
+            <div class="d-flex flex-nowrap align-items-end gap-2">
+                <div>
+                    <label class="form-label small mb-1">Від</label>
+                    <input class="form-control form-control-sm rounded-0"
+                           type="date"
+                           value="@DateFromStr"
+                           @onchange="@(e => OnDateFromChanged(e.Value?.ToString()))" />
+                </div>
+
+                <div>
+                    <label class="form-label small mb-1">До</label>
+                    <input class="form-control form-control-sm rounded-0"
+                           type="date"
+                           value="@DateToStr"
+                           @onchange="@(e => OnDateToChanged(e.Value?.ToString()))" />
+                </div>
+
+                <div class="form-check form-switch mb-1 ms-1">
+                    <input class="form-check-input" type="checkbox" id="reviewOnly" @bind="_reviewOnly" />
+                    <label class="form-check-label small" for="reviewOnly">Лише з позначкою перевірки</label>
+                </div>
+            </div>
+        </MetaContent>
+        <ActionsContent>
+            <div class="registry-toolbar-meta">
+                Кластери: <strong>@VisibleClusters.Count</strong>
+            </div>
+            <button type="button"
+                    class="btn btn-secondary btn-sm rounded-0"
+                    @onclick="ResetPeriodAsync"
+                    disabled="@_loading">
+                7 днів
+            </button>
+            <button type="button"
+                    class="btn btn-success btn-sm rounded-0"
+                    @onclick="LoadAsync"
+                    disabled="@_loading">
+                @if (_loading)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                else
+                {
+                    <i class="bi bi-arrow-repeat me-1"></i>
+                }
+                Оновити
+            </button>
+        </ActionsContent>
+    </CandidatesToolbar>
+
+    <div class="page-panel group-hierarchy-shell">
+        @if (_loading)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-sm me-2"></div>Завантаження ієрархії…
+                </div>
+            </div>
+        }
+        else if (_map is null || VisibleClusters.Count == 0)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <i class="bi bi-diagram-3 fs-1 d-block mb-2 opacity-25"></i>
+                    <div>Ієрархічних кластерів за поточним періодом не знайдено</div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="row g-0 h-100 group-hierarchy-layout">
+                <div class="col-12 col-xxl-4 border-end d-flex flex-column min-h-0 left-pane">
+                    <div class="pane-head px-3 py-3 border-bottom">
+                        <h5 class="mb-1">Кластери груп</h5>
+                        <div class="small text-muted">Показує не межі, а підпорядковані контури всередині опорної групи</div>
+                    </div>
+
+                    <div class="px-3 py-3 border-bottom">
+                        <div class="row g-2 stats-grid">
+                            <div class="col-6">
+                                <div class="stats-card">
+                                    <div class="stats-label">Кореневі групи</div>
+                                    <div class="stats-value">@(_map.RootGroupCount)</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stats-card">
+                                    <div class="stats-label">Підлеглі контури</div>
+                                    <div class="stats-value">@(_map.ChildGroupCount)</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stats-card">
+                                    <div class="stats-label">Міжгрупові вузли</div>
+                                    <div class="stats-value">@(_map.CrossGroupNodeCount)</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stats-card @( _map.NeedsReviewCount > 0 ? "needs-review" : null)">
+                                    <div class="stats-label">Потрібно перевірити</div>
+                                    <div class="stats-value">@(_map.NeedsReviewCount)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-scroll px-2 py-2">
+                        @foreach (var cluster in VisibleClusters)
+                        {
+                            var selected = _selectedCluster?.ClusterKey == cluster.ClusterKey;
+                            var childCount = cluster.Nodes.Count - 1;
+                            <button type="button"
+                                    class="cluster-row @(selected ? "is-selected" : null)"
+                                    @onclick="() => SelectCluster(cluster)">
+                                <div class="cluster-row-top">
+                                    <div>
+                                        <div class="cluster-title">@cluster.Root.Title</div>
+                                        <div class="small text-muted">Центр: @cluster.Root.KeyPersonName</div>
+                                    </div>
+                                    @if (cluster.NeedsReview)
+                                    {
+                                        <span class="badge text-bg-warning">Перевірити</span>
+                                    }
+                                </div>
+                                <div class="cluster-row-meta small text-muted">
+                                    <span><i class="bi bi-diagram-3 me-1"></i>@childCount дочірніх</span>
+                                    <span>•</span>
+                                    <span><i class="bi bi-broadcast me-1"></i>@PrimaryFrequency(cluster.Root)</span>
+                                    <span>•</span>
+                                    <span><i class="bi bi-lightning-charge me-1"></i>@FriendlyAction(cluster.Root.PrimaryAction)</span>
+                                </div>
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <div class="col-12 col-xxl-8 d-flex flex-column min-h-0 right-pane">
+                    @if (_selectedCluster is null)
+                    {
+                        <div class="p-3 text-muted small">Оберіть кластер зліва.</div>
+                    }
+                    else
+                    {
+                        <div class="pane-head px-3 py-3 border-bottom d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                            <div>
+                                <h4 class="mb-1">Деталі кластера груп</h4>
+                                <div class="small text-muted">@_selectedCluster.Summary</div>
+                            </div>
+                            <div class="small text-muted">Вузлів: <strong>@_selectedCluster.Nodes.Count</strong></div>
+                        </div>
+
+                        <div class="panel-scroll px-3 py-3">
+                            <div class="row g-3">
+                                <div class="col-12 col-lg-6">
+                                    <div class="cluster-panel h-100">
+                                        <div class="cluster-panel-header">
+                                            <h5 class="mb-1">Дерево підпорядкування</h5>
+                                            <div class="small text-muted">Центр групи та вузли, що ведуть у дочірні контури</div>
+                                        </div>
+
+                                        <div class="cluster-tree">
+                                            <div class="tree-root-card">
+                                                <div class="tree-card-title">@_selectedCluster.Root.Title</div>
+                                                <div class="tree-card-sub">Центр групи: @_selectedCluster.Root.KeyPersonName</div>
+                                                <div class="tree-card-meta small text-muted">Дії: @FriendlyAction(_selectedCluster.Root.PrimaryAction)</div>
+                                            </div>
+
+                                            @foreach (var node in ChildNodes)
+                                            {
+                                                <div class="tree-child-row">
+                                                    <div class="tree-connector"></div>
+                                                    <div class="tree-child-card @(node.NeedsReview ? "needs-review" : null)">
+                                                        <div class="tree-card-title">@node.Title</div>
+                                                        <div class="tree-card-sub">у @ParentMemberLabel(node.GroupKey)</div>
+                                                        <div class="tree-card-meta small text-muted">
+                                                            <span>@node.KeyPersonName</span>
+                                                            <span>•</span>
+                                                            <span>@PrimaryFrequency(node)</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-lg-6">
+                                    <div class="cluster-panel h-100">
+                                        <div class="cluster-panel-header">
+                                            <h5 class="mb-1">Дії та контури</h5>
+                                            <div class="small text-muted">Оператор бачить дерево та зміст дочірніх груп</div>
+                                        </div>
+
+                                        <div class="table-responsive">
+                                            <table class="table table-sm align-middle data-table mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Група</th>
+                                                        <th>Типова дія</th>
+                                                        <th>Сигнал</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var row in _selectedCluster.ActionRows)
+                                                    {
+                                                        <tr>
+                                                            <td class="fw-semibold">@row.GroupTitle</td>
+                                                            <td>@FriendlyAction(row.PrimaryAction)</td>
+                                                            <td class="text-muted">@row.Signal</td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-lg-6">
+                                    <div class="cluster-panel h-100">
+                                        <div class="cluster-panel-header">
+                                            <h5 class="mb-1">Ключова логіка</h5>
+                                        </div>
+
+                                        <ul class="logic-list mb-0">
+                                            <li>Якщо учасник опорної групи є центром іншої стійкої групи — це кандидат на ієрархічний зв'язок.</li>
+                                            <li>Для кожної дочірньої групи обирається один основний батьківський контур, щоб не змішувати дерево.</li>
+                                            <li>Прямі міжцентрові мости залишаються в карті зв'язків і не замінюють підпорядкування.</li>
+                                            <li>@_selectedCluster.Summary</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-lg-6">
+                                    <div class="cluster-panel h-100">
+                                        <div class="cluster-panel-header">
+                                            <h5 class="mb-1">Що робити оператору</h5>
+                                            <div class="small text-muted">Три прості кроки без складної аналітики</div>
+                                        </div>
+
+                                        <div class="operator-steps">
+                                            <div class="operator-step">
+                                                <div class="operator-step-badge">Крок 1</div>
+                                                <div>
+                                                    <div class="fw-semibold">Вибрати опорну групу</div>
+                                                    <div class="small text-muted">Система показує, чи є в її складі центри інших груп.</div>
+                                                </div>
+                                            </div>
+                                            <div class="operator-step">
+                                                <div class="operator-step-badge">Крок 2</div>
+                                                <div>
+                                                    <div class="fw-semibold">Подивитися дочірні контури</div>
+                                                    <div class="small text-muted">Для кожного вузла видно власну групу, частоту та дію.</div>
+                                                </div>
+                                            </div>
+                                            <div class="operator-step">
+                                                <div class="operator-step-badge">Крок 3</div>
+                                                <div>
+                                                    <div class="fw-semibold">Перейти в карту зв'язків</div>
+                                                    <div class="small text-muted">Ієрархія не замінює мости між центрами, а доповнює їх.</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

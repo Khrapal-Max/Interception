@@ -44,6 +44,28 @@
             </NavLink>
         }
 
+
+        @if (ActiveSection == "group-hierarchy")
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/analytics/group-hierarchy"
+                     Match="NavLinkMatch.All"
+                     title="Ієрархія груп"
+                     aria-label="Ієрархія груп">
+                <i class="bi bi-diagram-3"></i>
+                <span class="visually-hidden">Ієрархія груп</span>
+            </NavLink>
+        }
+        else
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/analytics/group-hierarchy"
+                     title="Ієрархія груп"
+                     aria-label="Ієрархія груп">
+                <i class="bi bi-diagram-3"></i>
+                <span class="visually-hidden">Ієрархія груп</span>
+            </NavLink>
+        }
         @if (ActiveSection == "frequency-weights")
         {
             <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
