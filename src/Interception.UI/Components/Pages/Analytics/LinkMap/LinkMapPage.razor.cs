@@ -2,7 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using System.Globalization;
 using Interception.UI.Application.Analytics.Abstractions;
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Toasts;
@@ -18,10 +17,13 @@ namespace Interception.UI.Components.Pages.Analytics.LinkMap;
 public partial class LinkMapPage : ComponentBase
 {
     [Inject] private ILinkMapService LinkMapService { get; set; } = default!;
+    [Inject] private ITopologySnapshotBuilder TopologySnapshotBuilder { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
     protected LinkMapDto? _map;
+    protected TopologySnapshotStateDto? _snapshotState;
     protected bool _loading;
+    protected bool _rebuilding;
 
     protected DateTime? _dateFrom = ConverterDateTimeExtensions.Now.Date.AddDays(-6);
     protected DateTime? _dateTo = ConverterDateTimeExtensions.Now.Date;
@@ -39,6 +41,26 @@ public partial class LinkMapPage : ComponentBase
 
     protected IReadOnlyList<LinkMapGroupDto> VisibleGroups => BuildVisibleGroups(_map, _search, _sort, _strongOnly);
 
+    protected bool HasSnapshot => _snapshotState?.HasSnapshot == true;
+
+    protected string SnapshotStatusText => _snapshotState?.Status switch
+    {
+        "building" => "перебудова триває",
+        "failed" => "остання перебудова завершилась помилкою",
+        _ when _snapshotState?.HasSnapshot == true && _snapshotState.IsStale => "снапшот застарів",
+        _ when _snapshotState?.HasSnapshot == true => "снапшот актуальний",
+        _ => "снапшот ще не побудований"
+    };
+
+    protected string EmptyMessage => _snapshotState?.Status switch
+    {
+        "failed" => string.IsNullOrWhiteSpace(_snapshotState.ErrorMessage)
+            ? "Остання перебудова завершилась помилкою. Перебудуйте карту повторно."
+            : $"Остання перебудова завершилась помилкою: {_snapshotState.ErrorMessage}",
+        _ when _snapshotState?.HasSnapshot == true => "За поточним періодом груп не знайдено.",
+        _ => "Для поточного періоду snapshot ще не побудований. Натисніть «Перебудувати».",
+    };
+
     internal IReadOnlyList<FocusedLinkDto> FocusedLinks => BuildFocusedLinks(_selectedGroup, _map);
 
     protected override async Task OnInitializedAsync()
@@ -51,23 +73,10 @@ public partial class LinkMapPage : ComponentBase
 
         try
         {
-            if (_dateFrom.HasValue && _dateTo.HasValue && _dateFrom.Value.Date > _dateTo.Value.Date)
-            {
-                Toasts.Error("Некоректний період", "Дата «від» не може бути пізніше за дату «до»." );
-                _map = null;
-                _selectedGroup = null;
+            if (!TryGetUtcPeriod(out var dateFromUtc, out var dateToUtc))
                 return;
-            }
 
-            DateTime? dateFromUtc = null;
-            DateTime? dateToUtc = null;
-
-            if (_dateFrom.HasValue)
-                dateFromUtc = ConverterDateTimeExtensions.ToUtc(_dateFrom.Value.Date);
-
-            if (_dateTo.HasValue)
-                dateToUtc = ConverterDateTimeExtensions.ToUtc(_dateTo.Value.Date.AddDays(1).AddTicks(-1));
-
+            _snapshotState = await TopologySnapshotBuilder.GetStateAsync(dateFromUtc, dateToUtc, CancellationToken.None);
             _map = await LinkMapService.BuildAsync(dateFromUtc, dateToUtc, CancellationToken.None);
 
             if (_map.Groups.Count == 0)
@@ -90,11 +99,37 @@ public partial class LinkMapPage : ComponentBase
         {
             Toasts.Error("Помилка завантаження", ex.Message);
             _map = null;
+            _snapshotState = null;
             _selectedGroup = null;
         }
         finally
         {
             _loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    protected async Task RebuildSnapshotAsync()
+    {
+        if (!TryGetUtcPeriod(out var dateFromUtc, out var dateToUtc))
+            return;
+
+        _rebuilding = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var result = await TopologySnapshotBuilder.RebuildAsync(dateFromUtc, dateToUtc, CancellationToken.None);
+            Toasts.Success("Карту перебудовано", $"Збережено груп: {result.GroupCount}.");
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Toasts.Error("Помилка перебудови", ex.Message);
+        }
+        finally
+        {
+            _rebuilding = false;
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -110,7 +145,7 @@ public partial class LinkMapPage : ComponentBase
         _search = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
         if (_selectedGroup is not null && !VisibleGroups.Any(x => x.GroupKey == _selectedGroup.GroupKey))
-            _selectedGroup = VisibleGroups.FirstOrDefault();
+            _selectedGroup = VisibleGroups[0];
     }
 
     protected async Task ResetPeriodAsync()
@@ -149,7 +184,7 @@ public partial class LinkMapPage : ComponentBase
     }
 
     protected static string PrimaryFrequency(LinkMapGroupDto group)
-        => group.Frequencies.FirstOrDefault() ?? "—";
+        => group.Frequencies[0] ?? "—";
 
     protected static string FriendlyAction(string? value)
         => string.IsNullOrWhiteSpace(value) ? "дія не визначена" : value;
@@ -173,6 +208,29 @@ public partial class LinkMapPage : ComponentBase
             >= 20m => "is-medium",
             _ => "is-weak"
         };
+
+    private bool TryGetUtcPeriod(out DateTime? dateFromUtc, out DateTime? dateToUtc)
+    {
+        dateFromUtc = null;
+        dateToUtc = null;
+
+        if (_dateFrom.HasValue && _dateTo.HasValue && _dateFrom.Value.Date > _dateTo.Value.Date)
+        {
+            Toasts.Error("Некоректний період", "Дата «від» не може бути пізніше за дату «до».");
+            _map = null;
+            _snapshotState = null;
+            _selectedGroup = null;
+            return false;
+        }
+
+        if (_dateFrom.HasValue)
+            dateFromUtc = ConverterDateTimeExtensions.ToUtc(_dateFrom.Value.Date);
+
+        if (_dateTo.HasValue)
+            dateToUtc = ConverterDateTimeExtensions.ToUtc(_dateTo.Value.Date.AddDays(1).AddTicks(-1));
+
+        return true;
+    }
 
     private static List<LinkMapGroupDto> BuildVisibleGroups(
         LinkMapDto? map,

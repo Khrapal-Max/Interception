@@ -22,6 +22,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<MessageGroup> MessageGroups { get; init; }
     public DbSet<ParticipantMatrix> ParticipantMatrices { get; init; }
 
+    public DbSet<TopologySnapshotRun> TopologySnapshotRuns { get; init; }
+    public DbSet<TopologySnapshotGroup> TopologySnapshotGroups { get; init; }
+    public DbSet<TopologySnapshotGroupFrequency> TopologySnapshotGroupFrequencies { get; init; }
+    public DbSet<TopologySnapshotGroupMember> TopologySnapshotGroupMembers { get; init; }
+    public DbSet<TopologySnapshotGroupAction> TopologySnapshotGroupActions { get; init; }
+    public DbSet<TopologySnapshotBridge> TopologySnapshotBridges { get; init; }
+    public DbSet<TopologySnapshotBridgeAction> TopologySnapshotBridgeActions { get; init; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -57,7 +57,11 @@ public sealed class InterceptionImportService(
         }
 
         if (imported > 0)
+        {
             await db.SaveChangesAsync(cancellationToken);
+            await TopologySnapshotStateMarker.MarkAllCompletedSnapshotsAsStaleAsync(db, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+        }
 
         return new ImportResultDto
         {

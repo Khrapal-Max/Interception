@@ -11,18 +11,18 @@ using Microsoft.EntityFrameworkCore;
 namespace Interception.Tests.Application.Analytics;
 
 /// <summary>
-/// TDD-тести для карти зв'язків.
-/// Частина кейсів фіксує вже прийняту базову поведінку,
-/// а частина навмисно закодовує вимоги стабільної моделі,
-/// включно з аналітичним шаром по діях груп і мостів.
+/// TDD-тести для read-side карти зв'язків через snapshot-и.
 /// </summary>
 public sealed class LinkMapServiceTests
 {
     private static LinkMapService CreateService(IDbContextFactory<AppDbContext> factory)
         => new(factory);
 
+    private static TopologySnapshotBuilder CreateBuilder(IDbContextFactory<AppDbContext> factory)
+        => new(factory);
+
     [Fact]
-    public async Task BuildAsync_NoMessages_ReturnsEmptyGroups()
+    public async Task BuildAsync_NoSnapshot_ReturnsEmptyGroups()
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
@@ -37,6 +37,7 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
+        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -57,6 +58,7 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
+        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().BeEmpty();
@@ -67,6 +69,7 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
+        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -94,6 +97,7 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
+        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().ContainSingle();
@@ -111,6 +115,7 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
+        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -138,6 +143,7 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
+        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().ContainSingle();
@@ -149,6 +155,7 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
+        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -160,6 +167,7 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
+        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().HaveCount(2);
@@ -184,6 +192,7 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
+        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -219,6 +228,7 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
+        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().ContainSingle();
@@ -230,6 +240,7 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
+        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -242,6 +253,7 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
+        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().ContainSingle(
@@ -258,6 +270,7 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
+        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -269,6 +282,7 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
+        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().HaveCount(2);
@@ -293,6 +307,7 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
+        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -304,6 +319,7 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
+        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().HaveCount(2);
@@ -326,6 +342,7 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
+        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -377,6 +394,7 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
+        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().HaveCount(2,
@@ -397,6 +415,7 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
+        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -421,6 +440,7 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
+        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         var group = result.Groups.Should().ContainSingle().Subject;
@@ -433,6 +453,7 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
+        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -466,6 +487,7 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
+        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         var group = result.Groups.Should().ContainSingle().Subject;
@@ -479,6 +501,7 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
+        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -491,6 +514,7 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
+        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         var groupA = result.Groups.Single(x => x.KeyPersonName == "А-ЦЕНТР");

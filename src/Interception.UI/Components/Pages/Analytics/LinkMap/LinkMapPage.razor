@@ -57,29 +57,61 @@
             <div class="registry-toolbar-meta">
                 Груп: <strong>@VisibleGroups.Count</strong>
             </div>
+            <div class="registry-toolbar-meta">
+                Стан: <strong>@SnapshotStatusText</strong>
+            </div>
             <button type="button"
                     class="btn btn-secondary btn-sm rounded-0"
                     @onclick="ResetPeriodAsync"
-                    disabled="@_loading">
+                    disabled="@(_loading || _rebuilding)">
                 7 днів
+            </button>
+            <button type="button"
+                    class="btn btn-outline-primary btn-sm rounded-0"
+                    @onclick="RebuildSnapshotAsync"
+                    disabled="@(_loading || _rebuilding)">
+                @(_rebuilding ? "Перебудова..." : "Перебудувати")
             </button>
             <button type="button"
                     class="btn btn-primary btn-sm rounded-0"
                     @onclick="LoadAsync"
-                    disabled="@_loading">
+                    disabled="@(_loading || _rebuilding)">
                 Оновити
             </button>
         </ActionsContent>
     </CandidatesToolbar>
 
     <div class="page-panel linkmap-shell">
+        @if (_snapshotState?.HasSnapshot == true && _snapshotState.IsStale)
+        {
+            <div class="alert alert-warning rounded-0 border-0 border-bottom mb-0 small">
+                Перехвати змінені після останньої перебудови карти. Зараз показано застарілий snapshot.
+            </div>
+        }
+        else if (_snapshotState?.Status == "failed")
+        {
+            <div class="alert alert-danger rounded-0 border-0 border-bottom mb-0 small">
+                Остання перебудова карти завершилась помилкою.
+                @if (!string.IsNullOrWhiteSpace(_snapshotState.ErrorMessage))
+                {
+                    <span> @_snapshotState.ErrorMessage</span>
+                }
+            </div>
+        }
+        else if (_snapshotState is not null && !_snapshotState.HasSnapshot)
+        {
+            <div class="alert alert-info rounded-0 border-0 border-bottom mb-0 small">
+                Для поточного періоду snapshot ще не побудований.
+            </div>
+        }
+
         @if (_loading)
         {
             <div class="p-3 text-muted small">Завантаження карти зв'язків…</div>
         }
         else if (_map is null || VisibleGroups.Count == 0)
         {
-            <div class="p-3 page-empty small">За поточним періодом груп не знайдено.</div>
+            <div class="p-3 page-empty small">@EmptyMessage</div>
         }
         else
         {

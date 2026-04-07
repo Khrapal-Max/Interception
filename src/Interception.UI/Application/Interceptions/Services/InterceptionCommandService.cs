@@ -5,6 +5,7 @@
 using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain;
+using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -44,6 +45,10 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
 
         db.InterceptionMessages.Add(message);
         await db.SaveChangesAsync(ct);
+
+        await TopologySnapshotStateMarker.MarkAllCompletedSnapshotsAsStaleAsync(db, ct);
+        await db.SaveChangesAsync(ct);
+
         return message;
     }
 
@@ -74,6 +79,9 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
             message.AddLabel(label);
 
         await db.SaveChangesAsync(ct);
+
+        await TopologySnapshotStateMarker.MarkAllCompletedSnapshotsAsStaleAsync(db, ct);
+        await db.SaveChangesAsync(ct);
     }
 
     /// <inheritdoc />
@@ -83,6 +91,9 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
         var message = await db.InterceptionMessages.FindAsync([id], ct)
             ?? throw new InvalidOperationException($"InterceptionMessage '{id}' не знайдено.");
         db.InterceptionMessages.Remove(message);
+        await db.SaveChangesAsync(ct);
+
+        await TopologySnapshotStateMarker.MarkAllCompletedSnapshotsAsStaleAsync(db, ct);
         await db.SaveChangesAsync(ct);
     }
 }

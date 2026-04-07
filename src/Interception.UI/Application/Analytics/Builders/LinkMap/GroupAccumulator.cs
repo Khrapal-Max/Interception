@@ -124,7 +124,7 @@ internal sealed class GroupAccumulator
         var keyPerson = _people.Values
             .OrderByDescending(x => x.UniquePartnerCount)
             .ThenByDescending(x => x.Frequencies.Count)
-            .ThenByDescending(x => LinkMapService.IsCenterCandidate(x.Name, x.Role))
+            .ThenByDescending(x => TopologySnapshotBuilder.IsCenterCandidate(x.Name, x.Role))
             .ThenByDescending(x => x.ConnectionWeight)
             .ThenByDescending(x => x.Mentions)
             .ThenByDescending(x => x.LastSeenAt)
@@ -218,13 +218,13 @@ internal sealed class GroupAccumulator
             ? "NO-KEY-PERSON"
             : NormalizeKey(keyPersonName);
 
-        var membersAnchor = members
-            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-            .Take(3)
+        var membersPart = string.Join(";", members
+            .Where(x => !string.IsNullOrWhiteSpace(x))
             .Select(NormalizeKey)
-            .ToList();
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
 
-        return $"{divisionPart}|{keyPersonPart}|{string.Join("+", membersAnchor)}";
+        return $"{divisionPart}|{keyPersonPart}|{membersPart}";
     }
 
     private static string NormalizeKey(string value)
