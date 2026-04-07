@@ -90,11 +90,4 @@ public sealed class FrequencyDivisionService(IDbContextFactory<AppDbContext> dbF
 
         await db.SaveChangesAsync(ct);
     }
-
-    /// <summary>
-    /// Перевіряє, чи значення підрозділу ще не зафіксоване.
-    /// </summary>
-    private static bool IsUnknownDivision(string? division)
-        => string.IsNullOrWhiteSpace(division)
-           || string.Equals(division.Trim(), UnknownDivision, StringComparison.OrdinalIgnoreCase);
 }

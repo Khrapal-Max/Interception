@@ -557,26 +557,4 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
             || (!string.IsNullOrWhiteSpace(role)
                 && role.Contains("координ", StringComparison.OrdinalIgnoreCase));
     }
-
-    private static string? ExtractCenterFromGroupKey(string? groupKey)
-    {
-        if (string.IsNullOrWhiteSpace(groupKey))
-            return null;
-
-        var stablePart = groupKey;
-        var frequencySeparator = stablePart.IndexOf("::", StringComparison.Ordinal);
-        if (frequencySeparator >= 0)
-            stablePart = stablePart[(frequencySeparator + 2)..];
-
-        var firstPipe = stablePart.IndexOf('|');
-        if (firstPipe < 0)
-            return null;
-
-        var secondPipe = stablePart.IndexOf('|', firstPipe + 1);
-        if (secondPipe < 0)
-            return null;
-
-        var center = stablePart.Substring(firstPipe + 1, secondPipe - firstPipe - 1).Trim();
-        return string.IsNullOrWhiteSpace(center) ? null : center;
-    }
 }
