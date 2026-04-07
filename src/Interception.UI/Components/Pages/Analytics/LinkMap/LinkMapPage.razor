@@ -49,10 +49,16 @@
         </MetaContent>
         <ActionsContent>
             <ExportLauncher Kind="ExportKind.LinkMap"
-                            Title="Експорт карти зв'язків"
+                            Title="Експорт xlxs"
                             ButtonClass="btn btn-outline-secondary btn-sm rounded-0"
                             DateFrom="_dateFrom"
                             DateTo="_dateTo" />
+
+            <a class="btn btn-outline-secondary btn-sm rounded-0"
+               href="@BuildHierarchyHref(_selectedGroup)"
+               title="Перейти в ієрархію груп">
+                Ієрархія груп
+            </a>
 
             <div class="registry-toolbar-meta">
                 Груп: <strong>@VisibleGroups.Count</strong>
@@ -143,6 +149,11 @@
                                     @onclick="OpenSelectedGroupDrawer">
                                 Деталі групи
                             </button>
+
+                            <a class="btn btn-outline-secondary btn-sm rounded-0"
+                               href="@BuildHierarchyHref(_selectedGroup)">
+                                Ієрархія
+                            </a>
                         </div>
 
                         <div class="panel-scroll px-3 py-3">

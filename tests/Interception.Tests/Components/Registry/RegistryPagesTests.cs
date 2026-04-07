@@ -6,6 +6,7 @@ using Bunit;
 using FluentAssertions;
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Exports.Abstractions;
+using Interception.UI.Application.Exports.Services;
 using Interception.UI.Application.Registry.Abstractions;
 using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Application.Toasts;
@@ -22,14 +23,17 @@ public sealed class FrequencyDivisionRegistryTests : BunitContext
 {
     private readonly IFrequencyDivisionService _frequencyDivisionService;
     private readonly IExcelExportService _excelExportService;
+    private readonly IPdfExportService _pdfExportService;
 
     public FrequencyDivisionRegistryTests()
     {
         _frequencyDivisionService = Substitute.For<IFrequencyDivisionService>();
         _excelExportService = Substitute.For<IExcelExportService>();
+        _pdfExportService = Substitute.For<IPdfExportService>();
 
         Services.AddSingleton(_frequencyDivisionService);
         Services.AddSingleton(_excelExportService);
+        Services.AddSingleton(_pdfExportService);
         Services.AddSingleton<ToastService>();
 
         ComponentFactories.AddStub<FrequencyDivisionDrawer>();
@@ -53,14 +57,17 @@ public sealed class PersonsRegistryTests : BunitContext
 {
     private readonly IPersonRegistryService _personRegistryService;
     private readonly IExcelExportService _excelExportService;
+    private readonly IPdfExportService _pdfExportService;
 
     public PersonsRegistryTests()
     {
         _personRegistryService = Substitute.For<IPersonRegistryService>();
         _excelExportService = Substitute.For<IExcelExportService>();
+        _pdfExportService = Substitute.For<IPdfExportService>();
 
         Services.AddSingleton(_personRegistryService);
         Services.AddSingleton(_excelExportService);
+        Services.AddSingleton(_pdfExportService);
         Services.AddSingleton<ToastService>();
 
         ComponentFactories.AddStub<PersonRegistryDrawer>();

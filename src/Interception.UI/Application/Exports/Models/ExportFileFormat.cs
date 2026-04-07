@@ -5,16 +5,10 @@
 namespace Interception.UI.Application.Exports.Models;
 
 /// <summary>
-/// Доступні види Excel-експорту.
+/// Формат файла експорту.
 /// </summary>
-public enum ExportKind
+public enum ExportFileFormat
 {
-    Interceptions = 1,
-    FrequencyDivisionRegistry = 2,
-    PersonsRegistry = 3,
-    DivisionReport = 4,
-    DayPicture = 5,
-    LinkMap = 6,
-    FrequencyWeights = 7,
-    GroupHierarchy = 8
+    Excel = 1,
+    Pdf = 2
 }

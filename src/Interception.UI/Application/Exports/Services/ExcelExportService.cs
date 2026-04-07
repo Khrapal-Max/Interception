@@ -4,6 +4,7 @@
 
 using ClosedXML.Excel;
 using Interception.UI.Application.Analytics.Abstractions;
+using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Exports.Abstractions;
 using Interception.UI.Application.Exports.Dtos;
 using Interception.UI.Application.Exports.Models;
@@ -27,7 +28,8 @@ public sealed class ExcelExportService(
     IPersonRegistryService personRegistryService,
     IDivisionReportService divisionReportService,
     IDayPictureService dayPictureService,
-    ILinkMapService linkMapService)
+    ILinkMapService linkMapService,
+    IGroupHierarchyService groupHierarchyService)
     : IExcelExportService
 {
     private const string ExcelContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -50,6 +52,7 @@ public sealed class ExcelExportService(
             ExportKind.DayPicture => await BuildDayPictureWorkbookAsync(workbook, request, ct),
             ExportKind.LinkMap => await BuildLinkMapWorkbookAsync(workbook, request, ct),
             ExportKind.FrequencyWeights => await BuildFrequencyWeightsWorkbookAsync(workbook, ct),
+            ExportKind.GroupHierarchy => await BuildGroupHierarchyWorkbookAsync(workbook, request, ct),
             _ => throw new NotSupportedException($"Непідтримуваний тип експорту '{request.Kind}'.")
         };
 
@@ -294,6 +297,76 @@ public sealed class ExcelExportService(
 
         ApplySheetStyle(sheet);
         return BuildFileName("analytics_link_map");
+    }
+
+    private async Task<string> BuildGroupHierarchyWorkbookAsync(XLWorkbook workbook, ExportRequestDto request, CancellationToken ct)
+    {
+        var (dateFrom, dateToExclusive) = NormalizeDateRange(request.DateFrom, request.DateTo);
+        var hierarchy = await groupHierarchyService.BuildAsync(dateFrom, dateToExclusive, ct);
+
+        var sheet = workbook.Worksheets.Add("Ієрархія груп");
+        WriteHeader(sheet,
+            "Опорна група", "Підрозділ", "Частоти", "Основна дія", "Характерні дії",
+            "Груп у кластері", "Унікальних осіб", "Ієрархічних переходів", "Прямих мостів",
+            "Рівень", "Центр вузла", "Роль центру", "Підрозділ вузла", "Частоти вузла",
+            "Дія вузла", "Учасників у вузлі", "Батьківський центр", "Перехідний учасник",
+            "Роль переходу", "Є прямий міст до батька", "Дочірніх вузлів");
+
+        var row = 2;
+        foreach (var cluster in hierarchy.Clusters)
+        {
+            var nodes = cluster.Nodes
+                .OrderBy(x => x.Level)
+                .ThenByDescending(x => x.ChildCount)
+                .ThenBy(x => x.CenterName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (nodes.Count == 0)
+            {
+                sheet.Cell(row, 1).Value = cluster.RootCenterName;
+                sheet.Cell(row, 2).Value = cluster.Division;
+                sheet.Cell(row, 3).Value = string.Join(", ", cluster.Frequencies);
+                sheet.Cell(row, 4).Value = cluster.PrimaryAction;
+                sheet.Cell(row, 5).Value = string.Join(", ", cluster.TopActions);
+                sheet.Cell(row, 6).Value = cluster.TotalGroups;
+                sheet.Cell(row, 7).Value = cluster.TotalUniqueMembers;
+                sheet.Cell(row, 8).Value = cluster.TransitionCount;
+                sheet.Cell(row, 9).Value = cluster.DirectBridgeCount;
+                row++;
+                continue;
+            }
+
+            foreach (var node in nodes)
+            {
+                sheet.Cell(row, 1).Value = cluster.RootCenterName;
+                sheet.Cell(row, 2).Value = cluster.Division;
+                sheet.Cell(row, 3).Value = string.Join(", ", cluster.Frequencies);
+                sheet.Cell(row, 4).Value = cluster.PrimaryAction;
+                sheet.Cell(row, 5).Value = string.Join(", ", cluster.TopActions);
+                sheet.Cell(row, 6).Value = cluster.TotalGroups;
+                sheet.Cell(row, 7).Value = cluster.TotalUniqueMembers;
+                sheet.Cell(row, 8).Value = cluster.TransitionCount;
+                sheet.Cell(row, 9).Value = cluster.DirectBridgeCount;
+                sheet.Cell(row, 10).Value = node.Level;
+                sheet.Cell(row, 11).Value = node.CenterName;
+                sheet.Cell(row, 12).Value = node.CenterRole;
+                sheet.Cell(row, 13).Value = node.Division;
+                sheet.Cell(row, 14).Value = string.Join(", ", node.Frequencies);
+                sheet.Cell(row, 15).Value = node.PrimaryAction;
+                sheet.Cell(row, 16).Value = node.MemberCount;
+                sheet.Cell(row, 17).Value = node.ParentCenterName;
+                sheet.Cell(row, 18).Value = node.TransitionMemberName;
+                sheet.Cell(row, 19).Value = node.TransitionMemberRole;
+                sheet.Cell(row, 20).Value = node.HasDirectBridgeToParent ? "Так" : "Ні";
+                sheet.Cell(row, 21).Value = node.ChildCount;
+                row++;
+            }
+
+            row++;
+        }
+
+        ApplySheetStyle(sheet);
+        return BuildFileName("analytics_group_hierarchy");
     }
 
     private async Task<string> BuildFrequencyWeightsWorkbookAsync(XLWorkbook workbook, CancellationToken ct)

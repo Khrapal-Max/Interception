@@ -1,0 +1,136 @@
+.hierarchy-page-shell {
+    height: calc(100vh - 1rem);
+    min-height: 0;
+    overflow: hidden;
+}
+
+.hierarchy-shell {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.hierarchy-layout,
+.left-pane,
+.right-pane {
+    min-height: 0;
+    height: 100%;
+}
+
+.pane-head {
+    flex: 0 0 auto;
+}
+
+.panel-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+.hierarchy-row {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: .35rem;
+    padding: .6rem .7rem;
+    border: 1px solid rgba(255,255,255,.08);
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    margin-bottom: .45rem;
+}
+
+.hierarchy-row:hover,
+.hierarchy-row.is-selected {
+    background: rgba(255,255,255,.04);
+    border-color: rgba(255,255,255,.18);
+}
+
+.hierarchy-row-main,
+.hierarchy-row-sub,
+.child-row-sub,
+.focus-summary-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .45rem;
+    min-width: 0;
+}
+
+.row-main-item,
+.row-sub-item,
+.child-title-item {
+    display: inline-flex;
+    align-items: center;
+    gap: .32rem;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.row-main-item i,
+.row-sub-item i,
+.child-title-item i,
+.focus-summary-row i {
+    font-size: .82em;
+    opacity: .8;
+}
+
+.row-main-sep,
+.row-sub-dot,
+.child-title-sep {
+    color: var(--bs-secondary-color);
+    flex: 0 0 auto;
+}
+
+.child-row {
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+    padding: .65rem .75rem;
+    margin-bottom: .65rem;
+    border: 1px solid rgba(255,255,255,.08);
+    background: transparent;
+}
+
+.child-row-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .75rem;
+}
+
+.child-row-title {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.child-row-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    flex: 0 0 auto;
+}
+
+@media (max-width: 1199.98px) {
+    .hierarchy-page-shell {
+        height: auto;
+        overflow: visible;
+    }
+
+    .hierarchy-shell,
+    .hierarchy-layout,
+    .left-pane,
+    .right-pane {
+        height: auto;
+        min-height: 0;
+    }
+
+    .panel-scroll {
+        overflow: visible;
+    }
+}

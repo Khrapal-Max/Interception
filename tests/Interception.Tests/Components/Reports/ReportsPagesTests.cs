@@ -19,14 +19,17 @@ public sealed class DivisionReportPageTests : BunitContext
 {
     private readonly IDivisionReportService _divisionReportService;
     private readonly IExcelExportService _excelExportService;
+    private readonly IPdfExportService _pdfExportService;
 
     public DivisionReportPageTests()
     {
         _divisionReportService = Substitute.For<IDivisionReportService>();
         _excelExportService = Substitute.For<IExcelExportService>();
+        _pdfExportService = Substitute.For<IPdfExportService>();
 
         Services.AddSingleton(_divisionReportService);
         Services.AddSingleton(_excelExportService);
+        Services.AddSingleton(_pdfExportService);
         Services.AddSingleton<ToastService>();
     }
 
@@ -49,14 +52,17 @@ public sealed class DayPicturePageTests : BunitContext
 {
     private readonly IDayPictureService _dayPictureService;
     private readonly IExcelExportService _excelExportService;
+    private readonly IPdfExportService _pdfExportService;
 
     public DayPicturePageTests()
     {
         _dayPictureService = Substitute.For<IDayPictureService>();
         _excelExportService = Substitute.For<IExcelExportService>();
+        _pdfExportService = Substitute.For<IPdfExportService>();
 
         Services.AddSingleton(_dayPictureService);
         Services.AddSingleton(_excelExportService);
+        Services.AddSingleton(_pdfExportService);
         Services.AddSingleton<ToastService>();
     }
 

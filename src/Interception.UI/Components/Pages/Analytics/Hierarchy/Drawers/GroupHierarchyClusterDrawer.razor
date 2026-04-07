@@ -1,0 +1,101 @@
+@using Interception.UI.Application.Analytics.Dtos
+@using Interception.UI.Components.Shared.Drawer
+
+@if (Cluster is not null)
+{
+    <Drawer IsOpen="@IsOpen"
+            Title="Деталі кластера груп"
+            OnClosed="OnClose"
+            CloseOnBackdrop="true"
+            CloseOnEscape="true">
+        <ChildContent>
+            <div class="d-flex flex-column gap-3">
+                <div class="row g-2 small">
+                    <div class="col-12 col-md-6">
+                        <div class="text-muted">Опорна група</div>
+                        <div class="fw-semibold">@Cluster.RootCenterName</div>
+                        <div class="text-muted">@(string.IsNullOrWhiteSpace(Cluster.RootCenterRole) ? "Роль не визначена" : Cluster.RootCenterRole)</div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="text-muted">Підсумок</div>
+                        <div class="fw-semibold">@Cluster.TotalGroups груп · @Cluster.TotalUniqueMembers осіб</div>
+                        <div class="text-muted">Ієрархічних переходів: @Cluster.TransitionCount</div>
+                    </div>
+                </div>
+
+                @if (Cluster.TopActions.Any())
+                {
+                    <div>
+                        <span class="small text-muted px-1">Характерні дії</span>
+                        @foreach (var action in Cluster.TopActions)
+                        {
+                            <span class="badge px-1 bg-secondary">@action</span>
+                        }
+                    </div>
+                }
+
+                <div class="page-panel">
+                    <div class="px-3 py-2 border-bottom small text-muted">Дерево груп</div>
+                    <div class="panel-scroll">
+                        <div class="table-wrap p-0">
+                            <table class="table data-table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Рівень</th>
+                                        <th>Центр</th>
+                                        <th>Підрозділ</th>
+                                        <th>Частоти</th>
+                                        <th>Дія</th>
+                                        <th>Перехід</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var node in Cluster.Nodes)
+                                    {
+                                        <tr>
+                                            <td class="text-nowrap">L@node.Level</td>
+                                            <td>
+                                                <div class="d-flex flex-column gap-1">
+                                                    <div class="fw-semibold">@node.CenterName</div>
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                        @if (node.IsRoot)
+                                                        {
+                                                            <span class="badge bg-primary">Опорна</span>
+                                                        }
+                                                        @if (node.ChildCount > 0)
+                                                        {
+                                                            <span class="badge bg-success">Дочірніх: @node.ChildCount</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>@(string.IsNullOrWhiteSpace(node.Division) ? "НВ підрозділ" : node.Division)</td>
+                                            <td>@string.Join(", ", node.Frequencies)</td>
+                                            <td>@(string.IsNullOrWhiteSpace(node.PrimaryAction) ? "—" : node.PrimaryAction)</td>
+                                            <td>
+                                                @if (node.IsRoot)
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                                else
+                                                {
+                                                    <div class="d-flex flex-column gap-1">
+                                                        <div>@node.TransitionMemberName</div>
+                                                        @if (node.HasDirectBridgeToParent)
+                                                        {
+                                                            <span class="badge bg-warning text-dark">Є прямий міст</span>
+                                                        }
+                                                    </div>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </ChildContent>
+    </Drawer>
+}

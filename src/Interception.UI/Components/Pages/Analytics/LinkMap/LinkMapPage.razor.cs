@@ -151,6 +151,14 @@ public partial class LinkMapPage : ComponentBase
     protected static string PrimaryFrequency(LinkMapGroupDto group)
         => group.Frequencies.FirstOrDefault() ?? "—";
 
+    protected static string BuildHierarchyHref(LinkMapGroupDto? group)
+    {
+        if (group is null)
+            return "/analytics/hierarchy";
+
+        return $"/analytics/hierarchy?group={Uri.EscapeDataString(group.GroupKey)}";
+    }
+
     protected static string FriendlyAction(string? value)
         => string.IsNullOrWhiteSpace(value) ? "дія не визначена" : value;
 

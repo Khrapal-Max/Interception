@@ -52,6 +52,7 @@ builder.Services.AddScoped<ToastService>();
 
 // --- Application services ---
 // Поточні контракти, які ще використовує фронт.
+builder.Services.AddScoped<IPdfExportService, PdfExportService>();
 builder.Services.AddScoped<IExcelExportService, ExcelExportService>();
 builder.Services.AddScoped<IInterceptionImportService, InterceptionImportService>();
 builder.Services.AddScoped<IInterceptionActionService, InterceptionActionService>();
@@ -65,6 +66,7 @@ builder.Services.AddScoped<IFrequencyDivisionService, FrequencyDivisionService>(
 
 // Нові candidate-сервіси
 builder.Services.AddScoped<ILinkMapService, LinkMapService>();
+builder.Services.AddScoped<IGroupHierarchyService, GroupHierarchyService>();
 builder.Services.AddScoped<IContextSuggestionService, ContextSuggestionService>();
 builder.Services.AddScoped<IFrequencyWeightReportService, FrequencyWeightReportService>();
 builder.Services.AddScoped<IKnownParticipantSuggestionService, KnownParticipantSuggestionService>();

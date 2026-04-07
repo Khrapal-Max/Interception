@@ -1,0 +1,225 @@
+@page "/analytics/hierarchy"
+@using Interception.UI.Application.Analytics.Dtos
+@using Interception.UI.Application.Exports.Models
+@using Interception.UI.Components.Shared.Export
+@using Interception.UI.Components.Pages.Analytics.Hierarchy.Drawers
+@using Interception.UI.Components.Pages.Analytics.Toolbar
+
+<div class="page-shell hierarchy-page-shell">
+    <CandidatesToolbar ActiveSection="hierarchy">
+        <MetaContent>
+            <div class="d-flex flex-nowrap align-items-end gap-2">
+                <div>
+                    <label class="form-label small mb-1">Від</label>
+                    <input class="form-control form-control-sm rounded-0"
+                           type="date"
+                           value="@DateFromStr"
+                           @onchange="@(e => OnDateFromChanged(e.Value?.ToString()))" />
+                </div>
+
+                <div>
+                    <label class="form-label small mb-1">До</label>
+                    <input class="form-control form-control-sm rounded-0"
+                           type="date"
+                           value="@DateToStr"
+                           @onchange="@(e => OnDateToChanged(e.Value?.ToString()))" />
+                </div>
+
+                <div>
+                    <label class="form-label small mb-1">Пошук</label>
+                    <input class="form-control form-control-sm rounded-0"
+                           type="text"
+                           value="@_search"
+                           @oninput="@(e => OnSearchChanged(e.Value?.ToString()))"
+                           placeholder="Опорна група / дочірня група / дія / підрозділ" />
+                </div>
+
+                <div class="form-check form-switch mb-1 ms-1">
+                    <input class="form-check-input" type="checkbox" id="onlyNested" @bind="_onlyNested" />
+                    <label class="form-check-label small" for="onlyNested">Лише з дочірніми</label>
+                </div>
+            </div>
+        </MetaContent>
+        <ActionsContent>
+            <ExportLauncher Kind="ExportKind.GroupHierarchy"
+                            Title="Excel"
+                            ButtonClass="btn btn-outline-secondary btn-sm rounded-0"
+                            DateFrom="_dateFrom"
+                            DateTo="_dateTo" />
+            <ExportLauncher Kind="ExportKind.GroupHierarchy"
+                            Format="ExportFileFormat.Pdf"
+                            Title="PDF-звіт"
+                            ButtonClass="btn btn-outline-secondary btn-sm rounded-0"
+                            DateFrom="_dateFrom"
+                            DateTo="_dateTo" />
+            <div class="registry-toolbar-meta">Кластерів: <strong>@VisibleClusters.Count</strong></div>
+            <button type="button"
+                    class="btn btn-secondary btn-sm rounded-0"
+                    @onclick="ResetPeriodAsync"
+                    disabled="@_loading">
+                7 днів
+            </button>
+            <button type="button"
+                    class="btn btn-primary btn-sm rounded-0"
+                    @onclick="LoadAsync"
+                    disabled="@_loading">
+                Оновити
+            </button>
+        </ActionsContent>
+    </CandidatesToolbar>
+
+    <div class="page-panel hierarchy-shell">
+        @if (_loading)
+        {
+            <div class="p-3 text-muted small">Завантаження ієрархії груп…</div>
+        }
+        else if (_hierarchy is null || VisibleClusters.Count == 0)
+        {
+            <div class="p-3 page-empty small">За поточним періодом ієрархії груп не знайдено.</div>
+        }
+        else
+        {
+            <div class="row g-0 h-100 hierarchy-layout">
+                <div class="col-12 col-xl-4 border-end d-flex flex-column min-h-0 left-pane">
+                    <div class="pane-head px-3 py-2 border-bottom small d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold">Кластери груп</span>
+                        <span class="text-muted">@VisibleClusters.Count</span>
+                    </div>
+
+                    <div class="panel-scroll px-2 py-2">
+                        @foreach (var cluster in VisibleClusters)
+                        {
+                            var selected = _selectedCluster?.ClusterKey == cluster.ClusterKey;
+
+                            <button type="button"
+                                    class="hierarchy-row @(selected ? "is-selected" : null)"
+                                    @onclick="() => SelectCluster(cluster)">
+                                <div class="hierarchy-row-main">
+                                    <span class="row-main-item"><i class="bi bi-diagram-2"></i>@cluster.RootCenterName</span>
+                                    <span class="row-main-sep">/</span>
+                                    <span class="row-main-item"><i class="bi bi-lightning-charge"></i>@FriendlyAction(cluster.PrimaryAction)</span>
+                                </div>
+
+                                <div class="hierarchy-row-sub">
+                                    <span class="row-sub-item"><i class="bi bi-diagram-3"></i>@FriendlyDivision(cluster.Division)</span>
+                                    <span class="row-sub-dot">•</span>
+                                    <span class="row-sub-item"><i class="bi bi-signpost-2"></i>@cluster.TransitionCount</span>
+                                    <span class="row-sub-dot">•</span>
+                                    <span class="row-sub-item"><i class="bi bi-collection"></i>@cluster.TotalGroups</span>
+                                    <button type="button"
+                                            class="btn btn-outline-secondary btn-sm rounded-0 ms-auto"
+                                            title="Деталі кластера"
+                                            @onclick:stopPropagation="true"
+                                            @onclick="() => OpenClusterDrawer(cluster)">
+                                        Деталі
+                                    </button>
+                                </div>
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <div class="col-12 col-xl-8 d-flex flex-column min-h-0 right-pane">
+                    @if (_selectedCluster is null)
+                    {
+                        <div class="p-3 text-muted small">Оберіть кластер груп зліва.</div>
+                    }
+                    else
+                    {
+                        <div class="pane-head px-3 py-2 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div>
+                                <div class="small text-muted">Опорна група</div>
+                                <div class="fw-semibold">@_selectedCluster.RootCenterName</div>
+                            </div>
+
+                            <div class="focus-summary-row small text-muted">
+                                <span><i class="bi bi-collection"></i>@_selectedCluster.TotalGroups груп</span>
+                                <span><i class="bi bi-people"></i>@_selectedCluster.TotalUniqueMembers осіб</span>
+                                <span><i class="bi bi-signpost-2"></i>@_selectedCluster.TransitionCount переходів</span>
+                                <span><i class="bi bi-bezier2"></i>@_selectedCluster.DirectBridgeCount прямих мостів</span>
+                            </div>
+                        </div>
+
+                        <div class="panel-scroll p-3 d-flex flex-column gap-3">
+                            <div class="row g-3">
+                                <div class="col-12 col-xxl-5">
+                                    <div class="page-panel p-3 h-100">
+                                        <div class="small text-muted mb-1">Суть кластера</div>
+                                        <div class="fw-semibold mb-2">
+                                            @BuildSummary(_selectedCluster)
+                                        </div>
+                                        <div class="small text-muted">
+                                            Тут показується не розмиття меж, а структурне вкладення:
+                                            якщо учасник опорної групи є центром іншої стійкої групи,
+                                            це формує дочірній контур усередині кластера.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xxl-7">
+                                    <div class="page-panel p-3 h-100">
+                                        <div class="small text-muted mb-1">Характерні дії</div>
+                                        @if (_selectedCluster.TopActions.Any())
+                                        {
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @foreach (var action in _selectedCluster.TopActions)
+                                                {
+                                                    <span class="badge bg-secondary">@action</span>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="text-muted small">Дії не визначено.</div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="page-panel p-3">
+                                <div class="small text-muted mb-2">Дочірні контури</div>
+                                @if (!ChildNodes.Any())
+                                {
+                                    <div class="text-muted small">Опорна група не має дочірніх контурів у поточному періоді.</div>
+                                }
+                                else
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-sm align-middle mb-0">
+                                            <thead>
+                                            <tr>
+                                                <th>Рівень</th>
+                                                <th>Центр</th>
+                                                <th>Підрозділ</th>
+                                                <th>Перехідний учасник</th>
+                                                <th>Частоти</th>
+                                                <th>Прямий міст</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            @foreach (var node in ChildNodes)
+                                            {
+                                                <tr>
+                                                    <td>@node.Level</td>
+                                                    <td>@node.CenterName</td>
+                                                    <td>@FriendlyDivision(node.Division)</td>
+                                                    <td>@(string.IsNullOrWhiteSpace(node.TransitionMemberName) ? "—" : node.TransitionMemberName)</td>
+                                                    <td>@string.Join(", ", node.Frequencies)</td>
+                                                    <td>@(node.HasDirectBridgeToParent ? "Так" : "Ні")</td>
+                                                </tr>
+                                            }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<GroupHierarchyClusterDrawer IsOpen="_drawerOpen"
+                             Cluster="_drawerCluster"
+                             OnClose="CloseDrawerAsync" />

@@ -40,7 +40,7 @@
                     <label class="form-label form-label-sm">Дата/час</label>
                     <input type="datetime-local"
                            class="form-control form-control-sm"
-                           value="@ConverterDateTimeExtensions.ToInputString(_form.ObservedDate)"
+                           value="@ConverterDateTimeExtensions.ToDisplay(_form.ObservedDate)"
                            @onchange="OnObservedDateChange" />
                 </div>
 

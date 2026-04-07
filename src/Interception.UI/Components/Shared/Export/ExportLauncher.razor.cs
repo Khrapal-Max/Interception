@@ -12,24 +12,28 @@ using Microsoft.JSInterop;
 namespace Interception.UI.Components.Shared.Export;
 
 /// <summary>
-/// Компактна кнопка Excel-експорту без меню.
+/// Компактна кнопка експорту без меню.
 /// Один компонент = один тип експорту.
 /// </summary>
 public partial class ExportLauncher : ComponentBase
 {
     [Inject] private IExcelExportService ExportService { get; set; } = default!;
+    [Inject] private IPdfExportService PdfExportService { get; set; } = default!;
     [Inject] private IJSRuntime Js { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
     /// <summary>
     /// Явний вид експорту.
-    /// Рекомендований режим використання.
     /// </summary>
     [Parameter] public ExportKind? Kind { get; set; }
 
     /// <summary>
+    /// Формат файла експорту.
+    /// </summary>
+    [Parameter] public ExportFileFormat Format { get; set; } = ExportFileFormat.Excel;
+
+    /// <summary>
     /// Текст кнопки.
-    /// Якщо не задано, визначається автоматично від виду експорту.
     /// </summary>
     [Parameter] public string? Title { get; set; }
 
@@ -38,22 +42,10 @@ public partial class ExportLauncher : ComponentBase
     /// </summary>
     [Parameter] public string ButtonClass { get; set; } = "btn btn-outline-light btn-sm rounded-0";
 
-    /// <summary>
-    /// Початок діапазону для сторінкового експорту.
-    /// </summary>
     [Parameter] public DateTime? DateFrom { get; set; }
-
-    /// <summary>
-    /// Кінець діапазону для сторінкового експорту.
-    /// </summary>
     [Parameter] public DateTime? DateTo { get; set; }
-
-    /// <summary>
-    /// День для експорту картини дня.
-    /// </summary>
     [Parameter] public DateTime? Day { get; set; }
 
-    // Legacy flags залишені для сумісності зі старими вставками.
     [Parameter] public bool ShowInterceptions { get; set; }
     [Parameter] public bool ShowFrequencyRegistry { get; set; }
     [Parameter] public bool ShowPersonsRegistry { get; set; }
@@ -67,7 +59,6 @@ public partial class ExportLauncher : ComponentBase
     private ExportKind? _resolvedKind;
     private string _resolvedTitle = "Експорт";
 
-    /// <inheritdoc />
     protected override Task OnParametersSetAsync()
     {
         ResolveAction();
@@ -79,7 +70,7 @@ public partial class ExportLauncher : ComponentBase
         _resolvedKind = Kind ?? ResolveLegacyKind();
         _hasAction = _resolvedKind.HasValue;
         _resolvedTitle = string.IsNullOrWhiteSpace(Title)
-            ? BuildDefaultTitle(_resolvedKind)
+            ? BuildDefaultTitle(_resolvedKind, Format)
             : Title!.Trim();
     }
 
@@ -87,39 +78,38 @@ public partial class ExportLauncher : ComponentBase
     {
         if (ShowInterceptions)
             return ExportKind.Interceptions;
-
         if (ShowFrequencyRegistry)
             return ExportKind.FrequencyDivisionRegistry;
-
         if (ShowPersonsRegistry)
             return ExportKind.PersonsRegistry;
-
         if (ShowDivisionReport)
             return ExportKind.DivisionReport;
-
         if (ShowDayPicture)
             return ExportKind.DayPicture;
-
         if (ShowLinkMap)
             return ExportKind.LinkMap;
-
         if (ShowFrequencyWeights)
             return ExportKind.FrequencyWeights;
-
         return null;
     }
 
-    private static string BuildDefaultTitle(ExportKind? kind) => kind switch
+    private static string BuildDefaultTitle(ExportKind? kind, ExportFileFormat format)
     {
-        ExportKind.Interceptions => "Експорт спостережень",
-        ExportKind.FrequencyDivisionRegistry => "Експорт частота / підрозділ",
-        ExportKind.PersonsRegistry => "Експорт осіб",
-        ExportKind.DivisionReport => "Експорт звіту",
-        ExportKind.DayPicture => "Експорт картини дня",
-        ExportKind.LinkMap => "Експорт карти зв'язків",
-        ExportKind.FrequencyWeights => "Експорт ваг підрозділів",
-        _ => "Експорт"
-    };
+        var suffix = format == ExportFileFormat.Pdf ? " (PDF)" : string.Empty;
+
+        return kind switch
+        {
+            ExportKind.Interceptions => "Експорт спостережень" + suffix,
+            ExportKind.FrequencyDivisionRegistry => "Експорт частота / підрозділ" + suffix,
+            ExportKind.PersonsRegistry => "Експорт осіб" + suffix,
+            ExportKind.DivisionReport => "Експорт звіту" + suffix,
+            ExportKind.DayPicture => "Експорт картини дня" + suffix,
+            ExportKind.LinkMap => "Експорт карти зв'язків" + suffix,
+            ExportKind.FrequencyWeights => "Експорт ваг підрозділів" + suffix,
+            ExportKind.GroupHierarchy => "Експорт ієрархії груп" + suffix,
+            _ => "Експорт"
+        };
+    }
 
     private async Task ExportAsync()
     {
@@ -131,9 +121,10 @@ public partial class ExportLauncher : ComponentBase
 
         try
         {
-            var file = await ExportService.ExportAsync(
-                new ExportRequestDto(_resolvedKind.Value, DateFrom, DateTo, Day),
-                CancellationToken.None);
+            var request = new ExportRequestDto(_resolvedKind.Value, DateFrom, DateTo, Day);
+            var file = Format == ExportFileFormat.Pdf
+                ? await PdfExportService.ExportAsync(request, CancellationToken.None)
+                : await ExportService.ExportAsync(request, CancellationToken.None);
 
             await Js.InvokeVoidAsync(
                 "interceptionExport.downloadFile",
