@@ -111,14 +111,14 @@ public partial class ExportLauncher : ComponentBase
 
     private static string BuildDefaultTitle(ExportKind? kind) => kind switch
     {
-        ExportKind.Interceptions => "Експорт спостережень",
-        ExportKind.FrequencyDivisionRegistry => "Експорт частота / підрозділ",
-        ExportKind.PersonsRegistry => "Експорт осіб",
-        ExportKind.DivisionReport => "Експорт звіту",
-        ExportKind.DayPicture => "Експорт картини дня",
-        ExportKind.LinkMap => "Експорт карти зв'язків",
-        ExportKind.FrequencyWeights => "Експорт ваг підрозділів",
-        _ => "Експорт"
+        ExportKind.Interceptions => "",
+        ExportKind.FrequencyDivisionRegistry => "",
+        ExportKind.PersonsRegistry => "",
+        ExportKind.DivisionReport => "",
+        ExportKind.DayPicture => "",
+        ExportKind.LinkMap => "",
+        ExportKind.FrequencyWeights => "",
+        _ => "",
     };
 
     private async Task ExportAsync()

@@ -20,6 +20,11 @@ public sealed class PersonRegistryItemDto
     public string Name { get; init; } = string.Empty;
 
     /// <summary>
+    /// Частота, якщо вона є визначальною для цього запису.
+    /// </summary>
+    public string? Frequency { get; init; }
+
+    /// <summary>
     /// Канонічна або ефективна роль.
     /// </summary>
     public string? Role { get; init; }

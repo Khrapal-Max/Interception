@@ -90,25 +90,41 @@ public sealed class InterceptionSuggestionService(IDbContextFactory<AppDbContext
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
-        var q = db.InterceptionMessageParticipants
+        var rawQuery = db.InterceptionMessageParticipants
             .Where(p => !p.IsUnknown && p.Name != null);
 
         if (!string.IsNullOrWhiteSpace(query))
-            q = q.Where(p => p.Name!.StartsWith(query));
+            rawQuery = rawQuery.Where(p => p.Name!.StartsWith(query));
 
-        var rows = await q
+        var rawRows = await rawQuery
             .Select(p => new ParticipantSuggestionRow(
                 p.Name!,
                 p.Role,
                 p.InterceptionMessage.Frequency,
                 p.InterceptionMessage.Division,
-                p.InterceptionMessage.ObservedDate))
+                p.InterceptionMessage.ObservedDate,
+                IsCanonical: false))
+            .ToListAsync(ct);
+
+        var resolvedQuery = db.ResolvedParticipants.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(query))
+            resolvedQuery = resolvedQuery.Where(p => p.Name.StartsWith(query));
+
+        var resolvedRows = await resolvedQuery
+            .Select(p => new ParticipantSuggestionRow(
+                p.Name,
+                p.Role,
+                p.Frequency,
+                p.Division,
+                p.ConfirmedAt,
+                IsCanonical: true))
             .ToListAsync(ct);
 
         var normalizedFrequency = NormalizeKey(frequency);
         var normalizedDivision = NormalizeKey(division);
 
-        return [.. rows
+        return [.. rawRows
+            .Concat(resolvedRows)
             .GroupBy(x => new ParticipantSuggestionKey(
                 NormalizeKey(x.Name),
                 NormalizeKey(x.Frequency),
@@ -117,13 +133,15 @@ public sealed class InterceptionSuggestionService(IDbContextFactory<AppDbContext
             {
                 var role = g.Where(x => !string.IsNullOrWhiteSpace(x.Role))
                     .GroupBy(x => NormalizeKey(x.Role))
-                    .OrderByDescending(x => x.Count())
+                    .OrderByDescending(x => x.Any(v => v.IsCanonical))
+                    .ThenByDescending(x => x.Count())
                     .ThenByDescending(x => x.Max(v => v.ObservedDate))
                     .Select(x => x.First().Role)
                     .FirstOrDefault();
 
                 var latestObservedDate = g.Max(x => x.ObservedDate);
                 var contextScore = 0;
+                var hasCanonical = g.Any(x => x.IsCanonical);
 
                 if (!string.IsNullOrWhiteSpace(normalizedFrequency)
                     && string.Equals(g.Key.Frequency, normalizedFrequency, StringComparison.Ordinal))
@@ -143,9 +161,11 @@ public sealed class InterceptionSuggestionService(IDbContextFactory<AppDbContext
                         SeenCount = g.Count()
                     },
                     contextScore,
-                    latestObservedDate);
+                    latestObservedDate,
+                    hasCanonical);
             })
             .OrderByDescending(x => x.ContextScore)
+            .ThenByDescending(x => x.HasCanonical)
             .ThenByDescending(x => x.Dto.SeenCount)
             .ThenByDescending(x => x.LatestObservedDate)
             .ThenBy(x => x.Dto.Name, StringComparer.OrdinalIgnoreCase)
@@ -163,7 +183,8 @@ public sealed class InterceptionSuggestionService(IDbContextFactory<AppDbContext
         string? Role,
         string? Frequency,
         string? Division,
-        DateTime ObservedDate);
+        DateTime ObservedDate,
+        bool IsCanonical);
 
     private sealed record ParticipantSuggestionKey(
         string Name,
@@ -173,5 +194,6 @@ public sealed class InterceptionSuggestionService(IDbContextFactory<AppDbContext
     private sealed record ParticipantSuggestionProjection(
         ParticipantSuggestionDto Dto,
         int ContextScore,
-        DateTime LatestObservedDate);
+        DateTime LatestObservedDate,
+        bool HasCanonical);
 }

@@ -54,13 +54,13 @@ public sealed class ParticipantCandidateGroupCommandServiceTests
     }
 
     [Fact]
-    public async Task ConfirmAsync_WhenResolvedParticipantExistsByName_UpdatesItWithoutCreatingDuplicate()
+    public async Task ConfirmAsync_WhenSingleContextFreeResolvedParticipantExists_EnrichesItWithoutCreatingDuplicate()
     {
         var ct = TestContext.Current.CancellationToken;
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
 
-        var existingResolved = ResolvedParticipant.Create("ГРОМ", "seed", "стара роль", "старий підрозділ");
+        var existingResolved = ResolvedParticipant.Create("ГРОМ", "seed", null, null);
         var group = ParticipantCandidateGroup.Create(
             [new ParticipantRef(Guid.NewGuid(), Guid.NewGuid(), 1), new ParticipantRef(Guid.NewGuid(), Guid.NewGuid(), 2)],
             0.82,
@@ -86,6 +86,38 @@ public sealed class ParticipantCandidateGroupCommandServiceTests
         var persistedGroup = await verifyDb.ParticipantCandidateGroups.SingleAsync(ct);
         persistedGroup.Status.Should().Be(CandidateGroupStatus.Confirmed);
         persistedGroup.ResolvedParticipantId.Should().Be(existingResolved.Id);
+    }
+
+    [Fact]
+    public async Task ConfirmAsync_WhenOnlyNameMatchesButContextDiffers_CreatesAdditionalResolvedParticipant()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+
+        var existingResolved = ResolvedParticipant.Create("ГРОМ", "seed", "стара роль", "старий підрозділ");
+        var group = ParticipantCandidateGroup.Create(
+            [new ParticipantRef(Guid.NewGuid(), Guid.NewGuid(), 1), new ParticipantRef(Guid.NewGuid(), Guid.NewGuid(), 2)],
+            0.82,
+            new PatternMatchReasons { SameVector = true });
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            db.ResolvedParticipants.Add(existingResolved);
+            db.ParticipantCandidateGroups.Add(group);
+            await db.SaveChangesAsync(ct);
+        }
+
+        await service.ConfirmAsync(group.Id, "ГРОМ", "analyst", "нова роль", "новий підрозділ", ct);
+
+        await using var verifyDb = await factory.CreateDbContextAsync(ct);
+        (await verifyDb.ResolvedParticipants.CountAsync(ct)).Should().Be(2);
+        verifyDb.ResolvedParticipants.Should().Contain(x => x.Id == existingResolved.Id);
+        verifyDb.ResolvedParticipants.Should().Contain(x =>
+            x.Name == "ГРОМ" &&
+            x.Role == "нова роль" &&
+            x.Division == "новий підрозділ" &&
+            x.Id != existingResolved.Id);
     }
 
     [Fact]

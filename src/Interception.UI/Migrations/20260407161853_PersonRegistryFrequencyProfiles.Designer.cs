@@ -3,6 +3,7 @@ using System;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,75 +11,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Interception.UI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260407161853_PersonRegistryFrequencyProfiles")]
+    partial class PersonRegistryFrequencyProfiles
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
-
-            modelBuilder.Entity("Interception.UI.Domain.CanonicalPerson", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("created_at_utc");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("display_name");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("note");
-
-                    b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("updated_at_utc");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DisplayName")
-                        .HasDatabaseName("ix_canonical_persons_display_name");
-
-                    b.ToTable("canonical_persons", (string)null);
-                });
-
-            modelBuilder.Entity("Interception.UI.Domain.CanonicalPersonMember", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("AddedAtUtc")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("added_at_utc");
-
-                    b.Property<Guid>("CanonicalPersonId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("canonical_person_id");
-
-                    b.Property<Guid>("ResolvedParticipantId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("resolved_participant_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CanonicalPersonId")
-                        .HasDatabaseName("ix_canonical_person_members_canonical_person_id");
-
-                    b.HasIndex("ResolvedParticipantId")
-                        .IsUnique()
-                        .HasDatabaseName("ux_canonical_person_members_resolved_participant_id");
-
-                    b.ToTable("canonical_person_members", (string)null);
-                });
 
             modelBuilder.Entity("Interception.UI.Domain.DailyReport", b =>
                 {
@@ -772,25 +712,6 @@ namespace Interception.UI.Migrations
                     b.ToTable("topology_snapshot_runs", (string)null);
                 });
 
-            modelBuilder.Entity("Interception.UI.Domain.CanonicalPersonMember", b =>
-                {
-                    b.HasOne("Interception.UI.Domain.CanonicalPerson", "CanonicalPerson")
-                        .WithMany("Members")
-                        .HasForeignKey("CanonicalPersonId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Interception.UI.Domain.ResolvedParticipant", "ResolvedParticipant")
-                        .WithMany()
-                        .HasForeignKey("ResolvedParticipantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CanonicalPerson");
-
-                    b.Navigation("ResolvedParticipant");
-                });
-
             modelBuilder.Entity("Interception.UI.Domain.InterceptionMessage", b =>
                 {
                     b.HasOne("Interception.UI.Domain.InterceptionAction", "InterceptionAction")
@@ -1056,11 +977,6 @@ namespace Interception.UI.Migrations
                         .IsRequired();
 
                     b.Navigation("Group");
-                });
-
-            modelBuilder.Entity("Interception.UI.Domain.CanonicalPerson", b =>
-                {
-                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("Interception.UI.Domain.DailyReport", b =>

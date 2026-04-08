@@ -36,10 +36,9 @@ public sealed class PersonRegistryService(
             })
             .ToListAsync(ct);
 
-        var singleConfirmedByName = confirmed
+        var confirmedByName = confirmed
             .GroupBy(x => x.Name.Trim(), StringComparer.OrdinalIgnoreCase)
-            .Where(x => x.Count() == 1)
-            .ToDictionary(x => x.Key, x => x.Single(), StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(x => x.Key, x => (IReadOnlyList<PersonRegistryItemDto>)x.ToList(), StringComparer.OrdinalIgnoreCase);
 
         var observedRows = await db.InterceptionMessages
             .AsNoTracking()
@@ -78,7 +77,7 @@ public sealed class PersonRegistryService(
                  ConfirmedBy = null,
                  ConfirmedAt = null
              })
-             .Where(x => !ShouldHideObservedRow(x, singleConfirmedByName))
+             .Where(x => !ShouldHideObservedRow(x, confirmedByName))
              .ToList();
 
         return [.. confirmed
@@ -153,23 +152,45 @@ public sealed class PersonRegistryService(
     /// </summary>
     private static bool ShouldHideObservedRow(
         PersonRegistryItemDto observed,
-        Dictionary<string, PersonRegistryItemDto> singleConfirmedByName)
+        Dictionary<string, IReadOnlyList<PersonRegistryItemDto>> confirmedByName)
     {
-        if (!singleConfirmedByName.TryGetValue(observed.Name, out var confirmed))
+        if (!confirmedByName.TryGetValue(observed.Name, out var confirmedRows) || confirmedRows.Count == 0)
             return false;
 
+        var observedRole = SemanticValueExtensions.NormalizeMeaningfulOrNull(observed.Role);
         var observedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(observed.Division);
-        var confirmedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(confirmed.Division);
 
-        if (observedDivision is null)
+        // 1) Найсильніший сигнал: exact-ish profile match.
+        if (confirmedRows.Any(x =>
+                StringComparer.OrdinalIgnoreCase.Equals(
+                    SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Role),
+                    observedRole) &&
+                StringComparer.OrdinalIgnoreCase.Equals(
+                    SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Division),
+                    observedDivision)))
+        {
+            return true;
+        }
+
+        // 2) Якщо в observed немає підрозділу, але є рівно один confirmed з таким ім'ям і роллю,
+        //    вважаємо це тим самим уже підтвердженим записом.
+        if (observedDivision is null && observedRole is not null)
+        {
+            var sameRole = confirmedRows
+                .Where(x => StringComparer.OrdinalIgnoreCase.Equals(
+                    SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Role),
+                    observedRole))
+                .ToList();
+
+            if (sameRole.Count == 1)
+                return true;
+        }
+
+        // 3) Старий безпечний fallback: якщо confirmed рядок з таким ім'ям лише один,
+        //    приховуємо observed-дубль навіть коли контекст бідний.
+        if (confirmedRows.Count == 1)
             return true;
 
-        if (confirmedDivision is null)
-            return true;
-
-        return string.Equals(
-            observedDivision,
-            confirmedDivision,
-            StringComparison.OrdinalIgnoreCase);
+        return false;
     }
 }

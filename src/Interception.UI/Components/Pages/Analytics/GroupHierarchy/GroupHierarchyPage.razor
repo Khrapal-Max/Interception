@@ -6,7 +6,7 @@
 <div class="page-shell group-hierarchy-page-shell">
     <CandidatesToolbar ActiveSection="group-hierarchy">
         <MetaContent>
-            <div class="d-flex flex-nowrap align-items-end gap-2">
+            <div class="hierarchy-toolbar-meta-grid">
                 <div>
                     <label class="form-label small mb-1">Від</label>
                     <input class="form-control form-control-sm rounded-0"
@@ -23,35 +23,38 @@
                            @onchange="@(e => OnDateToChanged(e.Value?.ToString()))" />
                 </div>
 
-                <div class="form-check form-switch mb-1 ms-1">
+                <label class="form-check form-switch hierarchy-toolbar-switch" for="reviewOnly">
                     <input class="form-check-input" type="checkbox" id="reviewOnly" @bind="_reviewOnly" />
-                    <label class="form-check-label small" for="reviewOnly">Лише з позначкою перевірки</label>
-                </div>
+                    <span class="form-check-label small">Лише з позначкою перевірки</span>
+                </label>
             </div>
         </MetaContent>
         <ActionsContent>
-            <div class="registry-toolbar-meta">
+            <div class="registry-toolbar-meta toolbar-inline-meta">
                 Кластери: <strong>@VisibleClusters.Count</strong>
             </div>
             <button type="button"
-                    class="btn btn-secondary btn-sm rounded-0"
+                    class="btn btn-secondary btn-sm rounded-0 icon-action-btn"
                     @onclick="ResetPeriodAsync"
-                    disabled="@_loading">
-                7 днів
+                    disabled="@_loading"
+                    title="Скинути період на 7 днів"
+                    aria-label="Скинути період на 7 днів">
+                <i class="bi bi-calendar-week"></i>
             </button>
             <button type="button"
-                    class="btn btn-success btn-sm rounded-0"
+                    class="btn btn-success btn-sm rounded-0 icon-action-btn"
                     @onclick="LoadAsync"
-                    disabled="@_loading">
+                    disabled="@_loading"
+                    title="Оновити ієрархію"
+                    aria-label="Оновити ієрархію">
                 @if (_loading)
                 {
-                    <span class="spinner-border spinner-border-sm me-1"></span>
+                    <span class="spinner-border spinner-border-sm"></span>
                 }
                 else
                 {
-                    <i class="bi bi-arrow-repeat me-1"></i>
+                    <i class="bi bi-arrow-repeat"></i>
                 }
-                Оновити
             </button>
         </ActionsContent>
     </CandidatesToolbar>
@@ -78,12 +81,12 @@
         {
             <div class="row g-0 h-100 group-hierarchy-layout">
                 <div class="col-12 col-xxl-4 border-end d-flex flex-column min-h-0 left-pane">
-                    <div class="pane-head px-3 py-3 border-bottom">
+                    <div class="pane-head px-3 py-1 border-bottom">
                         <h5 class="mb-1">Кластери груп</h5>
                         <div class="small text-muted">Показує не межі, а підпорядковані контури всередині опорної групи</div>
                     </div>
 
-                    <div class="px-3 py-3 border-bottom">
+                    <div class="px-3 py-1 border-bottom">
                         <div class="row g-2 stats-grid">
                             <div class="col-6">
                                 <div class="stats-card">
@@ -149,7 +152,7 @@
                     }
                     else
                     {
-                        <div class="pane-head px-3 py-3 border-bottom d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                        <div class="pane-head p-2 border-bottom d-flex justify-content-between align-items-center gap-1 flex-wrap">
                             <div>
                                 <h4 class="mb-1">Деталі кластера груп</h4>
                                 <div class="small text-muted">@_selectedCluster.Summary</div>
@@ -157,8 +160,8 @@
                             <div class="small text-muted">Вузлів: <strong>@_selectedCluster.Nodes.Count</strong></div>
                         </div>
 
-                        <div class="panel-scroll px-3 py-3">
-                            <div class="row g-3">
+                        <div class="panel-scroll p-1">
+                            <div class="row g-1">
                                 <div class="col-12 col-lg-6">
                                     <div class="cluster-panel h-100">
                                         <div class="cluster-panel-header">

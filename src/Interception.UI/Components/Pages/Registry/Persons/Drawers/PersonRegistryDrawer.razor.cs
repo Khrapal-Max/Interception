@@ -23,6 +23,7 @@ public partial class PersonRegistryDrawer : ComponentBase
     [Parameter] public EventCallback OnSaved { get; set; }
 
     private string? _name;
+    private string? _frequency;
     private string? _role;
     private string? _division;
     private bool _nameError;
@@ -44,6 +45,7 @@ public partial class PersonRegistryDrawer : ComponentBase
 
         _initialized = true;
         _name = Participant?.Name ?? string.Empty;
+        _frequency = Participant?.Frequency ?? string.Empty;
         _role = Participant?.Role ?? string.Empty;
         _division = Participant?.Division ?? string.Empty;
         _nameError = false;
@@ -83,6 +85,7 @@ public partial class PersonRegistryDrawer : ComponentBase
                 new PersonRegistryUpdateDto
                 {
                     Name = _name,
+                    Frequency = _frequency,
                     Role = _role,
                     Division = _division
                 });

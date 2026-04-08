@@ -22,6 +22,7 @@ public sealed class ResolvedParticipant
     public string Name { get; private set; } = default!;
     public string? Role { get; private set; }
     public string? Division { get; private set; }
+    public string? Frequency { get; private set; }
     public string ConfirmedBy { get; private set; } = default!;
     public DateTime ConfirmedAt { get; private set; }
 
@@ -33,7 +34,8 @@ public sealed class ResolvedParticipant
         string name,
         string confirmedBy,
         string? role = null,
-        string? division = null)
+        string? division = null,
+        string? frequency = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException(
@@ -49,6 +51,7 @@ public sealed class ResolvedParticipant
             Name = name.Trim(),
             Role = NormalizeOptional(role),
             Division = NormalizeOptional(division),
+            Frequency = NormalizeOptional(frequency),
             ConfirmedBy = confirmedBy.Trim(),
             ConfirmedAt = ConverterDateTimeExtensions.Now
         };
@@ -58,7 +61,7 @@ public sealed class ResolvedParticipant
     // Update
     // -------------------------------------------------------------------------
 
-    public void Update(string name, string? role = null, string? division = null)
+    public void Update(string name, string? role = null, string? division = null, string? frequency = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException(
@@ -67,6 +70,7 @@ public sealed class ResolvedParticipant
         Name = name.Trim();
         Role = NormalizeOptional(role);
         Division = NormalizeOptional(division);
+        Frequency = NormalizeOptional(frequency);
     }
 
     // -------------------------------------------------------------------------

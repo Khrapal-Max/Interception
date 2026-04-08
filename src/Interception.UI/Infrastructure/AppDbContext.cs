@@ -18,6 +18,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<ParticipantCandidateGroup> ParticipantCandidateGroups { get; init; }
     public DbSet<ResolvedParticipant> ResolvedParticipants { get; init; }
+    public DbSet<CanonicalPerson> CanonicalPersons { get; init; }
+    public DbSet<CanonicalPersonMember> CanonicalPersonMembers { get; init; }
 
     public DbSet<DailyReport> DailyReports { get; init; }
     public DbSet<MessageGroup> MessageGroups { get; init; }

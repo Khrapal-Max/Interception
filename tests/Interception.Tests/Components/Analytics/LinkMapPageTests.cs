@@ -56,7 +56,8 @@ public sealed class LinkMapPageTests : BunitContext
         cut.WaitForAssertion(() =>
         {
             cut.Markup.Should().Contain("За поточним періодом груп не знайдено.");
-            cut.FindAll("button").Any(x => x.TextContent.Contains("Оновити")).Should().BeTrue();
+            cut.Find("button[aria-label='Оновити карту']").Should().NotBeNull();
+            cut.Markup.Should().Contain("Груп:");
         });
 
         _topologySnapshotBuilder.Received(1).GetStateAsync(Arg.Any<DateTime?>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>());
@@ -137,6 +138,7 @@ public sealed class LinkMapPageTests : BunitContext
             cut.Markup.Should().Contain("розвід інформація");
             cut.Markup.Should().Contain("А-ЦЕНТР");
             cut.Markup.Should().Contain("Б-ЦЕНТР");
+            cut.Markup.Should().Contain("401.2000");
         });
     }
 
@@ -181,7 +183,8 @@ public sealed class LinkMapPageTests : BunitContext
         cut.WaitForAssertion(() =>
         {
             cut.Markup.Should().Contain("Перехвати змінені після останньої перебудови карти.");
-            cut.Markup.Should().Contain("снапшот застарів");
+            cut.Markup.Should().Contain("застарілий snapshot");
+            cut.FindAll("button").Any(x => x.TextContent.Contains("Перебудувати")).Should().BeTrue();
         });
     }
 
@@ -223,9 +226,7 @@ public sealed class LinkMapPageTests : BunitContext
         cut.WaitForAssertion(() =>
             cut.Markup.Should().Contain("Для поточного періоду snapshot ще не побудований."));
 
-        var rebuildButton = cut.FindAll("button")
-            .Single(x => x.TextContent.Contains("Перебудувати"));
-
+        var rebuildButton = cut.Find("button[aria-label='Рефреш']");
         rebuildButton.Click();
 
         cut.WaitForAssertion(() =>

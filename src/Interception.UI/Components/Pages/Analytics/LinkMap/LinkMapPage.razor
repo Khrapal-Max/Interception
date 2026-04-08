@@ -6,8 +6,8 @@
 <div class="page-shell linkmap-page-shell">
     <CandidatesToolbar ActiveSection="link-map">
         <MetaContent>
-            <div class="d-flex flex-nowrap align-items-end gap-2">
-                <div>
+            <div class="toolbar-meta-grid">
+                <div class="toolbar-field toolbar-field-date">
                     <label class="form-label small mb-1">Від</label>
                     <input class="form-control form-control-sm rounded-0"
                            type="date"
@@ -15,7 +15,7 @@
                            @onchange="@(e => OnDateFromChanged(e.Value?.ToString()))" />
                 </div>
 
-                <div>
+                <div class="toolbar-field toolbar-field-date">
                     <label class="form-label small mb-1">До</label>
                     <input class="form-control form-control-sm rounded-0"
                            type="date"
@@ -23,7 +23,7 @@
                            @onchange="@(e => OnDateToChanged(e.Value?.ToString()))" />
                 </div>
 
-                <div>
+                <div class="toolbar-field toolbar-field-search">
                     <label class="form-label small mb-1">Пошук</label>
                     <input class="form-control form-control-sm rounded-0"
                            type="text"
@@ -32,8 +32,8 @@
                            placeholder="Частота / особа / дія / підрозділ" />
                 </div>
 
-                <div>
-                    <label class="form-label small mb-1">Порядок</label>
+                <div class="toolbar-field toolbar-field-sort">
+                    <label class="form-label small mb-1">Сорт.</label>
                     <select class="form-select form-select-sm rounded-0" @bind="_sort">
                         <option value="connections">За зв'язками</option>
                         <option value="action">За дією</option>
@@ -41,42 +41,57 @@
                     </select>
                 </div>
 
-                <div class="form-check form-switch mb-1 ms-1">
+                <label class="form-check form-switch toolbar-switch" for="strongOnly">
                     <input class="form-check-input" type="checkbox" id="strongOnly" @bind="_strongOnly" />
-                    <label class="form-check-label small" for="strongOnly">Лише зі зв'язками</label>
-                </div>
+                    <span class="form-check-label small">+ зв'язком</span>
+                </label>
             </div>
         </MetaContent>
         <ActionsContent>
-            <ExportLauncher Kind="ExportKind.LinkMap"
-                            Title="Експорт карти зв'язків"
-                            ButtonClass="btn btn-outline-secondary btn-sm rounded-0"
-                            DateFrom="_dateFrom"
-                            DateTo="_dateTo" />
-
-            <div class="registry-toolbar-meta">
+            <div class="registry-toolbar-meta toolbar-inline-meta">
                 Груп: <strong>@VisibleGroups.Count</strong>
             </div>
-            <div class="registry-toolbar-meta">
-                Стан: <strong>@SnapshotStatusText</strong>
-            </div>
+            <ExportLauncher Kind="ExportKind.LinkMap"
+                            ButtonClass="btn btn-outline-secondary btn-sm rounded-0 icon-action-btn"
+                            DateFrom="_dateFrom"
+                            DateTo="_dateTo" />
             <button type="button"
-                    class="btn btn-secondary btn-sm rounded-0"
+                    class="btn btn-secondary btn-sm rounded-0 icon-action-btn"
                     @onclick="ResetPeriodAsync"
-                    disabled="@(_loading || _rebuilding)">
-                7 днів
+                    disabled="@(_loading || _rebuilding)"
+                    title="Скинути період на 7 днів"
+                    aria-label="Скинути період на 7 днів">
+                <i class="bi bi-calendar-week"></i>
             </button>
             <button type="button"
-                    class="btn btn-outline-primary btn-sm rounded-0"
+                    class="btn btn-outline-primary btn-sm rounded-0 icon-action-btn"
                     @onclick="RebuildSnapshotAsync"
-                    disabled="@(_loading || _rebuilding)">
-                @(_rebuilding ? "Перебудова..." : "Перебудувати")
+                    disabled="@(_loading || _rebuilding)"
+                    title="Рефреш"
+                    aria-label="Рефреш">
+                @if (_rebuilding)
+                {
+                    <span class="spinner-border spinner-border-sm"></span>
+                }
+                else
+                {
+                    <i class="bi bi-hdd-stack"></i>
+                }
             </button>
             <button type="button"
-                    class="btn btn-primary btn-sm rounded-0"
+                    class="btn btn-primary btn-sm rounded-0 icon-action-btn"
                     @onclick="LoadAsync"
-                    disabled="@(_loading || _rebuilding)">
-                Оновити
+                    disabled="@(_loading || _rebuilding)"
+                    title="Оновити карту"
+                    aria-label="Оновити карту">
+                @if (_loading)
+                {
+                    <span class="spinner-border spinner-border-sm"></span>
+                }
+                else
+                {
+                    <i class="bi bi-arrow-repeat"></i>
+                }
             </button>
         </ActionsContent>
     </CandidatesToolbar>
@@ -84,24 +99,44 @@
     <div class="page-panel linkmap-shell">
         @if (_snapshotState?.HasSnapshot == true && _snapshotState.IsStale)
         {
-            <div class="alert alert-warning rounded-0 border-0 border-bottom mb-0 small">
-                Перехвати змінені після останньої перебудови карти. Зараз показано застарілий snapshot.
+            <div class="snapshot-banner alert alert-warning rounded-0 border-0 border-bottom mb-0 small d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <div>Перехвати змінені після останньої перебудови карти. Зараз показано застарілий snapshot.</div>
+                <button type="button"
+                        class="btn btn-outline-dark btn-sm rounded-0"
+                        @onclick="RebuildSnapshotAsync"
+                        disabled="@(_loading || _rebuilding)">
+                    @(_rebuilding ? "Перебудова..." : "Перебудувати")
+                </button>
             </div>
         }
         else if (_snapshotState?.Status == "failed")
         {
-            <div class="alert alert-danger rounded-0 border-0 border-bottom mb-0 small">
-                Остання перебудова карти завершилась помилкою.
-                @if (!string.IsNullOrWhiteSpace(_snapshotState.ErrorMessage))
-                {
-                    <span> @_snapshotState.ErrorMessage</span>
-                }
+            <div class="snapshot-banner alert alert-danger rounded-0 border-0 border-bottom mb-0 small d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <div>
+                    Остання перебудова карти завершилась помилкою.
+                    @if (!string.IsNullOrWhiteSpace(_snapshotState.ErrorMessage))
+                    {
+                        <span> @_snapshotState.ErrorMessage</span>
+                    }
+                </div>
+                <button type="button"
+                        class="btn btn-outline-light btn-sm rounded-0"
+                        @onclick="RebuildSnapshotAsync"
+                        disabled="@(_loading || _rebuilding)">
+                    @(_rebuilding ? "Повтор..." : "Повторити")
+                </button>
             </div>
         }
         else if (_snapshotState is not null && !_snapshotState.HasSnapshot)
         {
-            <div class="alert alert-info rounded-0 border-0 border-bottom mb-0 small">
-                Для поточного періоду snapshot ще не побудований.
+            <div class="snapshot-banner alert alert-info rounded-0 border-0 border-bottom mb-0 small d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <div>Для поточного періоду snapshot ще не побудований.</div>
+                <button type="button"
+                        class="btn btn-outline-primary btn-sm rounded-0"
+                        @onclick="RebuildSnapshotAsync"
+                        disabled="@(_loading || _rebuilding)">
+                    @(_rebuilding ? "Побудова..." : "Побудувати")
+                </button>
             </div>
         }
 
@@ -116,7 +151,7 @@
         else
         {
             <div class="row g-0 h-100 linkmap-layout">
-                <div class="col-12 col-xl-4 border-end d-flex flex-column min-h-0 left-pane">
+                <div class="col-12 col-xl-6 border-end d-flex flex-column min-h-0 left-pane">
                     <div class="pane-head px-3 py-2 border-bottom small d-flex justify-content-between align-items-center">
                         <span class="fw-semibold">Групи</span>
                         <span class="text-muted">@VisibleGroups.Count</span>
@@ -155,7 +190,7 @@
                     </div>
                 </div>
 
-                <div class="col-12 col-xl-8 d-flex flex-column min-h-0 right-pane">
+                <div class="col-12 col-xl-6 d-flex flex-column min-h-0 right-pane">
                     @if (_selectedGroup is null)
                     {
                         <div class="p-3 text-muted small">Оберіть групу зліва.</div>

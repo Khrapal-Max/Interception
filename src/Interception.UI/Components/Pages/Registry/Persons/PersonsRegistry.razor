@@ -48,10 +48,11 @@
                 <table class="table table-hover table-sm align-middle data-table">
                     <thead>
                         <tr>
-                            <th style="width: 28%">Позивний</th>
-                            <th style="width: 18%">Статус</th>
-                            <th style="width: 22%">Роль</th>
-                            <th style="width: 24%">Підрозділ</th>
+                            <th style="width: 24%">Позивний</th>
+                            <th style="width: 14%">Частота</th>
+                            <th style="width: 16%">Статус</th>
+                            <th style="width: 18%">Роль</th>
+                            <th style="width: 20%">Підрозділ</th>
                             <th style="width: 8%"></th>
                         </tr>
                     </thead>
@@ -60,6 +61,7 @@
                         {
                             <tr>
                                 <td class="fw-medium">@person.Name</td>
+                                <td class="small text-muted font-monospace">@(string.IsNullOrWhiteSpace(person.Frequency) ? "—" : person.Frequency)</td>
                                 <td>
                                     @if (person.IsConfirmed)
                                     {

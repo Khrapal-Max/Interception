@@ -4,15 +4,21 @@
 
 using Interception.UI.Application.Analytics.Abstractions;
 using Interception.UI.Application.Analytics.Dtos;
+using Interception.UI.Extensions;
+using Interception.UI.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace Interception.UI.Application.Analytics.Services;
 
 /// <summary>
 /// Будує операторську ієрархію груп поверх уже зібраної карти зв'язків.
 /// </summary>
-public sealed class GroupHierarchyService(ILinkMapService linkMapService) : IGroupHierarchyService
+public sealed class GroupHierarchyService(
+    ILinkMapService linkMapService,
+    IDbContextFactory<AppDbContext> dbFactory) : IGroupHierarchyService
 {
     private readonly ILinkMapService _linkMapService = linkMapService;
+    private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
 
     /// <inheritdoc />
     public async Task<GroupHierarchyMapDto> BuildAsync(
@@ -24,8 +30,11 @@ public sealed class GroupHierarchyService(ILinkMapService linkMapService) : IGro
         if (map.Groups.Count == 0)
             return new GroupHierarchyMapDto([], 0, 0, 0, 0);
 
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var canonicalByName = await LoadCanonicalByNameMapAsync(db, map.Groups, ct);
+
         var groupsByKey = map.Groups.ToDictionary(x => x.GroupKey, StringComparer.OrdinalIgnoreCase);
-        var candidateEdges = BuildCandidateEdges(map.Groups);
+        var candidateEdges = BuildCandidateEdges(map.Groups, canonicalByName);
         var reviewGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         var selectedEdges = SelectBestEdges(candidateEdges, reviewGroups);
@@ -82,12 +91,30 @@ public sealed class GroupHierarchyService(ILinkMapService linkMapService) : IGro
 
     /// <summary>
     /// Шукає усі можливі parent → child зв'язки через центри інших груп.
+    /// Якщо для імені є однозначна канонічна особа — звіряє також по ній.
     /// </summary>
-    private static List<CandidateEdge> BuildCandidateEdges(IReadOnlyList<LinkMapGroupDto> groups)
+    private static List<CandidateEdge> BuildCandidateEdges(
+        IReadOnlyList<LinkMapGroupDto> groups,
+        IReadOnlyDictionary<string, Guid> canonicalByName)
     {
-        var byKeyPerson = groups
-            .GroupBy(x => x.KeyPersonName.Trim(), StringComparer.OrdinalIgnoreCase)
+        var byKeyPersonName = groups
+            .Where(x => !string.IsNullOrWhiteSpace(x.KeyPersonName))
+            .GroupBy(x => NormalizePersonName(x.KeyPersonName), StringComparer.OrdinalIgnoreCase)
+            .Where(x => !string.IsNullOrWhiteSpace(x.Key))
             .ToDictionary(x => x.Key, x => x.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        var byKeyPersonCanonical = groups
+            .Where(x => !string.IsNullOrWhiteSpace(x.KeyPersonName))
+            .Select(x => new
+            {
+                Group = x,
+                CanonicalId = canonicalByName.TryGetValue(NormalizePersonName(x.KeyPersonName), out var canonicalId)
+                    ? canonicalId
+                    : Guid.Empty
+            })
+            .Where(x => x.CanonicalId != Guid.Empty)
+            .GroupBy(x => x.CanonicalId)
+            .ToDictionary(x => x.Key, x => x.Select(v => v.Group).ToList());
 
         var result = new List<CandidateEdge>();
 
@@ -95,10 +122,25 @@ public sealed class GroupHierarchyService(ILinkMapService linkMapService) : IGro
         {
             foreach (var member in parent.MemberDetails.Where(x => !x.IsKeyPerson && !string.IsNullOrWhiteSpace(x.Name)))
             {
-                if (!byKeyPerson.TryGetValue(member.Name.Trim(), out var matchedGroups))
-                    continue;
+                var matchedGroups = new List<LinkMapGroupDto>();
+                var normalizedMemberName = NormalizePersonName(member.Name);
 
-                foreach (var child in matchedGroups.Where(x => !x.GroupKey.Equals(parent.GroupKey, StringComparison.OrdinalIgnoreCase)))
+                if (!string.IsNullOrWhiteSpace(normalizedMemberName)
+                    && byKeyPersonName.TryGetValue(normalizedMemberName, out var byName))
+                {
+                    matchedGroups.AddRange(byName);
+                }
+
+                if (!string.IsNullOrWhiteSpace(normalizedMemberName)
+                    && canonicalByName.TryGetValue(normalizedMemberName, out var canonicalId)
+                    && byKeyPersonCanonical.TryGetValue(canonicalId, out var byCanonical))
+                {
+                    matchedGroups.AddRange(byCanonical);
+                }
+
+                foreach (var child in matchedGroups
+                             .Where(x => !x.GroupKey.Equals(parent.GroupKey, StringComparison.OrdinalIgnoreCase))
+                             .DistinctBy(x => x.GroupKey, StringComparer.OrdinalIgnoreCase))
                 {
                     var score = member.MentionCount * 1000
                                 + member.ConnectionWeight * 100
@@ -114,13 +156,60 @@ public sealed class GroupHierarchyService(ILinkMapService linkMapService) : IGro
                         ViaMemberName: member.Name,
                         ViaMemberRole: member.Role,
                         Score: score,
-                        IsAmbiguous: matchedGroups.Count > 1));
+                        IsAmbiguous: matchedGroups
+                            .DistinctBy(x => x.GroupKey, StringComparer.OrdinalIgnoreCase)
+                            .Count() > 1));
                 }
             }
         }
 
         return result;
     }
+
+    /// <summary>
+    /// Завантажує однозначну канонічну прив'язку для імен, які вже зведені в аналітиці.
+    /// </summary>
+    private static async Task<Dictionary<string, Guid>> LoadCanonicalByNameMapAsync(
+        AppDbContext db,
+        IReadOnlyList<LinkMapGroupDto> groups,
+        CancellationToken ct)
+    {
+        var names = groups
+            .Select(x => x.KeyPersonName)
+            .Concat(groups.SelectMany(x => x.MemberDetails.Select(v => v.Name)))
+            .Select(NormalizePersonName)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (names.Count == 0)
+            return [];
+
+        var rows = await (
+                from member in db.CanonicalPersonMembers.AsNoTracking()
+                join resolved in db.ResolvedParticipants.AsNoTracking() on member.ResolvedParticipantId equals resolved.Id
+                where !string.IsNullOrWhiteSpace(resolved.Name)
+                select new
+                {
+                    member.CanonicalPersonId,
+                    resolved.Name
+                })
+            .ToListAsync(ct);
+
+        return rows
+            .Select(x => new
+            {
+                x.CanonicalPersonId,
+                Name = NormalizePersonName(x.Name)
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.Name) && names.Contains(x.Name))
+            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .Where(x => x.Select(v => v.CanonicalPersonId).Distinct().Count() == 1)
+            .ToDictionary(x => x.Key, x => x.First().CanonicalPersonId, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizePersonName(string? name)
+        => SemanticValueExtensions.NormalizeMeaningfulOrNull(name)?.Trim().ToUpperInvariant() ?? string.Empty;
 
     /// <summary>
     /// Вибирає одного основного батька для кожної дочірньої групи.

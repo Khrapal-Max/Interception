@@ -187,8 +187,16 @@ public sealed class PersonRegistryServiceTests
         }
 
         var all = await svc.GetAllAsync(ct);
-        all.Should().ContainSingle(x => x.Name == "МАДЖЕСТИК");
+        all.Should().ContainSingle(x =>
+            x.Name == "МАДЖЕСТИК" &&
+            x.IsConfirmed &&
+            x.Role == "оператор бпла" &&
+            x.Division == "ВЖ 1 мсб 656 мсп");
         all.Should().NotContain(x => x.Name == "МАНДЖЕСТИК");
+        all.Should().NotContain(x =>
+            x.Name == "МАДЖЕСТИК" &&
+            !x.IsConfirmed &&
+            x.Division == "ВЖ 1 мсб 656 мсп");
     }
 
     [Fact]
@@ -236,7 +244,15 @@ public sealed class PersonRegistryServiceTests
         }
 
         var all = await svc.GetAllAsync(ct);
-        all.Should().ContainSingle(x => x.Name == "ГРОМ");
+        all.Should().ContainSingle(x =>
+            x.Name == "ГРОМ" &&
+            x.IsConfirmed &&
+            x.Role == "старший" &&
+            x.Division == "РЕР");
+        all.Should().NotContain(x =>
+            x.Name == "ГРОМ" &&
+            !x.IsConfirmed &&
+            x.Role == "старший");
     }
 
     private static InterceptionAction CreateAction()

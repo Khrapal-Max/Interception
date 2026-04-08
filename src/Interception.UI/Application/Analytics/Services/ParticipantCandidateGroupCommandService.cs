@@ -41,13 +41,37 @@ public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<Ap
             .SingleOrDefaultAsync(x => x.Id == groupId, ct)
             ?? throw new InvalidOperationException($"ParticipantCandidateGroup '{groupId}' не знайдено.");
 
-        var normalizedLookupName = StringTextNormExtensions.NormalizeOption(normalizedName);
+        var normalizedLookupName = StringTextNormExtensions.NormalizeOption(normalizedName)!;
 
-        var resolved = await db.ResolvedParticipants
+        var sameNameResolved = await db.ResolvedParticipants
             .AsTracking()
-            .SingleOrDefaultAsync(
-                x => x.Name != null && StringTextNormExtensions.NormalizeOption(x.Name) == normalizedLookupName,
-                ct);
+            .Where(x => x.Name != null && StringTextNormExtensions.NormalizeOption(x.Name) == normalizedLookupName)
+            .ToListAsync(ct);
+
+        ResolvedParticipant? resolved = null;
+
+        // 1) Якщо вже є точний збіг по контексту — пере використовуємо його.
+        var exactMatches = sameNameResolved
+            .Where(x =>
+                StringComparer.OrdinalIgnoreCase.Equals(StringTextNormExtensions.NormalizeOption(x.Role), normalizedRole) &&
+                StringComparer.OrdinalIgnoreCase.Equals(StringTextNormExtensions.NormalizeOption(x.Division), normalizedDivision))
+            .ToList();
+
+        if (exactMatches.Count == 1)
+        {
+            resolved = exactMatches[0];
+        }
+        else
+        {
+            // 2) Якщо існує лише один частковий запис з цим ім'ям без власного контексту —
+            //    можна безпечно дозаповнити його замість створення дубліката.
+            var enrichable = sameNameResolved
+                .Where(x => string.IsNullOrWhiteSpace(x.Role) && string.IsNullOrWhiteSpace(x.Division))
+                .ToList();
+
+            if (sameNameResolved.Count == 1 && enrichable.Count == 1)
+                resolved = enrichable[0];
+        }
 
         if (resolved is null)
         {
@@ -61,7 +85,6 @@ public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<Ap
         }
         else
         {
-            // Upsert-by-name: оновлюємо існуючий запис без створення дубліката.
             var entry = db.Entry(resolved);
             entry.Property(nameof(ResolvedParticipant.Name)).CurrentValue = normalizedName;
             entry.Property(nameof(ResolvedParticipant.Role)).CurrentValue = normalizedRole;

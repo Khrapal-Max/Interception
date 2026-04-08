@@ -33,6 +33,10 @@ internal sealed class ResolvedParticipantConfiguration
             .HasColumnName("division")
             .HasMaxLength(300);
 
+        builder.Property(x => x.Frequency)
+            .HasColumnName("frequency")
+            .HasMaxLength(50);
+
         builder.Property(x => x.ConfirmedBy)
             .HasColumnName("confirmed_by")
             .HasMaxLength(200)
@@ -42,9 +46,7 @@ internal sealed class ResolvedParticipantConfiguration
             .HasColumnName("confirmed_at")
             .IsRequired();
 
-        // Ім'я унікальне — одна встановлена особа з таким позивним
-        builder.HasIndex(x => x.Name)
-            .IsUnique()
-            .HasDatabaseName("ix_resolved_participants_name");
+        builder.HasIndex(x => new { x.Name, x.Frequency, x.Division })
+            .HasDatabaseName("ix_resolved_participants_name_frequency_division");
     }
 }

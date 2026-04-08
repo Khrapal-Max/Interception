@@ -15,6 +15,11 @@ public sealed class PersonRegistryUpdateDto
     public string Name { get; init; } = string.Empty;
 
     /// <summary>
+    /// Частота для конкретного профілю особи.
+    /// </summary>
+    public string? Frequency { get; init; }
+
+    /// <summary>
     /// Роль.
     /// </summary>
     public string? Role { get; init; }

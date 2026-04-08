@@ -47,7 +47,7 @@ public partial class GroupHierarchyPage : ComponentBase
         {
             if (_dateFrom.HasValue && _dateTo.HasValue && _dateFrom.Value.Date > _dateTo.Value.Date)
             {
-                Toasts.Error("Некоректний період", "Дата «від» не може бути пізніше за дату «до»." );
+                Toasts.Error("Некоректний період", "Дата «від» не може бути пізніше за дату «до».");
                 _map = null;
                 _selectedCluster = null;
                 return;

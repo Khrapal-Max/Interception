@@ -1,5 +1,5 @@
-<div class="registry-toolbar flex-shrink-0">
-    <div class="toolbar-start d-flex align-items-center gap-2">
+<div class="registry-toolbar analytics-toolbar flex-shrink-0">
+    <div class="toolbar-start d-flex align-items-center gap-2 flex-wrap">
         @if (ActiveSection == "groups")
         {
             <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
@@ -66,6 +66,27 @@
                 <span class="visually-hidden">Ієрархія груп</span>
             </NavLink>
         }
+        @if (ActiveSection == "person-identities")
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/analytics/person-identities"
+                     Match="NavLinkMatch.All"
+                     title="Кандидати на об'єднання"
+                     aria-label="Кандидати на об'єднання">
+                <i class="bi bi-person-vcard"></i>
+                <span class="visually-hidden">Кандидати на об'єднання</span>
+            </NavLink>
+        }
+        else
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/analytics/person-identities"
+                     title="Кандидати на об'єднання"
+                     aria-label="Кандидати на об'єднання">
+                <i class="bi bi-person-vcard"></i>
+                <span class="visually-hidden">Кандидати на об'єднання</span>
+            </NavLink>
+        }
         @if (ActiveSection == "frequency-weights")
         {
             <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
@@ -96,7 +117,7 @@
         }
     </div>
 
-    <div class="toolbar-actions d-flex align-items-center gap-2 justify-content-end">
+    <div class="toolbar-actions d-flex align-items-center gap-2 justify-content-end flex-wrap">
         @if (ActionsContent is not null)
         {
             @ActionsContent

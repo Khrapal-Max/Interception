@@ -1,0 +1,213 @@
+@page "/analytics/person-identities"
+@using Interception.UI.Components.Pages.Analytics.Toolbar
+@using Interception.UI.Extensions
+
+<PageTitle>Аналітика — Кандидати на об'єднання</PageTitle>
+
+<div class="page-shell">
+    <CandidatesToolbar ActiveSection="person-identities">
+        <MetaContent>
+            @if (_candidates is not null)
+            {
+                <span>Кандидати: <strong>@TotalCandidates</strong></span>
+                <span>Уже мають канонічну: <strong>@ReadyCanonicalCount</strong></span>
+            }
+        </MetaContent>
+        <ActionsContent>
+            <button class="btn btn-success btn-sm rounded-0" @onclick="LoadAsync" disabled="@_loading">
+                <i class="bi bi-arrow-repeat me-1"></i>Оновити
+            </button>
+        </ActionsContent>
+    </CandidatesToolbar>
+
+    <div class="page-panel h-100">
+        @if (_loading)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-sm me-2"></div>Пошук кандидатів…
+                </div>
+            </div>
+        }
+        else if (_candidates is null || _candidates.Count == 0)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <i class="bi bi-person-vcard fs-1 d-block mb-2 opacity-25"></i>
+                    <div>Кандидатів на об'єднання не знайдено</div>
+                    <div class="small mt-1">Сторінка показує лише проблемні випадки — дублікати або однакові імена в кількох контекстах.</div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="row g-0 h-100">
+                <div class="col-12 col-xxl-4 border-end d-flex flex-column min-h-0">
+                    <div class="pane-head px-3 py-3 border-bottom">
+                        <h5 class="mb-1">Кандидати на канонічну особу</h5>
+                        <div class="small text-muted">Не всі особи системи, а лише випадки, де є сенс у злитті.</div>
+                    </div>
+
+                    <div class="panel-scroll px-2 py-2">
+                        @foreach (var candidate in _candidates)
+                        {
+                            var isSelected = _selected?.CandidateKey == candidate.CandidateKey;
+                            <button type="button"
+                                    class="cluster-row @(isSelected ? "is-selected" : null)"
+                                    @onclick="() => SelectCandidateAsync(candidate)">
+                                <div class="cluster-row-top">
+                                    <div>
+                                        <div class="cluster-title">@candidate.DisplayName</div>
+                                        <div class="small text-muted">Підтверджених рядків: @candidate.ConfirmedRowsCount</div>
+                                    </div>
+                                    @if (candidate.HasCanonicalPerson)
+                                    {
+                                        <span class="badge text-bg-success">Є канонічна</span>
+                                    }
+                                </div>
+                                <div class="cluster-row-meta small text-muted">
+                                    <span><i class="bi bi-broadcast me-1"></i>@candidate.DistinctFrequencyCount частот</span>
+                                    <span>•</span>
+                                    <span><i class="bi bi-diagram-3 me-1"></i>@candidate.DistinctDivisionCount підрозділів</span>
+                                </div>
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <div class="col-12 col-xxl-8 d-flex flex-column min-h-0">
+                    @if (_selected is null)
+                    {
+                        <div class="p-3 text-muted small">Оберіть кандидата зліва.</div>
+                    }
+                    else
+                    {
+                        <div class="pane-head px-3 py-3 border-bottom d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                            <div>
+                                <h4 class="mb-1">@_selected.DisplayName</h4>
+                                <div class="small text-muted">Аналітичний крок для злиття кількох підтверджених записів в одну особу.</div>
+                            </div>
+                            @if (_selected.HasCanonicalPerson)
+                            {
+                                <span class="badge text-bg-success">Канонічна особа вже створена</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-secondary">Ще без канонічної особи</span>
+                            }
+                        </div>
+
+                        <div class="panel-scroll px-3 py-3">
+                            @if (!string.IsNullOrWhiteSpace(_selected.Warning))
+                            {
+                                <div class="alert alert-warning rounded-0">@_selected.Warning</div>
+                            }
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-lg-6">
+                                    <div class="border rounded-0 p-3 h-100">
+                                        <div class="fw-semibold mb-2">Контексти зі спостережень</div>
+                                        <div class="small text-muted mb-2">Це підказка для аналітика, а не автоматичне злиття.</div>
+                                        <div class="small mb-1"><strong>Частоти:</strong> @(_selected.Frequencies.Count == 0 ? "—" : string.Join(", ", _selected.Frequencies))</div>
+                                        <div class="small"><strong>Підрозділи:</strong> @(_selected.Divisions.Count == 0 ? "—" : string.Join("; ", _selected.Divisions))</div>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-lg-6">
+                                    <div class="border rounded-0 p-3 h-100">
+                                        <div class="fw-semibold mb-2">Канонічна особа</div>
+                                        @if (_selected.HasCanonicalPerson)
+                                        {
+                                            <div class="small mb-1"><strong>Назва:</strong> @_selected.CanonicalDisplayName</div>
+                                            <div class="small"><strong>Нотатка:</strong> @(string.IsNullOrWhiteSpace(_selected.CanonicalNote) ? "—" : _selected.CanonicalNote)</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="small text-muted">Ще не створена. Нижче можна вибрати підтверджені рядки і створити канонічну особу лише для цього проблемного кейсу.</div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border rounded-0 p-3 mb-3">
+                                <div class="fw-semibold mb-2">Підтверджені рядки для об'єднання</div>
+                                <div class="small text-muted mb-3">Для поодиноких осіб нічого робити не потрібно. Тут працюємо лише з тими випадками, де є сенс у злитті.</div>
+
+                                <div class="table-wrap">
+                                    <table class="table table-hover table-sm align-middle data-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 6%"></th>
+                                                <th style="width: 20%">Позивний</th>
+                                                <th style="width: 18%">Роль</th>
+                                                <th style="width: 22%">Підрозділ</th>
+                                                <th style="width: 18%">Контексти</th>
+                                                <th style="width: 16%">Статус</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var row in _selected.Rows)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <input type="checkbox"
+                                                               class="form-check-input"
+                                                               checked="@IsChecked(row.ResolvedParticipantId)"
+                                                               disabled="@row.IsLinkedToCanonical || _saving"
+                                                               @onchange="e => ToggleRow(row.ResolvedParticipantId, e.Value)" />
+                                                    </td>
+                                                    <td class="fw-medium">@row.Name</td>
+                                                    <td class="small text-muted">@(string.IsNullOrWhiteSpace(row.Role) ? "—" : row.Role)</td>
+                                                    <td class="small text-muted">@(string.IsNullOrWhiteSpace(row.Division) ? "—" : row.Division)</td>
+                                                    <td class="small text-muted">
+                                                        <div>Частоти: @(row.Frequencies.Count == 0 ? "—" : string.Join(", ", row.Frequencies))</div>
+                                                        <div>Observation: @row.ObservationCount</div>
+                                                    </td>
+                                                    <td>
+                                                        @if (row.IsLinkedToCanonical)
+                                                        {
+                                                            <span class="badge text-bg-success">У канонічній</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge text-bg-secondary">Доступний</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="border rounded-0 p-3 d-flex flex-column gap-3">
+                                <div>
+                                    <label class="form-label">Нотатка аналітика</label>
+                                    <textarea class="form-control rounded-0"
+                                              rows="3"
+                                              @bind="_note"
+                                              placeholder="Коротко: чому ці записи вважаються однією особою"></textarea>
+                                </div>
+
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button class="btn btn-success btn-sm rounded-0"
+                                            @onclick="SaveAsync"
+                                            disabled="@_saving">
+                                        @if (_saving)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-person-check me-1"></i>
+                                        }
+                                        @(_selected.HasCanonicalPerson ? "Додати в канонічну" : "Створити канонічну")
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

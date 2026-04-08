@@ -25,7 +25,15 @@
                 }
             </div>
 
-            <div class="col-6">
+            <div class="col-4">
+                <label class="form-label form-label-sm">Частота</label>
+                <input type="text" class="form-control form-control-sm"
+                       placeholder="напр. 402.0000"
+                       value="@_frequency"
+                       @oninput="e => _frequency = e.Value?.ToString()" />
+            </div>
+
+            <div class="col-4">
                 <label class="form-label form-label-sm">Роль</label>
                 <input type="text" class="form-control form-control-sm"
                        placeholder="напр. оператор бпла"
@@ -33,7 +41,7 @@
                        @oninput="e => _role = e.Value?.ToString()" />
             </div>
 
-            <div class="col-6">
+            <div class="col-4">
                 <label class="form-label form-label-sm">Підрозділ</label>
                 <input type="text" class="form-control form-control-sm"
                        placeholder="напр. 1 мсб 656 мсп"
@@ -45,7 +53,7 @@
             {
                 <div class="col-12">
                     <div class="alert alert-secondary py-2 px-3 small mb-0">
-                        Після першого редагування для цієї особи буде створено канонічний запис реєстру.
+                        Якщо вкажете той самий позивний, частоту і підрозділ, рядок буде зведено до вже існуючої канонічної особи.
                     </div>
                 </div>
             }
