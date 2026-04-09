@@ -22,19 +22,37 @@ public sealed class PersonRegistryService(
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
-        var confirmed = await db.ResolvedParticipants
-            .AsNoTracking()
-            .Select(x => new PersonRegistryItemDto
-            {
-                Id = x.Id,
-                Name = x.Name,
-                Role = x.Role,
-                Division = x.Division,
-                IsConfirmed = true,
-                ConfirmedBy = x.ConfirmedBy,
-                ConfirmedAt = x.ConfirmedAt
-            })
-            .ToListAsync(ct);
+        var supportsResolvedFrequency = SupportsResolvedFrequency(db);
+
+        var confirmed = supportsResolvedFrequency
+            ? await db.ResolvedParticipants
+                .AsNoTracking()
+                .Select(x => new PersonRegistryItemDto
+                {
+                    Id = x.Id,
+                    Name = x.Name,
+                    Frequency = EF.Property<string?>(x, "Frequency"),
+                    Role = x.Role,
+                    Division = x.Division,
+                    IsConfirmed = true,
+                    ConfirmedBy = x.ConfirmedBy,
+                    ConfirmedAt = x.ConfirmedAt
+                })
+                .ToListAsync(ct)
+            : await db.ResolvedParticipants
+                .AsNoTracking()
+                .Select(x => new PersonRegistryItemDto
+                {
+                    Id = x.Id,
+                    Name = x.Name,
+                    Frequency = null,
+                    Role = x.Role,
+                    Division = x.Division,
+                    IsConfirmed = true,
+                    ConfirmedBy = x.ConfirmedBy,
+                    ConfirmedAt = x.ConfirmedAt
+                })
+                .ToListAsync(ct);
 
         var confirmedByName = confirmed
             .GroupBy(x => x.Name.Trim(), StringComparer.OrdinalIgnoreCase)
@@ -50,6 +68,7 @@ public sealed class PersonRegistryService(
                     participant.Name,
                     participant.Role,
                     participant.IsUnknown,
+                    message.Frequency,
                     message.Division
                 })
             .Where(x =>
@@ -61,12 +80,15 @@ public sealed class PersonRegistryService(
              .GroupBy(x => new
              {
                  NameKey = x.Name!.Trim().ToUpperInvariant(),
+                 FrequencyKey = (SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Frequency) ?? string.Empty).ToUpperInvariant(),
                  DivisionKey = (SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Division) ?? string.Empty).ToUpperInvariant()
              })
              .Select(group => new PersonRegistryItemDto
              {
                  Id = group.OrderBy(x => x.ParticipantId).Select(x => x.ParticipantId).First(),
                  Name = group.Select(x => x.Name!.Trim()).First(),
+                 Frequency = group.Select(x => SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Frequency))
+                     .FirstOrDefault(x => x is not null),
                  Role = group.Select(x => SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Role))
                      .FirstOrDefault(x => x is not null),
                  Division = string.IsNullOrWhiteSpace(group.Key.DivisionKey)
@@ -83,6 +105,7 @@ public sealed class PersonRegistryService(
         return [.. confirmed
              .Concat(observed)
              .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+             .ThenBy(x => x.Frequency, StringComparer.OrdinalIgnoreCase)
              .ThenBy(x => x.Division, StringComparer.OrdinalIgnoreCase)];
     }
 
@@ -96,6 +119,7 @@ public sealed class PersonRegistryService(
         var normalizedName = dto.Name.Trim();
         var normalizedRole = SemanticValueExtensions.NormalizeMeaningfulOrNull(dto.Role);
         var normalizedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(dto.Division);
+        var supportsResolvedFrequency = SupportsResolvedFrequency(db);
 
         var resolved = await db.ResolvedParticipants
             .FirstOrDefaultAsync(x => x.Id == id, ct);
@@ -105,10 +129,20 @@ public sealed class PersonRegistryService(
             resolved.Update(normalizedName, normalizedRole, normalizedDivision);
             await db.SaveChangesAsync(ct);
 
+            string? resolvedFrequency = null;
+            if (supportsResolvedFrequency)
+            {
+                resolvedFrequency = await db.ResolvedParticipants
+                    .Where(x => x.Id == id)
+                    .Select(x => EF.Property<string?>(x, "Frequency"))
+                    .FirstOrDefaultAsync(ct);
+            }
+
             return new PersonRegistryItemDto
             {
                 Id = resolved.Id,
                 Name = resolved.Name,
+                Frequency = SemanticValueExtensions.NormalizeMeaningfulOrNull(resolvedFrequency),
                 Role = resolved.Role,
                 Division = resolved.Division,
                 IsConfirmed = true,
@@ -117,10 +151,25 @@ public sealed class PersonRegistryService(
             };
         }
 
+        var participantContext = await db.InterceptionMessageParticipants
+            .AsNoTracking()
+            .Where(x => x.Id == id)
+            .Select(x => new
+            {
+                ParticipantId = x.Id,
+                x.Name,
+                x.IsUnknown,
+                MessageFrequency = x.InterceptionMessage.Frequency
+            })
+            .FirstOrDefaultAsync(ct);
+
+        if (participantContext is null || participantContext.IsUnknown || string.IsNullOrWhiteSpace(participantContext.Name))
+            throw new InvalidOperationException($"Особу '{id}' не знайдено.");
+
         var participant = await db.InterceptionMessageParticipants
             .FirstOrDefaultAsync(x => x.Id == id, ct);
 
-        if (participant is null || participant.IsUnknown || string.IsNullOrWhiteSpace(participant.Name))
+        if (participant is null)
             throw new InvalidOperationException($"Особу '{id}' не знайдено.");
 
         participant.ResolveAsKnown(normalizedName, normalizedRole);
@@ -132,12 +181,22 @@ public sealed class PersonRegistryService(
             division: normalizedDivision);
 
         db.ResolvedParticipants.Add(created);
+
+        if (supportsResolvedFrequency)
+        {
+            var normalizedFrequency = SemanticValueExtensions.NormalizeMeaningfulOrNull(participantContext.MessageFrequency);
+            db.Entry(created).Property("Frequency").CurrentValue = normalizedFrequency;
+        }
+
         await db.SaveChangesAsync(ct);
 
         return new PersonRegistryItemDto
         {
             Id = created.Id,
             Name = created.Name,
+            Frequency = supportsResolvedFrequency
+                ? SemanticValueExtensions.NormalizeMeaningfulOrNull(participantContext.MessageFrequency)
+                : null,
             Role = created.Role,
             Division = created.Division,
             IsConfirmed = true,
@@ -148,7 +207,7 @@ public sealed class PersonRegistryService(
 
     /// <summary>
     /// Визначає, чи треба приховати observed-рядок, якщо для нього вже існує
-    /// однозначний canonical person.
+    /// підтверджений рядок з таким самим контекстом.
     /// </summary>
     private static bool ShouldHideObservedRow(
         PersonRegistryItemDto observed,
@@ -157,40 +216,47 @@ public sealed class PersonRegistryService(
         if (!confirmedByName.TryGetValue(observed.Name, out var confirmedRows) || confirmedRows.Count == 0)
             return false;
 
+        var observedFrequency = SemanticValueExtensions.NormalizeMeaningfulOrNull(observed.Frequency);
         var observedRole = SemanticValueExtensions.NormalizeMeaningfulOrNull(observed.Role);
         var observedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(observed.Division);
 
-        // 1) Найсильніший сигнал: exact-ish profile match.
+        var useFrequency = !string.IsNullOrWhiteSpace(observedFrequency)
+            || confirmedRows.Any(x => !string.IsNullOrWhiteSpace(SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Frequency)));
+
         if (confirmedRows.Any(x =>
+                (!useFrequency || StringComparer.OrdinalIgnoreCase.Equals(
+                    SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Frequency),
+                    observedFrequency)) &&
                 StringComparer.OrdinalIgnoreCase.Equals(
                     SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Role),
                     observedRole) &&
-                StringComparer.OrdinalIgnoreCase.Equals(
+                (StringComparer.OrdinalIgnoreCase.Equals(
                     SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Division),
-                    observedDivision)))
+                    observedDivision) ||
+                 string.IsNullOrWhiteSpace(observedDivision))))
         {
             return true;
         }
 
-        // 2) Якщо в observed немає підрозділу, але є рівно один confirmed з таким ім'ям і роллю,
-        //    вважаємо це тим самим уже підтвердженим записом.
-        if (observedDivision is null && observedRole is not null)
+        if (string.IsNullOrWhiteSpace(observedDivision) && !string.IsNullOrWhiteSpace(observedRole))
         {
-            var sameRole = confirmedRows
-                .Where(x => StringComparer.OrdinalIgnoreCase.Equals(
-                    SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Role),
-                    observedRole))
+            var sameContext = confirmedRows
+                .Where(x =>
+                    (!useFrequency || StringComparer.OrdinalIgnoreCase.Equals(
+                        SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Frequency),
+                        observedFrequency)) &&
+                    StringComparer.OrdinalIgnoreCase.Equals(
+                        SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Role),
+                        observedRole))
                 .ToList();
 
-            if (sameRole.Count == 1)
+            if (sameContext.Count == 1)
                 return true;
         }
 
-        // 3) Старий безпечний fallback: якщо confirmed рядок з таким ім'ям лише один,
-        //    приховуємо observed-дубль навіть коли контекст бідний.
-        if (confirmedRows.Count == 1)
-            return true;
-
         return false;
     }
+
+    private static bool SupportsResolvedFrequency(AppDbContext db)
+        => db.Model.FindEntityType(typeof(ResolvedParticipant))?.FindProperty("Frequency") is not null;
 }

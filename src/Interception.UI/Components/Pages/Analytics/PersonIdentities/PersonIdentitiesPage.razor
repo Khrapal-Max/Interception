@@ -2,25 +2,25 @@
 @using Interception.UI.Components.Pages.Analytics.Toolbar
 @using Interception.UI.Extensions
 
-<PageTitle>Аналітика — Кандидати на об'єднання</PageTitle>
+<PageTitle>Аналітика — Кандидати на об’єднання</PageTitle>
 
-<div class="page-shell">
+<div class="page-shell identities-page-shell">
     <CandidatesToolbar ActiveSection="person-identities">
         <MetaContent>
             @if (_candidates is not null)
             {
                 <span>Кандидати: <strong>@TotalCandidates</strong></span>
-                <span>Уже мають канонічну: <strong>@ReadyCanonicalCount</strong></span>
+                <span>Уже мають об’єднаний профіль: <strong>@ReadyCanonicalCount</strong></span>
             }
         </MetaContent>
         <ActionsContent>
-            <button class="btn btn-success btn-sm rounded-0" @onclick="LoadAsync" disabled="@_loading">
+            <button class="btn btn-success btn-sm rounded-0" @onclick="LoadAsync" disabled="@_loading" aria-label="Оновити">
                 <i class="bi bi-arrow-repeat me-1"></i>Оновити
             </button>
         </ActionsContent>
     </CandidatesToolbar>
 
-    <div class="page-panel h-100">
+    <div class="page-panel h-100 identities-panel">
         @if (_loading)
         {
             <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
@@ -41,14 +41,14 @@
         }
         else
         {
-            <div class="row g-0 h-100">
-                <div class="col-12 col-xxl-4 border-end d-flex flex-column min-h-0">
-                    <div class="pane-head px-3 py-3 border-bottom">
-                        <h5 class="mb-1">Кандидати на канонічну особу</h5>
+            <div class="row g-0 h-100 identities-layout">
+                <div class="col-12 col-xxl-4 border-end d-flex flex-column min-h-0 identities-left-pane">
+                    <div class="pane-head px-3 py-3 border-bottom flex-shrink-0">
+                        <h5 class="mb-1">Кандидати на об’єднання</h5>
                         <div class="small text-muted">Не всі особи системи, а лише випадки, де є сенс у злитті.</div>
                     </div>
 
-                    <div class="panel-scroll px-2 py-2">
+                    <div class="panel-scroll identities-left-scroll px-2 py-2">
                         @foreach (var candidate in _candidates)
                         {
                             var isSelected = _selected?.CandidateKey == candidate.CandidateKey;
@@ -62,7 +62,7 @@
                                     </div>
                                     @if (candidate.HasCanonicalPerson)
                                     {
-                                        <span class="badge text-bg-success">Є канонічна</span>
+                                        <span class="badge text-bg-success">Є профіль</span>
                                     }
                                 </div>
                                 <div class="cluster-row-meta small text-muted">
@@ -75,29 +75,29 @@
                     </div>
                 </div>
 
-                <div class="col-12 col-xxl-8 d-flex flex-column min-h-0">
+                <div class="col-12 col-xxl-8 d-flex flex-column min-h-0 identities-right-pane">
                     @if (_selected is null)
                     {
                         <div class="p-3 text-muted small">Оберіть кандидата зліва.</div>
                     }
                     else
                     {
-                        <div class="pane-head px-3 py-3 border-bottom d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                        <div class="pane-head px-3 py-3 border-bottom d-flex justify-content-between align-items-center gap-3 flex-wrap flex-shrink-0">
                             <div>
                                 <h4 class="mb-1">@_selected.DisplayName</h4>
-                                <div class="small text-muted">Аналітичний крок для злиття кількох підтверджених записів в одну особу.</div>
+                                <div class="small text-muted">Аналітичний крок для об’єднання кількох підтверджених записів в один об’єднаний профіль.</div>
                             </div>
                             @if (_selected.HasCanonicalPerson)
                             {
-                                <span class="badge text-bg-success">Канонічна особа вже створена</span>
+                                <span class="badge text-bg-success">Об’єднаний профіль уже створений</span>
                             }
                             else
                             {
-                                <span class="badge text-bg-secondary">Ще без канонічної особи</span>
+                                <span class="badge text-bg-secondary">Ще без об’єднаного профілю</span>
                             }
                         </div>
 
-                        <div class="panel-scroll px-3 py-3">
+                        <div class="panel-scroll identities-right-scroll px-3 py-3">
                             @if (!string.IsNullOrWhiteSpace(_selected.Warning))
                             {
                                 <div class="alert alert-warning rounded-0">@_selected.Warning</div>
@@ -114,7 +114,7 @@
                                 </div>
                                 <div class="col-12 col-lg-6">
                                     <div class="border rounded-0 p-3 h-100">
-                                        <div class="fw-semibold mb-2">Канонічна особа</div>
+                                        <div class="fw-semibold mb-2">Об’єднаний профіль</div>
                                         @if (_selected.HasCanonicalPerson)
                                         {
                                             <div class="small mb-1"><strong>Назва:</strong> @_selected.CanonicalDisplayName</div>
@@ -122,26 +122,27 @@
                                         }
                                         else
                                         {
-                                            <div class="small text-muted">Ще не створена. Нижче можна вибрати підтверджені рядки і створити канонічну особу лише для цього проблемного кейсу.</div>
+                                            <div class="small text-muted">Ще не створений. Нижче можна вибрати підтверджені рядки і створити об’єднаний профіль лише для цього проблемного кейсу.</div>
                                         }
                                     </div>
                                 </div>
                             </div>
 
                             <div class="border rounded-0 p-3 mb-3">
-                                <div class="fw-semibold mb-2">Підтверджені рядки для об'єднання</div>
-                                <div class="small text-muted mb-3">Для поодиноких осіб нічого робити не потрібно. Тут працюємо лише з тими випадками, де є сенс у злитті.</div>
+                                <div class="fw-semibold mb-2">Рядки для об’єднання</div>
+                                <div class="small text-muted mb-3">Показуємо кожен рядок окремо: назва, частота, роль і підрозділ.</div>
 
-                                <div class="table-wrap">
-                                    <table class="table table-hover table-sm align-middle data-table">
+                                <div class="table-wrap identities-table-wrap">
+                                    <table class="table table-hover table-sm align-middle data-table mb-0">
                                         <thead>
                                             <tr>
                                                 <th style="width: 6%"></th>
                                                 <th style="width: 20%">Позивний</th>
+                                                <th style="width: 14%">Частота</th>
                                                 <th style="width: 18%">Роль</th>
-                                                <th style="width: 22%">Підрозділ</th>
-                                                <th style="width: 18%">Контексти</th>
-                                                <th style="width: 16%">Статус</th>
+                                                <th style="width: 26%">Підрозділ</th>
+                                                <th style="width: 8%">Obs</th>
+                                                <th style="width: 8%">Статус</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -156,16 +157,14 @@
                                                                @onchange="e => ToggleRow(row.ResolvedParticipantId, e.Value)" />
                                                     </td>
                                                     <td class="fw-medium">@row.Name</td>
+                                                    <td class="small text-muted">@(string.IsNullOrWhiteSpace(row.Frequency) ? "—" : row.Frequency)</td>
                                                     <td class="small text-muted">@(string.IsNullOrWhiteSpace(row.Role) ? "—" : row.Role)</td>
                                                     <td class="small text-muted">@(string.IsNullOrWhiteSpace(row.Division) ? "—" : row.Division)</td>
-                                                    <td class="small text-muted">
-                                                        <div>Частоти: @(row.Frequencies.Count == 0 ? "—" : string.Join(", ", row.Frequencies))</div>
-                                                        <div>Observation: @row.ObservationCount</div>
-                                                    </td>
+                                                    <td class="small text-muted">@row.ObservationCount</td>
                                                     <td>
                                                         @if (row.IsLinkedToCanonical)
                                                         {
-                                                            <span class="badge text-bg-success">У канонічній</span>
+                                                            <span class="badge text-bg-success">У основній</span>
                                                         }
                                                         else
                                                         {
@@ -178,20 +177,43 @@
                                     </table>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="border rounded-0 p-3 d-flex flex-column gap-3">
+                        <div class="identity-actions border-top px-3 py-3">
+                            <div class="d-flex flex-column gap-3">
                                 <div>
-                                    <label class="form-label">Нотатка аналітика</label>
+                                    <label class="form-label">Назва основної особи</label>
+                                    <input class="form-control rounded-0"
+                                           @bind="_displayName"
+                                           placeholder="Наприклад: СЛОНИК" />
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Примітка аналітика</label>
                                     <textarea class="form-control rounded-0"
                                               rows="3"
                                               @bind="_note"
-                                              placeholder="Коротко: чому ці записи вважаються однією особою"></textarea>
+                                              placeholder="Коротко: чому ці рядки належать одній людині"></textarea>
                                 </div>
 
-                                <div class="d-flex justify-content-end gap-2">
+                                <div class="d-flex justify-content-end gap-2 flex-wrap">
+                                    @if (_selected.HasCanonicalPerson)
+                                    {
+                                        <button class="btn btn-outline-light btn-sm rounded-0"
+                                                @onclick="UpdateAsync"
+                                                disabled="@_saving">
+                                            <i class="bi bi-pencil-square me-1"></i>Редагувати
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm rounded-0"
+                                                @onclick="DeleteAsync"
+                                                disabled="@_saving">
+                                            <i class="bi bi-trash me-1"></i>Видалити
+                                        </button>
+                                    }
+
                                     <button class="btn btn-success btn-sm rounded-0"
                                             @onclick="SaveAsync"
-                                            disabled="@_saving">
+                                            disabled="@_saving || _selectedRows.Count == 0">
                                         @if (_saving)
                                         {
                                             <span class="spinner-border spinner-border-sm me-1"></span>
@@ -200,7 +222,7 @@
                                         {
                                             <i class="bi bi-person-check me-1"></i>
                                         }
-                                        @(_selected.HasCanonicalPerson ? "Додати в канонічну" : "Створити канонічну")
+                                        @(_selected.HasCanonicalPerson ? "Додати в профіль" : "Об’єднати в один профіль")
                                     </button>
                                 </div>
                             </div>

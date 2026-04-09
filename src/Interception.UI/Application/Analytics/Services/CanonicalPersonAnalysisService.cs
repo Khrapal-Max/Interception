@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Interception.UI.Application.Analytics.Services;
 
 /// <summary>
-/// Сервіс пошуку та створення канонічних осіб для проблемних дубльованих випадків.
+/// Сервіс пошуку та створення основних осіб для проблемних дубльованих випадків.
 /// </summary>
 public sealed class CanonicalPersonAnalysisService(
     IDbContextFactory<AppDbContext> dbFactory) : ICanonicalPersonAnalysisService
@@ -33,7 +33,7 @@ public sealed class CanonicalPersonAnalysisService(
             .Where(x => !string.IsNullOrWhiteSpace(x.Key))
             .Select(group =>
             {
-                var contexts = observationContexts.TryGetValue(group.Key!, out var value)
+                var contexts = observationContexts.ByCandidateKey.TryGetValue(group.Key!, out var value)
                     ? value
                     : ObservationContextSummary.Empty;
 
@@ -70,59 +70,74 @@ public sealed class CanonicalPersonAnalysisService(
 
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
-        var resolved = (await db.ResolvedParticipants
+        var resolvedRows = (await db.ResolvedParticipants
             .AsNoTracking()
-            .OrderBy(x => x.Name)
-            .ThenBy(x => x.Division)
-            .ThenBy(x => x.ConfirmedAt)
+            .Select(x => new ResolvedRow(
+                x.Id,
+                x.Name,
+                EF.Property<string?>(x, "Frequency"),
+                x.Role,
+                x.Division,
+                x.ConfirmedAt))
             .ToListAsync(ct))
             .Where(x => NormalizeCandidateKey(x.Name) == candidateKey)
+            .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Frequency, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Division, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.ConfirmedAtUtc)
             .ToList();
 
-        if (resolved.Count == 0)
+        if (resolvedRows.Count == 0)
             return null;
 
         var contexts = await LoadObservationContextsAsync(db, ct);
         var canonicalMap = await LoadCanonicalMapAsync(db, ct);
 
-        var linkedCanonicalIds = resolved
+        var linkedCanonicalIds = resolvedRows
             .Where(x => canonicalMap.ContainsKey(x.Id))
             .Select(x => canonicalMap[x.Id]!.Id)
             .Distinct()
             .ToList();
 
-        var primaryCanonical = resolved
+        var primaryCanonical = resolvedRows
             .Select(x => canonicalMap.TryGetValue(x.Id, out var item) ? item : null)
             .FirstOrDefault(x => x is not null);
 
-        var context = contexts.TryGetValue(candidateKey, out var value)
+        var context = contexts.ByCandidateKey.TryGetValue(candidateKey, out var value)
             ? value
             : ObservationContextSummary.Empty;
 
         return new CanonicalPersonCandidateDetailsDto
         {
             CandidateKey = candidateKey,
-            DisplayName = resolved.Select(x => x.Name.Trim()).First(),
+            DisplayName = resolvedRows.Select(x => x.Name.Trim()).First(),
             HasCanonicalPerson = primaryCanonical is not null,
             CanonicalPersonId = primaryCanonical?.Id,
             CanonicalDisplayName = primaryCanonical?.DisplayName,
             CanonicalNote = primaryCanonical?.Note,
             Warning = linkedCanonicalIds.Count > 1
-                ? "Для цього імені вже існує більше однієї канонічної особи. Потрібна ручна перевірка."
+                ? "Для цього імені вже існує більше однієї основної особи. Потрібна ручна перевірка."
                 : null,
             Frequencies = [.. context.Frequencies],
             Divisions = [.. context.Divisions],
-            Rows = [.. resolved.Select(x => new CanonicalPersonCandidateRowDto
+            Rows = [.. resolvedRows.Select(x =>
             {
-                ResolvedParticipantId = x.Id,
-                Name = x.Name,
-                Role = x.Role,
-                Division = x.Division,
-                ConfirmedAtUtc = x.ConfirmedAt,
-                IsLinkedToCanonical = canonicalMap.ContainsKey(x.Id),
-                ObservationCount = context.ObservationCount,
-                Frequencies = [.. context.Frequencies],
-                Divisions = [.. context.Divisions]
+                var rowKey = BuildObservationRowKey(x.Name, x.Frequency, x.Division);
+                var rowObservationCount = contexts.ByRowKey.TryGetValue(rowKey, out var count)
+                    ? count
+                    : 0;
+
+                return new CanonicalPersonCandidateRowDto
+                {
+                    ResolvedParticipantId = x.Id,
+                    Name = x.Name,
+                    Frequency = x.Frequency,
+                    Role = x.Role,
+                    Division = x.Division,
+                    ConfirmedAtUtc = x.ConfirmedAtUtc,
+                    IsLinkedToCanonical = canonicalMap.ContainsKey(x.Id),
+                    ObservationCount = rowObservationCount
+                };
             })]
         };
     }
@@ -130,6 +145,7 @@ public sealed class CanonicalPersonAnalysisService(
     public async Task<CanonicalPersonCandidateDetailsDto> CreateCanonicalAsync(
         string candidateKey,
         IReadOnlyCollection<Guid> resolvedParticipantIds,
+        string displayName,
         string? note,
         CancellationToken ct = default)
     {
@@ -137,7 +153,10 @@ public sealed class CanonicalPersonAnalysisService(
             throw new ArgumentException("Ключ кандидата обов'язковий.", nameof(candidateKey));
 
         if (resolvedParticipantIds is null || resolvedParticipantIds.Count == 0)
-            throw new InvalidOperationException("Оберіть хоча б один підтверджений рядок для створення канонічної особи.");
+            throw new InvalidOperationException("Оберіть хоча б один підтверджений рядок для створення основної особи.");
+
+        if (string.IsNullOrWhiteSpace(displayName))
+            throw new InvalidOperationException("Назва основної особи обов'язкова.");
 
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
@@ -153,9 +172,9 @@ public sealed class CanonicalPersonAnalysisService(
             .AnyAsync(ct);
 
         if (alreadyLinked)
-            throw new InvalidOperationException("Один або кілька рядків уже входять до іншої канонічної особи.");
+            throw new InvalidOperationException("Один або кілька рядків уже входять до іншої основної особи.");
 
-        var canonical = CanonicalPerson.Create(selected.Select(x => x.Name.Trim()).First(), note);
+        var canonical = CanonicalPerson.Create(displayName, note);
         foreach (var rowId in resolvedParticipantIds.Distinct())
             canonical.AddMember(rowId);
 
@@ -163,7 +182,7 @@ public sealed class CanonicalPersonAnalysisService(
         await db.SaveChangesAsync(ct);
 
         return await GetCandidateDetailsAsync(candidateKey, ct)
-            ?? throw new InvalidOperationException("Не вдалося перечитати створену канонічну особу.");
+            ?? throw new InvalidOperationException("Не вдалося перечитати створену основну особу.");
     }
 
     public async Task<CanonicalPersonCandidateDetailsDto> AttachToCanonicalAsync(
@@ -180,7 +199,7 @@ public sealed class CanonicalPersonAnalysisService(
         var canonical = await db.CanonicalPersons
             .Include(x => x.Members)
             .FirstOrDefaultAsync(x => x.Id == canonicalPersonId, ct)
-            ?? throw new InvalidOperationException("Канонічну особу не знайдено.");
+            ?? throw new InvalidOperationException("Основну особу не знайдено.");
 
         var selected = await db.ResolvedParticipants
             .Where(x => resolvedParticipantIds.Contains(x.Id))
@@ -194,7 +213,7 @@ public sealed class CanonicalPersonAnalysisService(
             .AnyAsync(ct);
 
         if (foreignMembers)
-            throw new InvalidOperationException("Один або кілька рядків уже входять до іншої канонічної особи.");
+            throw new InvalidOperationException("Один або кілька рядків уже входять до іншої основної особи.");
 
         foreach (var rowId in resolvedParticipantIds.Distinct())
         {
@@ -205,33 +224,78 @@ public sealed class CanonicalPersonAnalysisService(
         }
 
         if (!string.IsNullOrWhiteSpace(note))
-            canonical.UpdateNote(note);
+            canonical.Update(canonical.DisplayName, note);
 
         await db.SaveChangesAsync(ct);
 
         var candidateKey = NormalizeCandidateKey(selected.Select(x => x.Name).First());
         return await GetCandidateDetailsAsync(candidateKey, ct)
-            ?? throw new InvalidOperationException("Не вдалося перечитати оновлену канонічну особу.");
+            ?? throw new InvalidOperationException("Не вдалося перечитати оновлену основну особу.");
+    }
+
+    public async Task<CanonicalPersonCandidateDetailsDto> UpdateCanonicalAsync(
+        string candidateKey,
+        Guid canonicalPersonId,
+        string displayName,
+        string? note,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(candidateKey))
+            throw new ArgumentException("Ключ кандидата обов'язковий.", nameof(candidateKey));
+
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+
+        var canonical = await db.CanonicalPersons
+            .FirstOrDefaultAsync(x => x.Id == canonicalPersonId, ct)
+            ?? throw new InvalidOperationException("Основну особу не знайдено.");
+
+        canonical.Update(displayName, note);
+        await db.SaveChangesAsync(ct);
+
+        return await GetCandidateDetailsAsync(candidateKey, ct)
+            ?? throw new InvalidOperationException("Не вдалося перечитати оновлену основну особу.");
+    }
+
+    public async Task DeleteCanonicalAsync(Guid canonicalPersonId, CancellationToken ct = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+
+        var canonical = await db.CanonicalPersons
+            .Include(x => x.Members)
+            .FirstOrDefaultAsync(x => x.Id == canonicalPersonId, ct)
+            ?? throw new InvalidOperationException("Основну особу не знайдено.");
+
+        db.CanonicalPersons.Remove(canonical);
+        await db.SaveChangesAsync(ct);
     }
 
     private static string NormalizeCandidateKey(string? name)
         => SemanticValueExtensions.NormalizeMeaningfulOrNull(name)?.Trim().ToUpperInvariant() ?? string.Empty;
 
-    private static async Task<Dictionary<string, ObservationContextSummary>> LoadObservationContextsAsync(AppDbContext db, CancellationToken ct)
+    private static string NormalizeOptional(string? value)
+        => SemanticValueExtensions.NormalizeMeaningfulOrNull(value) ?? string.Empty;
+
+    private static string BuildObservationRowKey(string? name, string? frequency, string? division)
+        => $"{NormalizeCandidateKey(name)}|{NormalizeOptional(frequency)}|{NormalizeOptional(division)}";
+
+    private static async Task<ObservationContextStore> LoadObservationContextsAsync(AppDbContext db, CancellationToken ct)
     {
         var rows = await db.InterceptionMessages
             .AsNoTracking()
             .SelectMany(
                 message => message.Participants,
-                (message, participant) => new ObservationContextRow(
+                (message, participant) => new
+                {
                     participant.Name,
                     participant.IsUnknown,
                     message.Frequency,
-                    message.Division))
-            .Where(x => !x.IsUnknown && !string.IsNullOrWhiteSpace(x.Name))
+                    message.Division
+                })
+            .Where(x => !x.IsUnknown && x.Name != null && x.Name != "")
             .ToListAsync(ct);
 
-        return rows
+        var byCandidateKey = rows
+            .Select(x => new ObservationContextRow(x.Name, x.Frequency, x.Division))
             .GroupBy(x => NormalizeCandidateKey(x.Name))
             .Where(x => !string.IsNullOrWhiteSpace(x.Key))
             .ToDictionary(
@@ -246,6 +310,13 @@ public sealed class CanonicalPersonAnalysisService(
                         .Distinct(StringComparer.OrdinalIgnoreCase)
                         .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)!],
                     x.Count()));
+
+        var byRowKey = rows
+            .Select(x => BuildObservationRowKey(x.Name, x.Frequency, x.Division))
+            .GroupBy(x => x)
+            .ToDictionary(x => x.Key, x => x.Count(), StringComparer.OrdinalIgnoreCase);
+
+        return new ObservationContextStore(byCandidateKey, byRowKey);
     }
 
     private static async Task<Dictionary<Guid, CanonicalLookupItem>> LoadCanonicalMapAsync(AppDbContext db, CancellationToken ct)
@@ -262,7 +333,15 @@ public sealed class CanonicalPersonAnalysisService(
                 ct);
     }
 
-    private sealed record ObservationContextRow(string? Name, bool IsUnknown, string? Frequency, string? Division);
+    private sealed record ResolvedRow(
+        Guid Id,
+        string Name,
+        string? Frequency,
+        string? Role,
+        string? Division,
+        DateTime ConfirmedAtUtc);
+
+    private sealed record ObservationContextRow(string? Name, string? Frequency, string? Division);
 
     private sealed record ObservationContextSummary(
         IReadOnlyList<string> Frequencies,
@@ -271,6 +350,10 @@ public sealed class CanonicalPersonAnalysisService(
     {
         public static ObservationContextSummary Empty { get; } = new([], [], 0);
     }
+
+    private sealed record ObservationContextStore(
+        IReadOnlyDictionary<string, ObservationContextSummary> ByCandidateKey,
+        IReadOnlyDictionary<string, int> ByRowKey);
 
     private sealed record CanonicalLookupItem(Guid Id, string DisplayName, string? Note);
 }

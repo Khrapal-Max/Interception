@@ -7,7 +7,7 @@ using Interception.UI.Extensions;
 namespace Interception.UI.Domain;
 
 /// <summary>
-/// Канонічна особа — аналітичне ядро людини, що може об'єднувати кілька
+/// Об’єднаний профіль — аналітичне ядро людини, що може об'єднувати кілька
 /// підтверджених registry rows в одну особу.
 /// </summary>
 public sealed class CanonicalPerson
@@ -23,7 +23,7 @@ public sealed class CanonicalPerson
     public static CanonicalPerson Create(string displayName, string? note = null)
     {
         if (string.IsNullOrWhiteSpace(displayName))
-            throw new ArgumentException("Назва канонічної особи обов'язкова.", nameof(displayName));
+            throw new ArgumentException("Назва основної особи обов'язкова.", nameof(displayName));
 
         var now = ConverterDateTimeExtensions.Now;
 
@@ -37,6 +37,16 @@ public sealed class CanonicalPerson
         };
     }
 
+    public void Update(string displayName, string? note)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+            throw new ArgumentException("Назва основної особи обов'язкова.", nameof(displayName));
+
+        DisplayName = displayName.Trim();
+        Note = SemanticValueExtensions.NormalizeMeaningfulOrNull(note);
+        UpdatedAtUtc = ConverterDateTimeExtensions.Now;
+    }
+
     public void UpdateNote(string? note)
     {
         Note = SemanticValueExtensions.NormalizeMeaningfulOrNull(note);
@@ -46,7 +56,7 @@ public sealed class CanonicalPerson
     public CanonicalPersonMember AddMember(Guid resolvedParticipantId)
     {
         if (Members.Any(x => x.ResolvedParticipantId == resolvedParticipantId))
-            throw new InvalidOperationException("Цей підтверджений запис уже входить до канонічної особи.");
+            throw new InvalidOperationException("Цей підтверджений запис уже входить до основної особи.");
 
         var member = CanonicalPersonMember.Create(Id, resolvedParticipantId);
         Members.Add(member);

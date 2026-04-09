@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Interception.UI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260408144022_CanonicalPersonsAnalytics")]
-    partial class CanonicalPersonsAnalytics
+    [Migration("20260408184900_DirectiveRelationsIdentityEndpoints")]
+    partial class DirectiveRelationsIdentityEndpoints
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -404,6 +404,78 @@ namespace Interception.UI.Migrations
                         .IsUnique();
 
                     b.ToTable("participant_matrices", (string)null);
+                });
+
+            modelBuilder.Entity("Interception.UI.Domain.PersonDirectiveRelation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("comment");
+
+                    b.Property<string>("Confidence")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("confidence");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("FromCanonicalPersonId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("from_canonical_person_id");
+
+                    b.Property<Guid?>("FromResolvedParticipantId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("from_resolved_participant_id");
+
+                    b.Property<bool>("IsManual")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("is_manual");
+
+                    b.Property<string>("RelationType")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("relation_type");
+
+                    b.Property<Guid?>("SourceObservationId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("source_observation_id");
+
+                    b.Property<Guid?>("ToCanonicalPersonId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("to_canonical_person_id");
+
+                    b.Property<Guid?>("ToResolvedParticipantId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("to_resolved_participant_id");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FromCanonicalPersonId")
+                        .HasDatabaseName("ix_person_directive_relations_from_canonical");
+
+                    b.HasIndex("FromResolvedParticipantId")
+                        .HasDatabaseName("ix_person_directive_relations_from_resolved");
+
+                    b.HasIndex("ToCanonicalPersonId")
+                        .HasDatabaseName("ix_person_directive_relations_to_canonical");
+
+                    b.HasIndex("ToResolvedParticipantId")
+                        .HasDatabaseName("ix_person_directive_relations_to_resolved");
+
+                    b.ToTable("person_directive_relations", (string)null);
                 });
 
             modelBuilder.Entity("Interception.UI.Domain.ResolvedParticipant", b =>
@@ -993,6 +1065,37 @@ namespace Interception.UI.Migrations
                     b.Navigation("Cells");
 
                     b.Navigation("DailyReport");
+                });
+
+            modelBuilder.Entity("Interception.UI.Domain.PersonDirectiveRelation", b =>
+                {
+                    b.HasOne("Interception.UI.Domain.CanonicalPerson", "FromCanonicalPerson")
+                        .WithMany()
+                        .HasForeignKey("FromCanonicalPersonId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Interception.UI.Domain.ResolvedParticipant", "FromResolvedParticipant")
+                        .WithMany()
+                        .HasForeignKey("FromResolvedParticipantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Interception.UI.Domain.CanonicalPerson", "ToCanonicalPerson")
+                        .WithMany()
+                        .HasForeignKey("ToCanonicalPersonId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Interception.UI.Domain.ResolvedParticipant", "ToResolvedParticipant")
+                        .WithMany()
+                        .HasForeignKey("ToResolvedParticipantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("FromCanonicalPerson");
+
+                    b.Navigation("FromResolvedParticipant");
+
+                    b.Navigation("ToCanonicalPerson");
+
+                    b.Navigation("ToResolvedParticipant");
                 });
 
             modelBuilder.Entity("Interception.UI.Domain.Topology.TopologySnapshotBridge", b =>

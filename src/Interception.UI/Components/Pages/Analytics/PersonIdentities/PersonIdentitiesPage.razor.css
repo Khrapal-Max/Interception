@@ -1,0 +1,100 @@
+/* scoped css remains valid */
+.identities-page-shell {
+    height: calc(100vh - 1rem);
+    min-height: 0;
+    overflow: hidden;
+}
+
+.identities-panel,
+.identities-layout,
+.identities-left-pane,
+.identities-right-pane {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.identities-left-scroll,
+.identities-right-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+.identities-table-wrap {
+    overflow: auto;
+}
+
+.cluster-row {
+    width: 100%;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    padding: .75rem .85rem;
+    border: 1px solid rgba(255, 255, 255, .08);
+    background: transparent;
+    color: inherit;
+}
+
+.cluster-row + .cluster-row {
+    margin-top: .4rem;
+}
+
+.cluster-row.is-selected {
+    border-color: rgba(255, 255, 255, .22);
+    background: rgba(255, 255, 255, .04);
+}
+
+.cluster-row-top {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: .75rem;
+}
+
+.cluster-title {
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.cluster-row-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+}
+
+.identity-actions {
+    flex: 0 0 auto;
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    background: var(--bs-body-bg, #111);
+    box-shadow: 0 -6px 18px rgba(0,0,0,.18);
+}
+
+@media (max-width: 1399.98px) {
+    .identities-page-shell {
+        height: auto;
+        overflow: visible;
+    }
+
+    .identities-panel,
+    .identities-layout,
+    .identities-left-pane,
+    .identities-right-pane {
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+    }
+
+    .identities-left-scroll,
+    .identities-right-scroll {
+        overflow: visible;
+    }
+
+    .identity-actions {
+        position: static;
+        box-shadow: none;
+    }
+}

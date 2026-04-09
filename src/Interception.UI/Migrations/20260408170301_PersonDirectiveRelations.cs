@@ -1,11 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace Interception.UI.Migrations
 {
     /// <inheritdoc />
-    public partial class CanonicalPersonsAnalytics : Migration
+    public partial class PersonDirectiveRelations : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -51,6 +52,38 @@ namespace Interception.UI.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "person_directive_relations",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    from_canonical_person_id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    to_canonical_person_id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    relation_type = table.Column<string>(type: "TEXT", maxLength: 40, nullable: false),
+                    confidence = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    source_observation_id = table.Column<Guid>(type: "TEXT", nullable: true),
+                    is_manual = table.Column<bool>(type: "INTEGER", nullable: false),
+                    comment = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
+                    created_at_utc = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    updated_at_utc = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_person_directive_relations", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_person_directive_relations_canonical_persons_from_canonical_person_id",
+                        column: x => x.from_canonical_person_id,
+                        principalTable: "canonical_persons",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_person_directive_relations_canonical_persons_to_canonical_person_id",
+                        column: x => x.to_canonical_person_id,
+                        principalTable: "canonical_persons",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "ix_canonical_person_members_canonical_person_id",
                 table: "canonical_person_members",
@@ -66,6 +99,22 @@ namespace Interception.UI.Migrations
                 name: "ix_canonical_persons_display_name",
                 table: "canonical_persons",
                 column: "display_name");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_person_directive_relations_from",
+                table: "person_directive_relations",
+                column: "from_canonical_person_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_person_directive_relations_to",
+                table: "person_directive_relations",
+                column: "to_canonical_person_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_person_directive_relations_unique_pair",
+                table: "person_directive_relations",
+                columns: new[] { "from_canonical_person_id", "to_canonical_person_id" },
+                unique: true);
         }
 
         /// <inheritdoc />
@@ -73,6 +122,9 @@ namespace Interception.UI.Migrations
         {
             migrationBuilder.DropTable(
                 name: "canonical_person_members");
+
+            migrationBuilder.DropTable(
+                name: "person_directive_relations");
 
             migrationBuilder.DropTable(
                 name: "canonical_persons");

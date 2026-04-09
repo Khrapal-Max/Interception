@@ -73,14 +73,16 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
         var resolvedMap = resolvedParticipants.ToDictionary(x => x.Id);
         var participantToResolvedMap = BuildParticipantToResolvedMap(candidateGroups);
         var resolvedByNameMap = BuildResolvedByNameMap(resolvedParticipants);
-        var canonicalByResolvedMap = await LoadCanonicalByResolvedMapAsync(db, resolvedParticipantIds, ct);
-        var canonicalByNameMap = await LoadCanonicalByNameMapAsync(db, participants.Select(x => x.Name), ct);
-        var canonicalDivisionMap = BuildCanonicalDivisionMap(resolvedParticipants, canonicalByResolvedMap);
         var participantsByMessageId = participants
             .GroupBy(x => x.MessageId)
             .ToDictionary(x => x.Key, x => x.ToList());
         var participantsById = participants.ToDictionary(x => x.Id);
         var participantToGroupMap = BuildParticipantToGroupMap(candidateGroups);
+
+        var canonicalByResolvedMap = await LoadCanonicalByResolvedMapAsync(db, ct);
+        var canonicalByNameMap = await LoadCanonicalByNameMapAsync(db, ct);
+        var canonicalDivisionMap = await LoadCanonicalDivisionMapAsync(db, ct);
+
         var groupDivisionMap = BuildGroupDivisionMap(
             candidateGroups,
             participantsById,
@@ -248,11 +250,20 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
         {
             var divisions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            if (group.ResolvedParticipantId.HasValue && resolvedMap.TryGetValue(group.ResolvedParticipantId.Value, out var resolvedGroupParticipant))
+            if (group.ResolvedParticipantId.HasValue)
             {
-                var resolvedDivision = NormalizeKnownDivision(resolvedGroupParticipant.Division);
-                if (!string.IsNullOrWhiteSpace(resolvedDivision))
-                    divisions.Add(resolvedDivision);
+                if (canonicalByResolvedMap.TryGetValue(group.ResolvedParticipantId.Value, out var canonicalId)
+                    && canonicalDivisionMap.TryGetValue(canonicalId, out var canonicalDivision)
+                    && !string.IsNullOrWhiteSpace(canonicalDivision))
+                {
+                    divisions.Add(canonicalDivision);
+                }
+                else if (resolvedMap.TryGetValue(group.ResolvedParticipantId.Value, out var resolvedGroupParticipant))
+                {
+                    var resolvedDivision = NormalizeKnownDivision(resolvedGroupParticipant.Division);
+                    if (!string.IsNullOrWhiteSpace(resolvedDivision))
+                        divisions.Add(resolvedDivision);
+                }
             }
 
             foreach (var participantRef in group.ParticipantRefs)
@@ -290,8 +301,7 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
         IReadOnlyDictionary<string, Guid> canonicalByNameMap,
         IReadOnlyDictionary<Guid, string?> canonicalDivisionMap)
     {
-        if (participantToResolvedMap.TryGetValue(participant.Id, out var directResolvedId)
-            && resolvedMap.TryGetValue(directResolvedId, out var directResolvedParticipant))
+        if (participantToResolvedMap.TryGetValue(participant.Id, out var directResolvedId))
         {
             if (canonicalByResolvedMap.TryGetValue(directResolvedId, out var directCanonicalId)
                 && canonicalDivisionMap.TryGetValue(directCanonicalId, out var canonicalDivision)
@@ -300,26 +310,31 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
                 return canonicalDivision;
             }
 
-            var confirmedDivision = NormalizeKnownDivision(directResolvedParticipant.Division);
-            if (!string.IsNullOrWhiteSpace(confirmedDivision))
-                return confirmedDivision;
+            if (resolvedMap.TryGetValue(directResolvedId, out var directResolvedParticipant))
+            {
+                var confirmedDivision = NormalizeKnownDivision(directResolvedParticipant.Division);
+                if (!string.IsNullOrWhiteSpace(confirmedDivision))
+                    return confirmedDivision;
+            }
         }
 
         var normalizedName = StringTextNormExtensions.NormalizeOption(participant.Name);
         if (!string.IsNullOrWhiteSpace(normalizedName)
-            && resolvedByNameMap.TryGetValue(normalizedName, out var resolvedIdByName)
-            && resolvedMap.TryGetValue(resolvedIdByName, out var resolvedByNameParticipant))
+            && resolvedByNameMap.TryGetValue(normalizedName, out var resolvedIdByName))
         {
-            if (canonicalByResolvedMap.TryGetValue(resolvedIdByName, out var canonicalIdByResolved)
-                && canonicalDivisionMap.TryGetValue(canonicalIdByResolved, out var canonicalDivisionByResolved)
-                && !string.IsNullOrWhiteSpace(canonicalDivisionByResolved))
+            if (canonicalByResolvedMap.TryGetValue(resolvedIdByName, out var canonicalIdByResolvedName)
+                && canonicalDivisionMap.TryGetValue(canonicalIdByResolvedName, out var canonicalDivisionByResolvedName)
+                && !string.IsNullOrWhiteSpace(canonicalDivisionByResolvedName))
             {
-                return canonicalDivisionByResolved;
+                return canonicalDivisionByResolvedName;
             }
 
-            var confirmedDivision = NormalizeKnownDivision(resolvedByNameParticipant.Division);
-            if (!string.IsNullOrWhiteSpace(confirmedDivision))
-                return confirmedDivision;
+            if (resolvedMap.TryGetValue(resolvedIdByName, out var resolvedByNameParticipant))
+            {
+                var confirmedDivision = NormalizeKnownDivision(resolvedByNameParticipant.Division);
+                if (!string.IsNullOrWhiteSpace(confirmedDivision))
+                    return confirmedDivision;
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(normalizedName)
@@ -342,12 +357,13 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
         IReadOnlyDictionary<Guid, Guid> canonicalByResolvedMap,
         IReadOnlyDictionary<string, Guid> canonicalByNameMap)
     {
-        if (participantToResolvedMap.TryGetValue(participant.Id, out var directResolvedId)
-            && resolvedMap.ContainsKey(directResolvedId))
+        if (participantToResolvedMap.TryGetValue(participant.Id, out var directResolvedId))
         {
-            return canonicalByResolvedMap.TryGetValue(directResolvedId, out var canonicalId)
-                ? $"canonical:{canonicalId}"
-                : $"resolved:{directResolvedId}";
+            if (canonicalByResolvedMap.TryGetValue(directResolvedId, out var directCanonicalId))
+                return $"cp:{directCanonicalId}";
+
+            if (resolvedMap.ContainsKey(directResolvedId))
+                return $"resolved:{directResolvedId}";
         }
 
         if (participantToGroupMap.TryGetValue(participant.Id, out var groupId))
@@ -357,18 +373,19 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
 
         var normalizedName = StringTextNormExtensions.NormalizeOption(participant.Name);
         if (!string.IsNullOrWhiteSpace(normalizedName)
-            && resolvedByNameMap.TryGetValue(normalizedName, out var resolvedIdByName)
-            && resolvedMap.ContainsKey(resolvedIdByName))
+            && resolvedByNameMap.TryGetValue(normalizedName, out var resolvedIdByName))
         {
-            return canonicalByResolvedMap.TryGetValue(resolvedIdByName, out var canonicalIdByResolved)
-                ? $"canonical:{canonicalIdByResolved}"
-                : $"resolved:{resolvedIdByName}";
+            if (canonicalByResolvedMap.TryGetValue(resolvedIdByName, out var canonicalIdByResolvedName))
+                return $"cp:{canonicalIdByResolvedName}";
+
+            if (resolvedMap.ContainsKey(resolvedIdByName))
+                return $"resolved:{resolvedIdByName}";
         }
 
         if (!string.IsNullOrWhiteSpace(normalizedName)
             && canonicalByNameMap.TryGetValue(normalizedName, out var canonicalIdByName))
         {
-            return $"canonical:{canonicalIdByName}";
+            return $"cp:{canonicalIdByName}";
         }
 
         if (!string.IsNullOrWhiteSpace(normalizedName))
@@ -392,19 +409,21 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
         IReadOnlyDictionary<string, Guid> canonicalByNameMap,
         IReadOnlyDictionary<Guid, string?> canonicalDivisionMap)
     {
-        if (participantToResolvedMap.TryGetValue(participant.Id, out var directResolvedId)
-            && resolvedMap.TryGetValue(directResolvedId, out var directResolvedParticipant))
+        if (participantToResolvedMap.TryGetValue(participant.Id, out var directResolvedId))
         {
             if (canonicalByResolvedMap.TryGetValue(directResolvedId, out var directCanonicalId)
-                && canonicalDivisionMap.TryGetValue(directCanonicalId, out var directCanonicalDivision)
-                && !string.IsNullOrWhiteSpace(directCanonicalDivision))
+                && canonicalDivisionMap.TryGetValue(directCanonicalId, out var canonicalDivision)
+                && !string.IsNullOrWhiteSpace(canonicalDivision))
             {
-                return directCanonicalDivision;
+                return canonicalDivision;
             }
 
-            var confirmedDivision = NormalizeKnownDivision(directResolvedParticipant.Division);
-            if (!string.IsNullOrWhiteSpace(confirmedDivision))
-                return confirmedDivision;
+            if (resolvedMap.TryGetValue(directResolvedId, out var directResolvedParticipant))
+            {
+                var confirmedDivision = NormalizeKnownDivision(directResolvedParticipant.Division);
+                if (!string.IsNullOrWhiteSpace(confirmedDivision))
+                    return confirmedDivision;
+            }
         }
 
         if (participantToGroupMap.TryGetValue(participant.Id, out var groupId))
@@ -420,19 +439,21 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
 
         var normalizedName = StringTextNormExtensions.NormalizeOption(participant.Name);
         if (!string.IsNullOrWhiteSpace(normalizedName)
-            && resolvedByNameMap.TryGetValue(normalizedName, out var resolvedIdByName)
-            && resolvedMap.TryGetValue(resolvedIdByName, out var resolvedByNameParticipant))
+            && resolvedByNameMap.TryGetValue(normalizedName, out var resolvedIdByName))
         {
-            if (canonicalByResolvedMap.TryGetValue(resolvedIdByName, out var canonicalIdByResolved)
-                && canonicalDivisionMap.TryGetValue(canonicalIdByResolved, out var canonicalDivisionByResolved)
-                && !string.IsNullOrWhiteSpace(canonicalDivisionByResolved))
+            if (canonicalByResolvedMap.TryGetValue(resolvedIdByName, out var canonicalIdByResolvedName)
+                && canonicalDivisionMap.TryGetValue(canonicalIdByResolvedName, out var canonicalDivisionByResolvedName)
+                && !string.IsNullOrWhiteSpace(canonicalDivisionByResolvedName))
             {
-                return canonicalDivisionByResolved;
+                return canonicalDivisionByResolvedName;
             }
 
-            var confirmedDivision = NormalizeKnownDivision(resolvedByNameParticipant.Division);
-            if (!string.IsNullOrWhiteSpace(confirmedDivision))
-                return confirmedDivision;
+            if (resolvedMap.TryGetValue(resolvedIdByName, out var resolvedByNameParticipant))
+            {
+                var confirmedDivision = NormalizeKnownDivision(resolvedByNameParticipant.Division);
+                if (!string.IsNullOrWhiteSpace(confirmedDivision))
+                    return confirmedDivision;
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(normalizedName)
@@ -450,58 +471,73 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
         return UnknownGroup;
     }
 
-
     private static async Task<Dictionary<Guid, Guid>> LoadCanonicalByResolvedMapAsync(
         AppDbContext db,
-        IEnumerable<Guid> resolvedParticipantIds,
         CancellationToken ct)
     {
-        var ids = resolvedParticipantIds.Distinct().ToList();
-        if (ids.Count == 0)
-            return [];
-
-        return await db.CanonicalPersonMembers
+        var rows = await db.CanonicalPersonMembers
             .AsNoTracking()
-            .Where(x => ids.Contains(x.ResolvedParticipantId))
-            .ToDictionaryAsync(x => x.ResolvedParticipantId, x => x.CanonicalPersonId, ct);
+            .Select(x => new
+            {
+                x.ResolvedParticipantId,
+                x.CanonicalPersonId
+            })
+            .ToListAsync(ct);
+
+        return rows
+            .GroupBy(x => x.ResolvedParticipantId)
+            .Where(x => x.Select(v => v.CanonicalPersonId).Distinct().Count() == 1)
+            .ToDictionary(x => x.Key, x => x.First().CanonicalPersonId);
     }
 
     private static async Task<Dictionary<string, Guid>> LoadCanonicalByNameMapAsync(
         AppDbContext db,
-        IEnumerable<string?> names,
         CancellationToken ct)
     {
-        var normalizedNames = names
-            .Select(StringTextNormExtensions.NormalizeOption)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        if (normalizedNames.Count == 0)
-            return [];
-
-        var rows = await (
-                from member in db.CanonicalPersonMembers.AsNoTracking()
-                join resolved in db.ResolvedParticipants.AsNoTracking() on member.ResolvedParticipantId equals resolved.Id
-                where !string.IsNullOrWhiteSpace(resolved.Name)
-                select new { member.CanonicalPersonId, resolved.Name })
+        var rows = await db.CanonicalPersonMembers
+            .AsNoTracking()
+            .Join(
+                db.ResolvedParticipants.AsNoTracking(),
+                member => member.ResolvedParticipantId,
+                resolved => resolved.Id,
+                (member, resolved) => new
+                {
+                    member.CanonicalPersonId,
+                    resolved.Name
+                })
             .ToListAsync(ct);
 
         return rows
-            .Select(x => new { x.CanonicalPersonId, Name = StringTextNormExtensions.NormalizeOption(x.Name) })
-            .Where(x => !string.IsNullOrWhiteSpace(x.Name) && normalizedNames.Contains(x.Name))
-            .GroupBy(x => x.Name!, StringComparer.OrdinalIgnoreCase)
+            .Select(x => new
+            {
+                x.CanonicalPersonId,
+                NormalizedName = StringTextNormExtensions.NormalizeOption(x.Name)
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.NormalizedName))
+            .GroupBy(x => x.NormalizedName!, StringComparer.OrdinalIgnoreCase)
             .Where(x => x.Select(v => v.CanonicalPersonId).Distinct().Count() == 1)
             .ToDictionary(x => x.Key, x => x.First().CanonicalPersonId, StringComparer.OrdinalIgnoreCase);
     }
 
-    private static Dictionary<Guid, string?> BuildCanonicalDivisionMap(
-        IReadOnlyList<ResolvedRow> resolvedParticipants,
-        IReadOnlyDictionary<Guid, Guid> canonicalByResolvedMap)
+    private static async Task<Dictionary<Guid, string?>> LoadCanonicalDivisionMapAsync(
+        AppDbContext db,
+        CancellationToken ct)
     {
-        return resolvedParticipants
-            .Where(x => canonicalByResolvedMap.ContainsKey(x.Id))
-            .GroupBy(x => canonicalByResolvedMap[x.Id])
+        var rows = await db.CanonicalPersonMembers
+            .AsNoTracking()
+            .Join(
+                db.ResolvedParticipants.AsNoTracking(),
+                member => member.ResolvedParticipantId,
+                resolved => resolved.Id,
+                (member, resolved) => new
+                {
+                    member.CanonicalPersonId,
+                    resolved.Division
+                })
+            .ToListAsync(ct);
+
+        return rows
+            .GroupBy(x => x.CanonicalPersonId)
             .ToDictionary(
                 x => x.Key,
                 x =>

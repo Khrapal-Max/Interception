@@ -67,30 +67,28 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
         var messageEffectiveDivisions = messageRows
             .ToDictionary(x => x.Message.Id, x => x.EffectiveDivision!, EqualityComparer<Guid>.Default);
 
-        var canonicalByName = await LoadCanonicalByNameMapAsync(
-            db,
-            messageRows.SelectMany(x => x.Message.Participants).Select(x => x.Name),
-            ct);
-
         var unknownGroupsCountByDivision = await LoadUnknownGroupsCountByDivisionAsync(
             db,
             messageIds,
             messageEffectiveDivisions,
             ct);
 
+        var canonicalByResolvedMap = await LoadCanonicalByResolvedMapAsync(db, ct);
+        var canonicalByNameMap = await LoadCanonicalByNameMapAsync(db, ct);
+
         var confirmedPeople = await LoadConfirmedPeopleAsync(
             db,
             messageIds,
             messageDates,
             messageEffectiveDivisions,
+            canonicalByResolvedMap,
             ct);
 
-        var observedPeople = BuildObservedPeople(messageRows, canonicalByName);
+        var observedPeople = BuildObservedPeople(messageRows, canonicalByNameMap);
 
         var divisions = messageRows
             .Select(x => x.EffectiveDivision!)
             .Concat(confirmedPeople.Select(x => x.Division))
-            .Concat(observedPeople.Select(x => x.Division))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(x => x)
             .ToList();
@@ -111,8 +109,8 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
     private static DivisionReportGroupDto BuildGroup(
         string division,
         List<InterceptionMessage> messages,
-        List<ObservedPersonRow> observedPeople,
-        List<ConfirmedPersonRow> confirmedPeople,
+        List<PersonFact> observedPeople,
+        List<PersonFact> confirmedPeople,
         Dictionary<string, int> unknownGroupsCountByDivision)
     {
         var frequencies = messages
@@ -142,39 +140,36 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
     }
 
     private static List<DivisionReportPersonRowDto> BuildPeople(
-        List<ObservedPersonRow> observedPeople,
-        List<ConfirmedPersonRow> confirmedPeople)
+        List<PersonFact> observedPeople,
+        List<PersonFact> confirmedPeople)
     {
-        var people = new List<(string PersonKey, string Name, string? Role, DateTime LastSeenAt)>();
-        people.AddRange(observedPeople.Select(x => (x.PersonKey, x.Name, x.Role, x.LastSeenAt)));
-        people.AddRange(confirmedPeople.Select(x => (x.PersonKey, x.Name, x.Role, x.LastSeenAt)));
+        var people = new List<PersonFact>();
+        people.AddRange(observedPeople);
+        people.AddRange(confirmedPeople);
 
         return [.. people
-            .GroupBy(x => x.PersonKey, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(x => x.IdentityKey, StringComparer.OrdinalIgnoreCase)
             .Select(group =>
             {
                 var ordered = group
                     .OrderByDescending(x => x.LastSeenAt)
                     .ToList();
 
-                var (PersonKey, Name, Role, LastSeenAt) = ordered.First();
+                var current = ordered.First();
 
                 var lastNonEmptyRole = ordered
                     .Select(x => x.Role)
                     .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
 
                 return new DivisionReportPersonRowDto(
-                    PersonKey: PersonKey,
-                    Name: Name,
+                    PersonKey: current.IdentityKey,
+                    Name: current.Name,
                     Role: lastNonEmptyRole,
-                    LastSeenAt: LastSeenAt);
+                    LastSeenAt: current.LastSeenAt);
             })
             .OrderBy(x => x.Name)];
     }
 
-    /// <summary>
-    /// Будує карту частота → домінуючий підрозділ за наявними спостереженнями.
-    /// </summary>
     private static Dictionary<string, string> BuildFrequencyDivisionMap(List<InterceptionMessage> messages)
     {
         return messages
@@ -196,9 +191,6 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
             .ToDictionary(x => x.Frequency, x => x.Division!, StringComparer.OrdinalIgnoreCase);
     }
 
-    /// <summary>
-    /// Повертає ефективний підрозділ для повідомлення.
-    /// </summary>
     private static string? ResolveEffectiveDivision(
         string? observedDivision,
         string? frequency,
@@ -217,63 +209,32 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
         return null;
     }
 
-    /// <summary>
-    /// Будує observed-known осіб і відносить кожну до домінуючого effective division.
-    /// Якщо для імені є канонічна особа — склеює записи по ній.
-    /// </summary>
-    private static List<ObservedPersonRow> BuildObservedPeople(
+    private static List<PersonFact> BuildObservedPeople(
         List<(InterceptionMessage Message, string? EffectiveDivision)> messageRows,
-        IReadOnlyDictionary<string, Guid> canonicalByName)
+        IReadOnlyDictionary<string, Guid> canonicalByNameMap)
     {
-        var observations = messageRows
+        return [.. messageRows
             .SelectMany(messageRow => messageRow.Message.Participants
                 .Where(participant =>
                     !participant.IsUnknown &&
                     !string.IsNullOrWhiteSpace(participant.Name) &&
                     !string.IsNullOrWhiteSpace(messageRow.EffectiveDivision))
-                .Select(participant => new
+                .Select(participant =>
                 {
-                    Division = messageRow.EffectiveDivision!,
-                    Name = participant.Name!,
-                    participant.Role,
-                    LastSeenAt = messageRow.Message.ObservedDate,
-                    PersonKey = BuildObservedPersonKey(participant.Name, canonicalByName)
-                }))
-            .ToList();
+                    var normalizedName = StringTextNormExtensions.NormalizeOption(participant.Name);
+                    var identityKey = BuildObservedIdentityKey(
+                        normalizedName,
+                        canonicalByNameMap);
 
-        return [.. observations
-            .GroupBy(x => x.PersonKey, StringComparer.OrdinalIgnoreCase)
-            .Select(group =>
-            {
-                var assignedDivision = group
-                    .GroupBy(x => x.Division, StringComparer.OrdinalIgnoreCase)
-                    .OrderByDescending(x => x.Count())
-                    .ThenByDescending(x => x.Max(y => y.LastSeenAt))
-                    .ThenBy(x => x.Key)
-                    .Select(x => x.Key)
-                    .First();
-
-                var ordered = group
-                    .OrderByDescending(x => x.LastSeenAt)
-                    .ToList();
-
-                var first = ordered.First();
-                var lastNonEmptyRole = ordered
-                    .Select(x => x.Role)
-                    .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
-
-                return new ObservedPersonRow(
-                    Division: assignedDivision,
-                    PersonKey: first.PersonKey,
-                    Name: first.Name,
-                    Role: lastNonEmptyRole,
-                    LastSeenAt: first.LastSeenAt);
-            })];
+                    return new PersonFact(
+                        messageRow.EffectiveDivision!,
+                        identityKey,
+                        participant.Name!,
+                        participant.Role,
+                        messageRow.Message.ObservedDate);
+                }))];
     }
 
-    /// <summary>
-    /// Рахує open-групи НВ за effective division пов'язаних повідомлень.
-    /// </summary>
     private static async Task<Dictionary<string, int>> LoadUnknownGroupsCountByDivisionAsync(
         AppDbContext db,
         HashSet<Guid> messageIds,
@@ -293,14 +254,12 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
             .ToDictionary(x => x.Key, x => x.Count(), StringComparer.OrdinalIgnoreCase);
     }
 
-    /// <summary>
-    /// Завантажує підтверджених осіб і визначає effective division з пріоритетом confirmed division.
-    /// </summary>
-    private static async Task<List<ConfirmedPersonRow>> LoadConfirmedPeopleAsync(
+    private static async Task<List<PersonFact>> LoadConfirmedPeopleAsync(
         AppDbContext db,
         HashSet<Guid> messageIds,
         IReadOnlyDictionary<Guid, DateTime> messageDates,
         IReadOnlyDictionary<Guid, string> messageEffectiveDivisions,
+        IReadOnlyDictionary<Guid, Guid> canonicalByResolvedMap,
         CancellationToken ct)
     {
         var confirmedGroups = await db.ParticipantCandidateGroups
@@ -325,9 +284,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
             .Where(x => resolvedIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, ct);
 
-        var canonicalByResolved = await LoadCanonicalByResolvedMapAsync(db, resolvedIds, ct);
-
-        var people = new List<ConfirmedPersonRow>();
+        var people = new List<PersonFact>();
 
         foreach (var group in confirmedGroups)
         {
@@ -347,15 +304,83 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
             if (string.IsNullOrWhiteSpace(division))
                 continue;
 
-            people.Add(new ConfirmedPersonRow(
-                Division: division,
-                PersonKey: BuildConfirmedPersonKey(resolvedParticipant.Id, canonicalByResolved),
-                Name: resolvedParticipant.Name,
-                Role: resolvedParticipant.Role ?? group.SuggestedRole,
-                LastSeenAt: lastSeenAt));
+            var identityKey = canonicalByResolvedMap.TryGetValue(resolvedParticipant.Id, out var canonicalId)
+                ? $"cp:{canonicalId}"
+                : $"resolved:{resolvedParticipant.Id}";
+
+            people.Add(new PersonFact(
+                division,
+                identityKey,
+                resolvedParticipant.Name,
+                resolvedParticipant.Role ?? group.SuggestedRole,
+                lastSeenAt));
         }
 
         return people;
+    }
+
+    private static async Task<Dictionary<Guid, Guid>> LoadCanonicalByResolvedMapAsync(
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var rows = await db.CanonicalPersonMembers
+            .AsNoTracking()
+            .Select(x => new
+            {
+                x.ResolvedParticipantId,
+                x.CanonicalPersonId
+            })
+            .ToListAsync(ct);
+
+        return rows
+            .GroupBy(x => x.ResolvedParticipantId)
+            .Where(x => x.Select(v => v.CanonicalPersonId).Distinct().Count() == 1)
+            .ToDictionary(x => x.Key, x => x.First().CanonicalPersonId);
+    }
+
+    private static async Task<Dictionary<string, Guid>> LoadCanonicalByNameMapAsync(
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var rows = await db.CanonicalPersonMembers
+            .AsNoTracking()
+            .Join(
+                db.ResolvedParticipants.AsNoTracking(),
+                member => member.ResolvedParticipantId,
+                resolved => resolved.Id,
+                (member, resolved) => new
+                {
+                    member.CanonicalPersonId,
+                    resolved.Name
+                })
+            .ToListAsync(ct);
+
+        return rows
+            .Select(x => new
+            {
+                x.CanonicalPersonId,
+                NormalizedName = StringTextNormExtensions.NormalizeOption(x.Name)
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.NormalizedName))
+            .GroupBy(x => x.NormalizedName!, StringComparer.OrdinalIgnoreCase)
+            .Where(x => x.Select(v => v.CanonicalPersonId).Distinct().Count() == 1)
+            .ToDictionary(x => x.Key, x => x.First().CanonicalPersonId, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string BuildObservedIdentityKey(
+        string? normalizedName,
+        IReadOnlyDictionary<string, Guid> canonicalByNameMap)
+    {
+        if (!string.IsNullOrWhiteSpace(normalizedName)
+            && canonicalByNameMap.TryGetValue(normalizedName, out var canonicalId))
+        {
+            return $"cp:{canonicalId}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(normalizedName))
+            return $"observed:{normalizedName}";
+
+        return "observed:unknown";
     }
 
     private static string? ResolveConfirmedDivision(
@@ -406,85 +431,14 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
         return null;
     }
 
-
-    private static async Task<Dictionary<Guid, Guid>> LoadCanonicalByResolvedMapAsync(
-        AppDbContext db,
-        IEnumerable<Guid> resolvedParticipantIds,
-        CancellationToken ct)
-    {
-        var ids = resolvedParticipantIds.Distinct().ToList();
-        if (ids.Count == 0)
-            return [];
-
-        return await db.CanonicalPersonMembers
-            .AsNoTracking()
-            .Where(x => ids.Contains(x.ResolvedParticipantId))
-            .ToDictionaryAsync(x => x.ResolvedParticipantId, x => x.CanonicalPersonId, ct);
-    }
-
-    private static async Task<Dictionary<string, Guid>> LoadCanonicalByNameMapAsync(
-        AppDbContext db,
-        IEnumerable<string?> names,
-        CancellationToken ct)
-    {
-        var normalizedNames = names
-            .Select(NormalizePersonName)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        if (normalizedNames.Count == 0)
-            return [];
-
-        var rows = await (
-                from member in db.CanonicalPersonMembers.AsNoTracking()
-                join resolved in db.ResolvedParticipants.AsNoTracking() on member.ResolvedParticipantId equals resolved.Id
-                where !string.IsNullOrWhiteSpace(resolved.Name)
-                select new { member.CanonicalPersonId, resolved.Name })
-            .ToListAsync(ct);
-
-        return rows
-            .Select(x => new { x.CanonicalPersonId, Name = NormalizePersonName(x.Name) })
-            .Where(x => !string.IsNullOrWhiteSpace(x.Name) && normalizedNames.Contains(x.Name))
-            .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .Where(x => x.Select(v => v.CanonicalPersonId).Distinct().Count() == 1)
-            .ToDictionary(x => x.Key, x => x.First().CanonicalPersonId, StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static string BuildConfirmedPersonKey(Guid resolvedParticipantId, IReadOnlyDictionary<Guid, Guid> canonicalByResolved)
-        => canonicalByResolved.TryGetValue(resolvedParticipantId, out var canonicalId)
-            ? $"canonical:{canonicalId}"
-            : $"resolved:{resolvedParticipantId}";
-
-    private static string BuildObservedPersonKey(string? name, IReadOnlyDictionary<string, Guid> canonicalByName)
-    {
-        var normalizedName = NormalizePersonName(name);
-        if (string.IsNullOrWhiteSpace(normalizedName))
-            return $"name:{Guid.NewGuid()}";
-
-        return canonicalByName.TryGetValue(normalizedName, out var canonicalId)
-            ? $"canonical:{canonicalId}"
-            : $"name:{normalizedName}";
-    }
-
-    private static string NormalizePersonName(string? name)
-        => SemanticValueExtensions.NormalizeMeaningfulOrNull(name)?.Trim().ToUpperInvariant() ?? string.Empty;
-
-    private sealed record ObservedPersonRow(
-        string Division,
-        string PersonKey,
-        string Name,
-        string? Role,
-        DateTime LastSeenAt);
-
-    private sealed record ConfirmedPersonRow(
-        string Division,
-        string PersonKey,
-        string Name,
-        string? Role,
-        DateTime LastSeenAt);
-
     private static bool IsMeaningfulDivision(string? division)
         => !string.IsNullOrWhiteSpace(division)
            && !string.Equals(division.Trim(), UnknownDivision, StringComparison.OrdinalIgnoreCase);
+
+    private sealed record PersonFact(
+        string Division,
+        string IdentityKey,
+        string Name,
+        string? Role,
+        DateTime LastSeenAt);
 }

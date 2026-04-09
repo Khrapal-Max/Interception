@@ -459,7 +459,7 @@ public sealed class DivisionReportServiceTests
     }
 
     [Fact]
-    public async Task BuildAsync_AssignsObservedKnownPersonToDominantEffectiveDivision()
+    public async Task BuildAsync_DoesNotAutoMergeObservedKnownPersonAcrossDifferentDivisions_WithoutExplicitUnion()
     {
         var ct = TestContext.Current.CancellationToken;
         var factory = TestDbFactory.CreateFactory();
@@ -489,7 +489,7 @@ public sealed class DivisionReportServiceTests
             .People.Should().ContainSingle(x => x.Name == "ЯКУТ");
 
         report.Groups.Single(x => x.Division == "186 мсп")
-            .People.Should().NotContain(x => x.Name == "ЯКУТ");
+            .People.Should().ContainSingle(x => x.Name == "ЯКУТ");
     }
 
     private static InterceptionMessage CreateMessage(

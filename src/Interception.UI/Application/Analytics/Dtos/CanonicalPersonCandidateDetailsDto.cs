@@ -5,7 +5,7 @@
 namespace Interception.UI.Application.Analytics.Dtos;
 
 /// <summary>
-/// Деталі кандидата на канонічну особу.
+/// Деталі кандидата на об'єднання в об’єднаний профіль.
 /// </summary>
 public sealed class CanonicalPersonCandidateDetailsDto
 {

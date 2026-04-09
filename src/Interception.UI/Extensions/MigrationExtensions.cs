@@ -24,11 +24,11 @@ public static class MigrationExtensions
         var pending = await db.Database.GetPendingMigrationsAsync(ct);
         if (pending.Any())
         {
-            /* logger.LogInformation("Pending migrations: {Migrations}", string.Join(", ", pending));
-             await db.Database.MigrateAsync(ct);
-             logger.LogInformation("Database migrated successfully.");*/
+            logger.LogInformation("Pending migrations: {Migrations}", string.Join(", ", pending));
+            await db.Database.MigrateAsync(ct);
+            logger.LogInformation("Database migrated successfully.");
 
-            await db.Database.EnsureCreatedAsync(ct);
+            //await db.Database.EnsureCreatedAsync(ct);
         }
         else
         {

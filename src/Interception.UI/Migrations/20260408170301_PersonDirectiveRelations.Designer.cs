@@ -3,6 +3,7 @@ using System;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Interception.UI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260408170301_PersonDirectiveRelations")]
+    partial class PersonDirectiveRelations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
@@ -424,13 +427,9 @@ namespace Interception.UI.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("created_at_utc");
 
-                    b.Property<Guid?>("FromCanonicalPersonId")
+                    b.Property<Guid>("FromCanonicalPersonId")
                         .HasColumnType("TEXT")
                         .HasColumnName("from_canonical_person_id");
-
-                    b.Property<Guid?>("FromResolvedParticipantId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("from_resolved_participant_id");
 
                     b.Property<bool>("IsManual")
                         .HasColumnType("INTEGER")
@@ -446,13 +445,9 @@ namespace Interception.UI.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("source_observation_id");
 
-                    b.Property<Guid?>("ToCanonicalPersonId")
+                    b.Property<Guid>("ToCanonicalPersonId")
                         .HasColumnType("TEXT")
                         .HasColumnName("to_canonical_person_id");
-
-                    b.Property<Guid?>("ToResolvedParticipantId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("to_resolved_participant_id");
 
                     b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("TEXT")
@@ -461,16 +456,14 @@ namespace Interception.UI.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("FromCanonicalPersonId")
-                        .HasDatabaseName("ix_person_directive_relations_from_canonical");
-
-                    b.HasIndex("FromResolvedParticipantId")
-                        .HasDatabaseName("ix_person_directive_relations_from_resolved");
+                        .HasDatabaseName("ix_person_directive_relations_from");
 
                     b.HasIndex("ToCanonicalPersonId")
-                        .HasDatabaseName("ix_person_directive_relations_to_canonical");
+                        .HasDatabaseName("ix_person_directive_relations_to");
 
-                    b.HasIndex("ToResolvedParticipantId")
-                        .HasDatabaseName("ix_person_directive_relations_to_resolved");
+                    b.HasIndex("FromCanonicalPersonId", "ToCanonicalPersonId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_person_directive_relations_unique_pair");
 
                     b.ToTable("person_directive_relations", (string)null);
                 });
@@ -1069,30 +1062,18 @@ namespace Interception.UI.Migrations
                     b.HasOne("Interception.UI.Domain.CanonicalPerson", "FromCanonicalPerson")
                         .WithMany()
                         .HasForeignKey("FromCanonicalPersonId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Interception.UI.Domain.ResolvedParticipant", "FromResolvedParticipant")
-                        .WithMany()
-                        .HasForeignKey("FromResolvedParticipantId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("Interception.UI.Domain.CanonicalPerson", "ToCanonicalPerson")
                         .WithMany()
                         .HasForeignKey("ToCanonicalPersonId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Interception.UI.Domain.ResolvedParticipant", "ToResolvedParticipant")
-                        .WithMany()
-                        .HasForeignKey("ToResolvedParticipantId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("FromCanonicalPerson");
 
-                    b.Navigation("FromResolvedParticipant");
-
                     b.Navigation("ToCanonicalPerson");
-
-                    b.Navigation("ToResolvedParticipant");
                 });
 
             modelBuilder.Entity("Interception.UI.Domain.Topology.TopologySnapshotBridge", b =>

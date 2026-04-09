@@ -111,7 +111,7 @@ public sealed class CanonicalPersonAnalysisServiceTests
 
         details.Should().NotBeNull();
         details!.Warning.Should().NotBeNullOrWhiteSpace();
-        details.Warning.Should().Contain("більше однієї канонічної особи");
+        details.Warning.Should().Contain("більше однієї основної особи");
         details.Rows.Should().HaveCount(2);
     }
 
@@ -146,7 +146,12 @@ public sealed class CanonicalPersonAnalysisServiceTests
             await db.SaveChangesAsync(ct);
         }
 
-        var details = await service.CreateCanonicalAsync(candidateKey, [firstId, secondId], "це одна людина", ct);
+        var details = await service.CreateCanonicalAsync(
+            candidateKey,
+            [firstId, secondId],
+            "ШАПКА",
+            "це одна людина",
+            ct);
 
         details.HasCanonicalPerson.Should().BeTrue();
         details.CanonicalPersonId.Should().NotBeNull();
@@ -198,10 +203,15 @@ public sealed class CanonicalPersonAnalysisServiceTests
             await db.SaveChangesAsync(ct);
         }
 
-        var act = () => service.CreateCanonicalAsync(candidateKey, [firstId, secondId], null, ct);
+        var act = () => service.CreateCanonicalAsync(
+             candidateKey,
+             [firstId, secondId],
+             "ШАПКА",
+             null,
+             ct);
 
         await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*уже входять до іншої канонічної особи*");
+            .WithMessage("*уже входять до іншої основної особи*");
     }
 
     [Fact]

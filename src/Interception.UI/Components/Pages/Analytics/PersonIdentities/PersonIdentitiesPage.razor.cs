@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Components;
 namespace Interception.UI.Components.Pages.Analytics.PersonIdentities;
 
 /// <summary>
-/// Аналітична сторінка кандидатів на злиття в канонічну особу.
+/// Аналітична сторінка кандидатів на об’єднання в один профіль.
 /// </summary>
 public partial class PersonIdentitiesPage : ComponentBase
 {
@@ -22,6 +22,7 @@ public partial class PersonIdentitiesPage : ComponentBase
     protected bool _loading;
     protected bool _saving;
     protected string? _note;
+    protected string? _displayName;
     protected HashSet<Guid> _selectedRows = [];
 
     protected int TotalCandidates => _candidates?.Count ?? 0;
@@ -52,6 +53,7 @@ public partial class PersonIdentitiesPage : ComponentBase
             _selected = null;
             _selectedRows = [];
             _note = null;
+            _displayName = null;
         }
         finally
         {
@@ -79,24 +81,27 @@ public partial class PersonIdentitiesPage : ComponentBase
         if (_selected is null)
             return;
 
-        if (_selectedRows.Count == 0)
+        if (string.IsNullOrWhiteSpace(_displayName))
         {
-            Toasts.Warning("Немає вибору", "Оберіть хоча б один підтверджений рядок.");
+            Toasts.Warning("Немає назви профілю", "Вкажіть назву об’єднаного профілю.");
             return;
         }
 
         _saving = true;
         try
         {
+            var createdNew = !_selected.HasCanonicalPerson;
+
             _selected = _selected.HasCanonicalPerson && _selected.CanonicalPersonId.HasValue
                 ? await CanonicalPersonAnalysisService.AttachToCanonicalAsync(_selected.CanonicalPersonId.Value, [.. _selectedRows], _note)
-                : await CanonicalPersonAnalysisService.CreateCanonicalAsync(_selected.CandidateKey, [.. _selectedRows], _note);
+                : await CanonicalPersonAnalysisService.CreateCanonicalAsync(_selected.CandidateKey, [.. _selectedRows], _displayName, _note);
 
+            _displayName = _selected.CanonicalDisplayName ?? _selected.DisplayName;
             _note = _selected.CanonicalNote;
-            _selectedRows = [.. _selected.Rows.Where(x => !x.IsLinkedToCanonical).Select(x => x.ResolvedParticipantId)];
+            _selectedRows = [];
 
             Toasts.Success(
-                _selected.HasCanonicalPerson ? "Канонічну особу оновлено" : "Канонічну особу створено",
+                createdNew ? "Об’єднаний профіль створено" : "Об’єднаний профіль оновлено",
                 $"Кандидат '{_selected.DisplayName}' оброблено.");
 
             _candidates = await CanonicalPersonAnalysisService.GetCandidatesAsync();
@@ -112,6 +117,70 @@ public partial class PersonIdentitiesPage : ComponentBase
         }
     }
 
+    protected async Task UpdateAsync()
+    {
+        if (_selected?.CanonicalPersonId is null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_displayName))
+        {
+            Toasts.Warning("Немає назви профілю", "Вкажіть назву об’єднаного профілю.");
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            _selected = await CanonicalPersonAnalysisService.UpdateCanonicalAsync(
+                _selected.CandidateKey,
+                _selected.CanonicalPersonId.Value,
+                _displayName,
+                _note);
+
+            _displayName = _selected.CanonicalDisplayName ?? _selected.DisplayName;
+            _note = _selected.CanonicalNote;
+
+            Toasts.Success("Об’єднаний профіль оновлено", $"Кандидат '{_selected.DisplayName}' оновлено.");
+            _candidates = await CanonicalPersonAnalysisService.GetCandidatesAsync();
+        }
+        catch (Exception ex)
+        {
+            Toasts.Error("Помилка оновлення профілю", ex.Message);
+        }
+        finally
+        {
+            _saving = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    protected async Task DeleteAsync()
+    {
+        if (_selected?.CanonicalPersonId is null)
+            return;
+
+        _saving = true;
+        try
+        {
+            var candidateKey = _selected.CandidateKey;
+            await CanonicalPersonAnalysisService.DeleteCanonicalAsync(_selected.CanonicalPersonId.Value);
+
+            Toasts.Success("Об’єднаний профіль видалено", $"Кандидат '{_selected.DisplayName}' повернуто до окремих записів.");
+
+            _candidates = await CanonicalPersonAnalysisService.GetCandidatesAsync();
+            await LoadDetailsAsync(candidateKey);
+        }
+        catch (Exception ex)
+        {
+            Toasts.Error("Помилка видалення профілю", ex.Message);
+        }
+        finally
+        {
+            _saving = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
     private async Task LoadDetailsAsync(string? candidateKey)
     {
         if (string.IsNullOrWhiteSpace(candidateKey))
@@ -119,10 +188,12 @@ public partial class PersonIdentitiesPage : ComponentBase
             _selected = null;
             _selectedRows = [];
             _note = null;
+            _displayName = null;
             return;
         }
 
         _selected = await CanonicalPersonAnalysisService.GetCandidateDetailsAsync(candidateKey);
+        _displayName = _selected?.CanonicalDisplayName ?? _selected?.DisplayName;
         _note = _selected?.CanonicalNote;
         _selectedRows = _selected is null
             ? []
