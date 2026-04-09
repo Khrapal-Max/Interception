@@ -112,18 +112,40 @@ public partial class GroupHierarchyPage : ComponentBase
 
     protected string ParentMemberLabel(string childGroupKey)
     {
-        if (_selectedCluster is null)
+        var edge = FindEdge(childGroupKey);
+        if (edge is null)
             return "невідомий вузол";
 
-        var edge = _selectedCluster.Edges.LastOrDefault(x => x.ChildGroupKey == childGroupKey);
-        return edge is null ? "невідомий вузол" : edge.ViaMemberName;
+        return edge.IsDirective
+            ? "явний контур керування"
+            : edge.ViaMemberName;
     }
+
+    protected string EdgeHintLabel(string childGroupKey)
+    {
+        var edge = FindEdge(childGroupKey);
+        if (edge is null)
+            return string.Empty;
+
+        if (edge.IsDirective)
+            return edge.DirectiveLabel ?? "явний структурний зв'язок";
+
+        return string.IsNullOrWhiteSpace(edge.ViaMemberRole)
+            ? $"через {edge.ViaMemberName}"
+            : $"через {edge.ViaMemberName} ({edge.ViaMemberRole})";
+    }
+
+    protected bool IsDirectiveEdge(string childGroupKey)
+        => FindEdge(childGroupKey)?.IsDirective == true;
 
     protected static string FriendlyAction(string? value)
         => string.IsNullOrWhiteSpace(value) ? "дія не визначена" : value;
 
     protected static string PrimaryFrequency(GroupHierarchyNodeDto node)
         => node.Frequencies.FirstOrDefault() ?? "—";
+
+    private GroupHierarchyEdgeDto? FindEdge(string childGroupKey)
+        => _selectedCluster?.Edges.LastOrDefault(x => x.ChildGroupKey == childGroupKey);
 
     private static List<GroupHierarchyClusterDto> BuildVisibleClusters(
         GroupHierarchyMapDto? map,

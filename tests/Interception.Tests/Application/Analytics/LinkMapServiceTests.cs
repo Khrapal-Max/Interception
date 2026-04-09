@@ -11,18 +11,18 @@ using Microsoft.EntityFrameworkCore;
 namespace Interception.Tests.Application.Analytics;
 
 /// <summary>
-/// TDD-тести для read-side карти зв'язків через snapshot-и.
+/// TDD-тести для карти зв'язків.
+/// Частина кейсів фіксує вже прийняту базову поведінку,
+/// а частина навмисно закодовує вимоги стабільної моделі,
+/// включно з аналітичним шаром по діях груп і мостів.
 /// </summary>
 public sealed class LinkMapServiceTests
 {
     private static LinkMapService CreateService(IDbContextFactory<AppDbContext> factory)
         => new(factory);
 
-    private static TopologySnapshotBuilder CreateBuilder(IDbContextFactory<AppDbContext> factory)
-        => new(factory);
-
     [Fact]
-    public async Task BuildAsync_NoSnapshot_ReturnsEmptyGroups()
+    public async Task BuildAsync_NoMessages_ReturnsEmptyGroups()
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
@@ -37,7 +37,6 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -58,7 +57,6 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
-        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().BeEmpty();
@@ -69,7 +67,6 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -97,7 +94,6 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
-        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().ContainSingle();
@@ -115,7 +111,6 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -143,7 +138,6 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
-        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().ContainSingle();
@@ -155,7 +149,6 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -167,7 +160,6 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
-        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().HaveCount(2);
@@ -192,7 +184,6 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -228,7 +219,6 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
-        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().ContainSingle();
@@ -240,7 +230,6 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -253,7 +242,6 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
-        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().ContainSingle(
@@ -270,7 +258,6 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -282,7 +269,6 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
-        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().HaveCount(2);
@@ -307,7 +293,6 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -319,7 +304,6 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
-        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         result.Groups.Should().HaveCount(2);
@@ -338,11 +322,10 @@ public sealed class LinkMapServiceTests
     }
 
     [Fact]
-    public async Task BuildAsync_DoesNotCreateBridge_WhenOnlyCenterToForeignMemberExists()
+    public async Task BuildAsync_CreatesBridge_WhenCenterMeetsForeignBridgeRepresentative()
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -382,32 +365,116 @@ public sealed class LinkMapServiceTests
             b2.AddParticipant("Б-ЦЕНТР", false, "координатор", 1);
             b2.AddParticipant("Б-2", false, "оператор", 2);
 
-            var centerToForeignMember = CreateMessage(
+            var bridgeByCoreRepresentative = CreateMessage(
                 action,
                 new DateTime(2026, 03, 28, 12, 7, 0, DateTimeKind.Utc),
                 division: null,
                 frequency: "401.2000");
-            centerToForeignMember.AddParticipant("А-ЦЕНТР", false, "координатор", 1);
-            centerToForeignMember.AddParticipant("Б-1", false, "оператор", 2);
+            bridgeByCoreRepresentative.AddParticipant("А-ЦЕНТР", false, "координатор", 1);
+            bridgeByCoreRepresentative.AddParticipant("Б-1", false, "оператор", 2);
 
-            db.InterceptionMessages.AddRange(a1, a2, b1, b2, centerToForeignMember);
+            db.InterceptionMessages.AddRange(a1, a2, b1, b2, bridgeByCoreRepresentative);
             await db.SaveChangesAsync(ct);
         }
 
-        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
-        result.Groups.Should().HaveCount(2,
-            "контакт центру однієї групи зі звичайним учасником іншої не створює окремий міжгруповий міст");
+        result.Groups.Should().HaveCount(2);
 
         var groupA = result.Groups.Single(x => x.KeyPersonName == "А-ЦЕНТР");
         var groupB = result.Groups.Single(x => x.KeyPersonName == "Б-ЦЕНТР");
 
-        groupA.Bridges.Should().BeEmpty(
-            "міст між групами можливий лише коли є observation з центрами обох груп");
+        groupA.Bridges.Should().ContainSingle("міжгруповий зв'язок має знаходитися не лише через display-центр, а й через ядро представників групи");
+        groupB.Bridges.Should().ContainSingle();
 
-        groupB.Bridges.Should().BeEmpty(
-            "міст між групами можливий лише коли є observation з центрами обох груп");
+        groupA.Bridges.Single().ContactPersonName.Should().Be("Б-1");
+        groupA.Bridges.Single().BridgeFrequency.Should().Be("401.2000");
+        groupA.Bridges.Single().Weight.Should().Be(1);
+
+        groupB.Bridges.Single().ContactPersonName.Should().Be("А-ЦЕНТР");
+    }
+
+    [Fact]
+    public async Task BuildAsync_DoesNotCreateBridge_WhenForeignParticipantIsOutsideBridgeRepresentatives()
+    {
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+        var ct = TestContext.Current.CancellationToken;
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var action = InterceptionAction.Create("доповідь", string.Empty);
+            db.InterceptionActions.Add(action);
+
+            var a1 = CreateMessage(
+                action,
+                new DateTime(2026, 03, 28, 18, 0, 0, DateTimeKind.Utc),
+                division: null,
+                frequency: "402.0000");
+            a1.AddParticipant("А-ЦЕНТР", false, "координатор", 1);
+            a1.AddParticipant("А-1", false, "оператор", 2);
+
+            var a2 = CreateMessage(
+                action,
+                new DateTime(2026, 03, 28, 18, 1, 0, DateTimeKind.Utc),
+                division: null,
+                frequency: "402.0000");
+            a2.AddParticipant("А-ЦЕНТР", false, "координатор", 1);
+            a2.AddParticipant("А-2", false, "оператор", 2);
+
+            var b1 = CreateMessage(
+                action,
+                new DateTime(2026, 03, 28, 18, 2, 0, DateTimeKind.Utc),
+                division: null,
+                frequency: "145.1000");
+            b1.AddParticipant("Б-ЦЕНТР", false, "координатор", 1);
+            b1.AddParticipant("Б-1", false, "оператор", 2);
+
+            var b2 = CreateMessage(
+                action,
+                new DateTime(2026, 03, 28, 18, 3, 0, DateTimeKind.Utc),
+                division: null,
+                frequency: "145.1000");
+            b2.AddParticipant("Б-ЦЕНТР", false, "координатор", 1);
+            b2.AddParticipant("Б-2", false, "оператор", 2);
+
+            var b3 = CreateMessage(
+                action,
+                new DateTime(2026, 03, 28, 18, 4, 0, DateTimeKind.Utc),
+                division: null,
+                frequency: "145.1000");
+            b3.AddParticipant("Б-ЦЕНТР", false, "координатор", 1);
+            b3.AddParticipant("Б-3", false, "оператор", 2);
+
+            var b4 = CreateMessage(
+                action,
+                new DateTime(2026, 03, 28, 18, 5, 0, DateTimeKind.Utc),
+                division: null,
+                frequency: "145.1000");
+            b4.AddParticipant("Б-ЦЕНТР", false, "координатор", 1);
+            b4.AddParticipant("Б-4", false, "оператор", 2);
+
+            var bridgeWithNonCoreMember = CreateMessage(
+                action,
+                new DateTime(2026, 03, 28, 18, 6, 0, DateTimeKind.Utc),
+                division: null,
+                frequency: "401.2000");
+            bridgeWithNonCoreMember.AddParticipant("А-ЦЕНТР", false, "координатор", 1);
+            bridgeWithNonCoreMember.AddParticipant("Б-4", false, "оператор", 2);
+
+            db.InterceptionMessages.AddRange(a1, a2, b1, b2, b3, b4, bridgeWithNonCoreMember);
+            await db.SaveChangesAsync(ct);
+        }
+
+        var result = await service.BuildAsync(ct: CancellationToken.None);
+
+        result.Groups.Should().HaveCount(2);
+
+        var groupA = result.Groups.Single(x => x.KeyPersonName == "А-ЦЕНТР");
+        var groupB = result.Groups.Single(x => x.KeyPersonName == "Б-ЦЕНТР");
+
+        groupA.Bridges.Should().BeEmpty("рядовий учасник, який не входить до ядра представників групи, не повинен сам по собі створювати міжгруповий міст");
+        groupB.Bridges.Should().BeEmpty();
     }
 
     [Fact]
@@ -415,7 +482,6 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -440,7 +506,6 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
-        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         var group = result.Groups.Should().ContainSingle().Subject;
@@ -453,7 +518,6 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -487,7 +551,6 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
-        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         var group = result.Groups.Should().ContainSingle().Subject;
@@ -501,7 +564,6 @@ public sealed class LinkMapServiceTests
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
-        var builder = CreateBuilder(factory);
         var ct = TestContext.Current.CancellationToken;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -514,7 +576,6 @@ public sealed class LinkMapServiceTests
             await db.SaveChangesAsync(ct);
         }
 
-        await builder.RebuildAsync(ct: CancellationToken.None);
         var result = await service.BuildAsync(ct: CancellationToken.None);
 
         var groupA = result.Groups.Single(x => x.KeyPersonName == "А-ЦЕНТР");

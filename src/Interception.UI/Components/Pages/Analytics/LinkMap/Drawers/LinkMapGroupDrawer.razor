@@ -13,7 +13,7 @@
         <div class="drawer-body d-flex flex-column gap-3">
             <div class="row g-2">
                 <div class="col-12 col-md-6">
-                    <div class="small text-muted mb-1">Центральна особа</div>
+                    <div class="small text-muted mb-1">Ключова особа</div>
                     <div class="fw-semibold">@Group.KeyPersonName</div>
                     <div class="small text-muted">@(string.IsNullOrWhiteSpace(Group.KeyPersonRole) ? "Роль не визначена" : Group.KeyPersonRole)</div>
                 </div>
@@ -23,6 +23,31 @@
                     <div class="small text-muted">Зовнішніх зв'язків: @Group.Bridges.Count</div>
                 </div>
             </div>
+
+            @{
+                var bridgeRepresentatives = Group.MemberDetails
+                    .OrderByDescending(x => x.IsKeyPerson)
+                    .ThenByDescending(x => x.UniquePartnerCount)
+                    .ThenByDescending(x => x.ConnectionWeight)
+                    .ThenByDescending(x => x.MentionCount)
+                    .ThenByDescending(x => x.LastSeenAt)
+                    .ThenBy(x => x.Name)
+                    .Take(3)
+                    .ToList();
+            }
+
+            @if (bridgeRepresentatives.Count > 0)
+            {
+                <div>
+                    <div class="small text-muted mb-1">Представники групи для виявлення зв'язків</div>
+                    <div class="d-flex flex-wrap gap-1">
+                        @foreach (var representative in bridgeRepresentatives)
+                        {
+                            <span class="badge bg-dark border">@representative.Name</span>
+                        }
+                    </div>
+                </div>
+            }
 
             @if (Group.TopActions.Any())
             {
@@ -74,7 +99,7 @@
                                                 <div class="d-flex flex-wrap gap-1">
                                                     @if (member.IsKeyPerson)
                                                     {
-                                                        <span class="badge bg-primary">Центр</span>
+                                                        <span class="badge bg-primary">Ключова</span>
                                                     }
                                                     @if (member.IsCrossGroup)
                                                     {

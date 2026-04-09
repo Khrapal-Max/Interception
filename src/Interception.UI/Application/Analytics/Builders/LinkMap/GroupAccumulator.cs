@@ -121,15 +121,8 @@ internal sealed class GroupAccumulator
             .Select(x => x.Key)
             .FirstOrDefault();
 
-        var keyPerson = _people.Values
-            .OrderByDescending(x => x.UniquePartnerCount)
-            .ThenByDescending(x => x.Frequencies.Count)
-            .ThenByDescending(x => TopologySnapshotBuilder.IsCenterCandidate(x.Name, x.Role))
-            .ThenByDescending(x => x.ConnectionWeight)
-            .ThenByDescending(x => x.Mentions)
-            .ThenByDescending(x => x.LastSeenAt)
-            .ThenBy(x => x.Name)
-            .FirstOrDefault();
+        var rankedPeople = GetRankedPeople();
+        var keyPerson = rankedPeople.FirstOrDefault();
 
         if (keyPerson is null)
         {
@@ -140,6 +133,19 @@ internal sealed class GroupAccumulator
 
         KeyPersonName = keyPerson.Name;
         KeyPersonRole = keyPerson.Role;
+    }
+
+    /// <summary>
+    /// Повертає ядро представників групи, через яких дозволяється шукати міжгрупові зв'язки.
+    /// KeyPerson залишається display-центром групи, але міст не обмежується лише ним.
+    /// </summary>
+    public IReadOnlyList<string> GetBridgeRepresentatives(int take = 3)
+    {
+        FinalizeCoreProperties();
+
+        return [.. GetBridgeRepresentativePeople()
+            .Take(Math.Max(1, take))
+            .Select(x => x.Name)];
     }
 
     public LinkMapGroupDto ToModel(IReadOnlyDictionary<string, int> groupCountByMember)
@@ -208,6 +214,30 @@ internal sealed class GroupAccumulator
             orderedBridges);
     }
 
+    private List<PersonAccumulator> GetRankedPeople()
+    {
+        return [.. _people.Values
+            .OrderByDescending(x => x.UniquePartnerCount)
+            .ThenByDescending(x => x.Frequencies.Count)
+            .ThenByDescending(x => LinkMapService.IsCenterCandidate(x.Name, x.Role))
+            .ThenByDescending(x => x.ConnectionWeight)
+            .ThenByDescending(x => x.Mentions)
+            .ThenByDescending(x => x.LastSeenAt)
+            .ThenBy(x => x.Name)];
+    }
+
+    private List<PersonAccumulator> GetBridgeRepresentativePeople()
+    {
+        return [.. _people.Values
+            .OrderByDescending(x => string.Equals(x.Name, KeyPersonName, StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(x => x.UniquePartnerCount)
+            .ThenByDescending(x => x.Mentions)
+            .ThenByDescending(x => x.ConnectionWeight)
+            .ThenByDescending(x => LinkMapService.IsCenterCandidate(x.Name, x.Role))
+            .ThenByDescending(x => x.Frequencies.Count)
+            .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)];
+    }
+
     private static string BuildGroupKey(string? division, string keyPersonName, IEnumerable<string> members)
     {
         var divisionPart = string.IsNullOrWhiteSpace(division)
@@ -218,13 +248,13 @@ internal sealed class GroupAccumulator
             ? "NO-KEY-PERSON"
             : NormalizeKey(keyPersonName);
 
-        var membersPart = string.Join(";", members
-            .Where(x => !string.IsNullOrWhiteSpace(x))
+        var membersAnchor = members
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .Take(3)
             .Select(NormalizeKey)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
+            .ToList();
 
-        return $"{divisionPart}|{keyPersonPart}|{membersPart}";
+        return $"{divisionPart}|{keyPersonPart}|{string.Join("+", membersAnchor)}";
     }
 
     private static string NormalizeKey(string value)

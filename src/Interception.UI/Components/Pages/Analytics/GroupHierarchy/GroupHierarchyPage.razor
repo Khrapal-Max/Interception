@@ -183,10 +183,16 @@
                                                     <div class="tree-child-card @(node.NeedsReview ? "needs-review" : null)">
                                                         <div class="tree-card-title">@node.Title</div>
                                                         <div class="tree-card-sub">у @ParentMemberLabel(node.GroupKey)</div>
+                                                        @if (IsDirectiveEdge(node.GroupKey))
+                                                        {
+                                                            <div class="small mt-1"><span class="badge text-bg-info">Явний зв'язок</span></div>
+                                                        }
                                                         <div class="tree-card-meta small text-muted">
                                                             <span>@node.KeyPersonName</span>
                                                             <span>•</span>
                                                             <span>@PrimaryFrequency(node)</span>
+                                                            <span>•</span>
+                                                            <span>@EdgeHintLabel(node.GroupKey)</span>
                                                         </div>
                                                     </div>
                                                 </div>

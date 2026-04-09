@@ -4,6 +4,7 @@
 
 using Interception.UI.Application.Analytics.Abstractions;
 using Interception.UI.Application.Analytics.Dtos;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,7 @@ namespace Interception.UI.Application.Analytics.Services;
 
 /// <summary>
 /// Будує операторську ієрархію груп поверх уже зібраної карти зв'язків.
+/// Додатково враховує explicit structural links з <see cref="PersonDirectiveRelation"/> як сильний direction hint.
 /// </summary>
 public sealed class GroupHierarchyService(
     ILinkMapService linkMapService,
@@ -32,9 +34,10 @@ public sealed class GroupHierarchyService(
 
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         var canonicalByName = await LoadCanonicalByNameMapAsync(db, map.Groups, ct);
+        var directiveHints = await LoadDirectiveHintsAsync(db, ct);
 
         var groupsByKey = map.Groups.ToDictionary(x => x.GroupKey, StringComparer.OrdinalIgnoreCase);
-        var candidateEdges = BuildCandidateEdges(map.Groups, canonicalByName);
+        var candidateEdges = BuildCandidateEdges(map.Groups, canonicalByName, directiveHints);
         var reviewGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         var selectedEdges = SelectBestEdges(candidateEdges, reviewGroups);
@@ -46,7 +49,10 @@ public sealed class GroupHierarchyService(
 
         var childrenByParent = selectedEdges
             .GroupBy(x => x.ParentGroupKey, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(x => x.Key, x => x.OrderByDescending(y => y.Score).ThenBy(y => y.ChildTitle).ToList(), StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(
+                x => x.Key,
+                x => x.OrderByDescending(y => y.Score).ThenByDescending(y => y.IsDirective).ThenBy(y => y.ChildTitle).ToList(),
+                StringComparer.OrdinalIgnoreCase);
 
         var roots = map.Groups
             .Where(x => !incomingByChild.ContainsKey(x.GroupKey))
@@ -90,12 +96,14 @@ public sealed class GroupHierarchyService(
     }
 
     /// <summary>
-    /// Шукає усі можливі parent → child зв'язки через центри інших груп.
-    /// Якщо для імені є однозначна канонічна особа — звіряє також по ній.
+    /// Шукає усі можливі parent → child зв'язки.
+    /// Базова евристика: центр іншої групи входить до складу parent-групи.
+    /// Додатковий підсилювач: явний structural link з PersonDirectiveRelation.
     /// </summary>
     private static List<CandidateEdge> BuildCandidateEdges(
         IReadOnlyList<LinkMapGroupDto> groups,
-        IReadOnlyDictionary<string, Guid> canonicalByName)
+        IReadOnlyDictionary<string, Guid> canonicalByName,
+        IReadOnlyList<DirectiveHint> directiveHints)
     {
         var byKeyPersonName = groups
             .Where(x => !string.IsNullOrWhiteSpace(x.KeyPersonName))
@@ -118,25 +126,16 @@ public sealed class GroupHierarchyService(
 
         var result = new List<CandidateEdge>();
 
+        // 1. Базові candidate edges з карти зв'язків.
         foreach (var parent in groups)
         {
             foreach (var member in parent.MemberDetails.Where(x => !x.IsKeyPerson && !string.IsNullOrWhiteSpace(x.Name)))
             {
-                var matchedGroups = new List<LinkMapGroupDto>();
-                var normalizedMemberName = NormalizePersonName(member.Name);
-
-                if (!string.IsNullOrWhiteSpace(normalizedMemberName)
-                    && byKeyPersonName.TryGetValue(normalizedMemberName, out var byName))
-                {
-                    matchedGroups.AddRange(byName);
-                }
-
-                if (!string.IsNullOrWhiteSpace(normalizedMemberName)
-                    && canonicalByName.TryGetValue(normalizedMemberName, out var canonicalId)
-                    && byKeyPersonCanonical.TryGetValue(canonicalId, out var byCanonical))
-                {
-                    matchedGroups.AddRange(byCanonical);
-                }
+                var matchedGroups = ResolveMatchedGroups(
+                    NormalizePersonName(member.Name),
+                    canonicalByName,
+                    byKeyPersonName,
+                    byKeyPersonCanonical);
 
                 foreach (var child in matchedGroups
                              .Where(x => !x.GroupKey.Equals(parent.GroupKey, StringComparison.OrdinalIgnoreCase))
@@ -156,9 +155,59 @@ public sealed class GroupHierarchyService(
                         ViaMemberName: member.Name,
                         ViaMemberRole: member.Role,
                         Score: score,
-                        IsAmbiguous: matchedGroups
-                            .DistinctBy(x => x.GroupKey, StringComparer.OrdinalIgnoreCase)
-                            .Count() > 1));
+                        IsAmbiguous: matchedGroups.Count > 1,
+                        IsDirective: false,
+                        DirectiveLabel: null));
+                }
+            }
+        }
+
+        // 2. Явні relations між особами як сильний direction hint.
+        foreach (var directive in directiveHints)
+        {
+            var parents = ResolveMatchedGroups(
+                directive.FromNormalizedName,
+                canonicalByName,
+                byKeyPersonName,
+                byKeyPersonCanonical,
+                directive.FromCanonicalPersonId);
+
+            var children = ResolveMatchedGroups(
+                directive.ToNormalizedName,
+                canonicalByName,
+                byKeyPersonName,
+                byKeyPersonCanonical,
+                directive.ToCanonicalPersonId);
+
+            var distinctParents = parents.DistinctBy(x => x.GroupKey, StringComparer.OrdinalIgnoreCase).ToList();
+            var distinctChildren = children.DistinctBy(x => x.GroupKey, StringComparer.OrdinalIgnoreCase).ToList();
+
+            if (distinctParents.Count == 0 || distinctChildren.Count == 0)
+                continue;
+
+            var isAmbiguous = distinctParents.Count > 1 || distinctChildren.Count > 1;
+
+            foreach (var parent in distinctParents)
+            {
+                foreach (var child in distinctChildren.Where(x => !x.GroupKey.Equals(parent.GroupKey, StringComparison.OrdinalIgnoreCase)))
+                {
+                    var score = 1_000_000
+                                + GetDirectiveConfidenceScore(directive.Confidence)
+                                + GetDirectiveTypeScore(directive.RelationType)
+                                + (HasDirectBridge(parent, child.GroupKey) ? 25 : 0)
+                                + (HasMeaningfulSharedDivision(parent.Division, child.Division) ? 5 : 0);
+
+                    result.Add(new CandidateEdge(
+                        ParentGroupKey: parent.GroupKey,
+                        ParentTitle: BuildGroupTitle(parent),
+                        ChildGroupKey: child.GroupKey,
+                        ChildTitle: BuildGroupTitle(child),
+                        ViaMemberName: directive.FromDisplayName,
+                        ViaMemberRole: null,
+                        Score: score,
+                        IsAmbiguous: isAmbiguous,
+                        IsDirective: true,
+                        DirectiveLabel: BuildDirectiveLabel(directive)));
                 }
             }
         }
@@ -167,7 +216,79 @@ public sealed class GroupHierarchyService(
     }
 
     /// <summary>
-    /// Завантажує однозначну канонічну прив'язку для імен, які вже зведені в аналітиці.
+    /// Завантажує явні structural links для підсилення напряму parent → child.
+    /// </summary>
+    private static async Task<List<DirectiveHint>> LoadDirectiveHintsAsync(
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var relations = await db.PersonDirectiveRelations
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        if (relations.Count == 0)
+            return [];
+
+        var canonicalIds = relations
+            .SelectMany(x => new[] { x.FromCanonicalPersonId, x.ToCanonicalPersonId })
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .Distinct()
+            .ToList();
+
+        var resolvedIds = relations
+            .SelectMany(x => new[] { x.FromResolvedParticipantId, x.ToResolvedParticipantId })
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .Distinct()
+            .ToList();
+
+        var canonicalMap = await db.CanonicalPersons
+            .AsNoTracking()
+            .Where(x => canonicalIds.Contains(x.Id))
+            .ToDictionaryAsync(
+                x => x.Id,
+                x => SemanticValueExtensions.NormalizeMeaningfulOrNull(x.DisplayName) ?? "—",
+                ct);
+
+        var resolvedRows = await db.ResolvedParticipants
+            .AsNoTracking()
+            .Where(x => resolvedIds.Contains(x.Id))
+            .Select(x => new
+            {
+                x.Id,
+                x.Name
+            })
+            .ToListAsync(ct);
+
+        var resolvedMap = resolvedRows.ToDictionary(
+            x => x.Id,
+            x => SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Name) ?? "—");
+
+        var resolvedToCanonicalRows = await db.CanonicalPersonMembers
+            .AsNoTracking()
+            .Where(x => resolvedIds.Contains(x.ResolvedParticipantId))
+            .Select(x => new
+            {
+                x.ResolvedParticipantId,
+                x.CanonicalPersonId
+            })
+            .ToListAsync(ct);
+
+        var resolvedToCanonicalMap = resolvedToCanonicalRows
+            .GroupBy(x => x.ResolvedParticipantId)
+            .Where(x => x.Select(v => v.CanonicalPersonId).Distinct().Count() == 1)
+            .ToDictionary(x => x.Key, x => x.First().CanonicalPersonId);
+
+        return relations
+            .Select(x => BuildDirectiveHint(x, canonicalMap, resolvedMap, resolvedToCanonicalMap))
+            .Where(x => x is not null)
+            .Cast<DirectiveHint>()
+            .ToList();
+    }
+
+    /// <summary>
+    /// Завантажує однозначну canonical-прив'язку для імен, які вже зведені в аналітиці.
     /// </summary>
     private static async Task<Dictionary<string, Guid>> LoadCanonicalByNameMapAsync(
         AppDbContext db,
@@ -213,6 +334,7 @@ public sealed class GroupHierarchyService(
 
     /// <summary>
     /// Вибирає одного основного батька для кожної дочірньої групи.
+    /// Explicit relation має пріоритет над звичайною graph-евристикою.
     /// </summary>
     private static List<CandidateEdge> SelectBestEdges(
         IReadOnlyList<CandidateEdge> candidateEdges,
@@ -224,6 +346,7 @@ public sealed class GroupHierarchyService(
         {
             var ordered = childGroup
                 .OrderByDescending(x => x.Score)
+                .ThenByDescending(x => x.IsDirective)
                 .ThenBy(x => x.ParentTitle)
                 .ToList();
 
@@ -234,6 +357,9 @@ public sealed class GroupHierarchyService(
                 reviewGroups.Add(chosen.ChildGroupKey);
 
             if (ordered.Any(x => x.IsAmbiguous))
+                reviewGroups.Add(chosen.ChildGroupKey);
+
+            if (ordered.Any(x => x.IsDirective) && ordered.Any(x => !x.IsDirective))
                 reviewGroups.Add(chosen.ChildGroupKey);
         }
 
@@ -251,6 +377,7 @@ public sealed class GroupHierarchyService(
 
         foreach (var edge in selectedEdges
                      .OrderByDescending(x => x.Score)
+                     .ThenByDescending(x => x.IsDirective)
                      .ThenBy(x => x.ParentTitle)
                      .ThenBy(x => x.ChildTitle))
         {
@@ -322,11 +449,13 @@ public sealed class GroupHierarchyService(
                     ViaMemberName: child.ViaMemberName,
                     ViaMemberRole: child.ViaMemberRole,
                     IsAmbiguous: child.IsAmbiguous,
-                    Depth: depth + 1);
+                    Depth: depth + 1,
+                    IsDirective: child.IsDirective,
+                    DirectiveLabel: child.DirectiveLabel);
 
                 edges.Add(edge);
 
-                if (child.IsAmbiguous)
+                if (child.IsAmbiguous || child.IsDirective)
                     clusterReview = true;
 
                 Traverse(childGroup, depth + 1);
@@ -393,6 +522,9 @@ public sealed class GroupHierarchyService(
         if (directChildren.Count == 0)
             return $"Група {root.Title} поки не показує підлеглих контурів за поточним періодом.";
 
+        if (directChildren.Any(x => x.IsDirective))
+            return $"Група {root.Title} має явні зв'язки структурного керування з дочірніми контурами. Їхній напрямок підсилений ручно підтвердженим контуром керування.";
+
         var names = nodes
             .Where(x => directChildren.Any(e => e.ChildGroupKey.Equals(x.GroupKey, StringComparison.OrdinalIgnoreCase)))
             .Select(x => x.KeyPersonName)
@@ -434,7 +566,12 @@ public sealed class GroupHierarchyService(
     private static string BuildSignal(string groupKey, IReadOnlyList<GroupHierarchyEdgeDto> edges)
     {
         var edge = edges.LastOrDefault(x => x.ChildGroupKey.Equals(groupKey, StringComparison.OrdinalIgnoreCase));
-        return edge is null ? "контур" : $"дочірня група через {edge.ViaMemberName}";
+        if (edge is null)
+            return "контур";
+
+        return edge.IsDirective
+            ? $"дочірня група через {edge.DirectiveLabel ?? "явний зв'язок"}"
+            : $"дочірня група через {edge.ViaMemberName}";
     }
 
     /// <summary>
@@ -452,6 +589,139 @@ public sealed class GroupHierarchyService(
            && !left.Equals("НВ підрозділ", StringComparison.OrdinalIgnoreCase)
            && left.Equals(right, StringComparison.OrdinalIgnoreCase);
 
+    private static List<LinkMapGroupDto> ResolveMatchedGroups(
+        string? normalizedName,
+        IReadOnlyDictionary<string, Guid> canonicalByName,
+        IReadOnlyDictionary<string, List<LinkMapGroupDto>> byKeyPersonName,
+        IReadOnlyDictionary<Guid, List<LinkMapGroupDto>> byKeyPersonCanonical,
+        Guid? explicitCanonicalId = null)
+    {
+        var matchedGroups = new List<LinkMapGroupDto>();
+
+        if (!string.IsNullOrWhiteSpace(normalizedName)
+            && byKeyPersonName.TryGetValue(normalizedName, out var byName))
+        {
+            matchedGroups.AddRange(byName);
+        }
+
+        var canonicalId = explicitCanonicalId;
+        if (!canonicalId.HasValue
+            && !string.IsNullOrWhiteSpace(normalizedName)
+            && canonicalByName.TryGetValue(normalizedName, out var resolvedCanonicalId))
+        {
+            canonicalId = resolvedCanonicalId;
+        }
+
+        if (canonicalId.HasValue
+            && byKeyPersonCanonical.TryGetValue(canonicalId.Value, out var byCanonical))
+        {
+            matchedGroups.AddRange(byCanonical);
+        }
+
+        return [.. matchedGroups.DistinctBy(x => x.GroupKey, StringComparer.OrdinalIgnoreCase)];
+    }
+
+    private static DirectiveHint? BuildDirectiveHint(
+        Interception.UI.Domain.PersonDirectiveRelation relation,
+        IReadOnlyDictionary<Guid, string> canonicalMap,
+        IReadOnlyDictionary<Guid, string> resolvedMap,
+        IReadOnlyDictionary<Guid, Guid> resolvedToCanonicalMap)
+    {
+        var fromCanonicalId = relation.FromCanonicalPersonId;
+        var toCanonicalId = relation.ToCanonicalPersonId;
+
+        string fromDisplayName;
+        string toDisplayName;
+
+        if (fromCanonicalId.HasValue)
+        {
+            if (!canonicalMap.TryGetValue(fromCanonicalId.Value, out fromDisplayName!))
+                return null;
+        }
+        else if (relation.FromResolvedParticipantId.HasValue)
+        {
+            if (!resolvedMap.TryGetValue(relation.FromResolvedParticipantId.Value, out fromDisplayName!))
+                return null;
+
+            if (resolvedToCanonicalMap.TryGetValue(relation.FromResolvedParticipantId.Value, out var mappedCanonical))
+                fromCanonicalId = mappedCanonical;
+        }
+        else
+        {
+            return null;
+        }
+
+        if (toCanonicalId.HasValue)
+        {
+            if (!canonicalMap.TryGetValue(toCanonicalId.Value, out toDisplayName!))
+                return null;
+        }
+        else if (relation.ToResolvedParticipantId.HasValue)
+        {
+            if (!resolvedMap.TryGetValue(relation.ToResolvedParticipantId.Value, out toDisplayName!))
+                return null;
+
+            if (resolvedToCanonicalMap.TryGetValue(relation.ToResolvedParticipantId.Value, out var mappedCanonical))
+                toCanonicalId = mappedCanonical;
+        }
+        else
+        {
+            return null;
+        }
+
+        return new DirectiveHint(
+            FromCanonicalPersonId: fromCanonicalId,
+            FromNormalizedName: NormalizePersonName(fromDisplayName),
+            FromDisplayName: fromDisplayName,
+            ToCanonicalPersonId: toCanonicalId,
+            ToNormalizedName: NormalizePersonName(toDisplayName),
+            ToDisplayName: toDisplayName,
+            RelationType: relation.RelationType,
+            Confidence: relation.Confidence,
+            Comment: SemanticValueExtensions.NormalizeMeaningfulOrNull(relation.Comment));
+    }
+
+    private static string BuildDirectiveLabel(DirectiveHint directive)
+    {
+        var relationLabel = directive.RelationType switch
+        {
+            DirectiveRelationType.Command => "явний наказ",
+            DirectiveRelationType.ReportUp => "явний зв'язок керування",
+            DirectiveRelationType.Control => "явний контроль",
+            DirectiveRelationType.Correction => "явне коригування",
+            DirectiveRelationType.Coordination => "явна координація",
+            _ => "явний структурний зв'язок"
+        };
+
+        var confidenceSuffix = directive.Confidence switch
+        {
+            DirectiveRelationConfidence.High => " (висока впевненість)",
+            DirectiveRelationConfidence.Medium => " (середня впевненість)",
+            _ => " (потребує підтвердження)"
+        };
+
+        return relationLabel + confidenceSuffix;
+    }
+
+    private static int GetDirectiveConfidenceScore(DirectiveRelationConfidence confidence)
+        => confidence switch
+        {
+            DirectiveRelationConfidence.High => 300,
+            DirectiveRelationConfidence.Medium => 200,
+            _ => 100
+        };
+
+    private static int GetDirectiveTypeScore(DirectiveRelationType relationType)
+        => relationType switch
+        {
+            DirectiveRelationType.Command => 60,
+            DirectiveRelationType.Control => 50,
+            DirectiveRelationType.Correction => 45,
+            DirectiveRelationType.ReportUp => 35,
+            DirectiveRelationType.Coordination => 20,
+            _ => 10
+        };
+
     /// <summary>
     /// Технічна candidate-модель ребра до вибору найкращого батька.
     /// </summary>
@@ -463,5 +733,18 @@ public sealed class GroupHierarchyService(
         string ViaMemberName,
         string? ViaMemberRole,
         int Score,
-        bool IsAmbiguous);
+        bool IsAmbiguous,
+        bool IsDirective,
+        string? DirectiveLabel);
+
+    private sealed record DirectiveHint(
+        Guid? FromCanonicalPersonId,
+        string FromNormalizedName,
+        string FromDisplayName,
+        Guid? ToCanonicalPersonId,
+        string ToNormalizedName,
+        string ToDisplayName,
+        DirectiveRelationType RelationType,
+        DirectiveRelationConfidence Confidence,
+        string? Comment);
 }
