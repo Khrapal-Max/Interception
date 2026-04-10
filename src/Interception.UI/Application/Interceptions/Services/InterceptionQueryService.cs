@@ -142,33 +142,39 @@ public sealed class InterceptionQueryService(IDbContextFactory<AppDbContext> dbF
     public async Task<InterceptionDetailsDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
-        return await db.InterceptionMessages
+        var message = await db.InterceptionMessages
             .AsNoTracking()
             .Where(m => m.Id == id)
-            .Select(m => new InterceptionDetailsDto
-            {
-                Id = m.Id,
-                ObservedDate = m.ObservedDate,
-                Frequency = FrequencyCode.Create(m.Frequency)?.Value,
-                Division = DivisionName.Create(m.Division)?.Value,
-                PointSignal = m.PointSignal,
-                VectorSignal = m.VectorSignal,
-                InterceptionActionId = m.InterceptionActionId,
-                Note = m.Note,
-                Participants = [.. m.Participants
-                    .OrderBy(p => p.Ordinal)
-                    .Select(p => new InterceptionDetailsParticipantDto
-                    {
-                        Ordinal = p.Ordinal,
-                        Name = p.Name,
-                        Role = p.Role,
-                        IsUnknown = p.IsUnknown
-                    })],
-                Labels = [.. m.Labels
-                    .OrderBy(l => l.NameLabel)
-                    .Select(l => l.NameLabel)]
-            })
             .FirstOrDefaultAsync(ct);
+
+        if (message is null)
+            return null;
+
+        return new InterceptionDetailsDto
+        {
+            Id = message.Id,
+            ObservedDate = message.ObservedDate,
+            Frequency = FrequencyCode.Create(message.Frequency)?.Value,
+            Division = DivisionName.Create(message.Division)?.Value,
+            PointSignal = message.PointSignal,
+            VectorSignal = message.VectorSignal,
+            InterceptionActionId = message.InterceptionActionId,
+            Note = message.Note,
+            Participants = message.Participants
+                .OrderBy(p => p.Ordinal)
+                .Select(p => new InterceptionDetailsParticipantDto
+                {
+                    Ordinal = p.Ordinal,
+                    Name = p.Name,
+                    Role = p.Role,
+                    IsUnknown = p.IsUnknown
+                })
+                .ToList(),
+            Labels = message.Labels
+                .OrderBy(l => l.NameLabel)
+                .Select(l => l.NameLabel)
+                .ToList()
+        };
     }
 
     /// <summary>
