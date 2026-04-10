@@ -111,7 +111,7 @@ public sealed class CanonicalPersonAnalysisServiceTests
 
         details.Should().NotBeNull();
         details!.Warning.Should().NotBeNullOrWhiteSpace();
-        details.Warning.Should().Contain("більше однієї основної особи");
+        details.Warning.Should().Contain("більше одного окремого профілю");
         details.Rows.Should().HaveCount(2);
     }
 
@@ -175,7 +175,7 @@ public sealed class CanonicalPersonAnalysisServiceTests
     }
 
     [Fact]
-    public async Task CreateCanonicalAsync_Throws_WhenAnySelectedRowAlreadyLinked()
+    public async Task CreateCanonicalAsync_WhenSelectedRowsIncludeSingletonProfile_ReplacesItWithMergedProfile()
     {
         var factory = TestDbFactory.CreateFactory();
         var service = CreateService(factory);
@@ -183,6 +183,7 @@ public sealed class CanonicalPersonAnalysisServiceTests
 
         Guid firstId;
         Guid secondId;
+        Guid oldCanonicalId;
         string candidateKey;
 
         await using (var db = await factory.CreateDbContextAsync(ct))
@@ -201,17 +202,35 @@ public sealed class CanonicalPersonAnalysisServiceTests
             db.CanonicalPersons.Add(canonical);
 
             await db.SaveChangesAsync(ct);
+            oldCanonicalId = canonical.Id;
         }
 
-        var act = () => service.CreateCanonicalAsync(
-             candidateKey,
-             [firstId, secondId],
-             "ШАПКА",
-             null,
-             ct);
+        var details = await service.CreateCanonicalAsync(
+            candidateKey,
+            [firstId, secondId],
+            "ШАПКА",
+            null,
+            ct);
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*уже входять до іншої основної особи*");
+        details.HasCanonicalPerson.Should().BeTrue();
+        details.CanonicalPersonId.Should().NotBeNull();
+        details.CanonicalPersonId.Should().NotBe(oldCanonicalId);
+        details.Rows.Should().HaveCount(2);
+        details.Rows.Should().OnlyContain(x => x.IsLinkedToCanonical);
+
+        await using (var verifyDb = await factory.CreateDbContextAsync(ct))
+        {
+            verifyDb.CanonicalPersons.Should().HaveCount(1, "старий singleton-профіль має бути замінений новим об'єднаним профілем");
+            verifyDb.CanonicalPersonMembers.Should().HaveCount(2);
+
+            var canonical = await verifyDb.CanonicalPersons
+                .Include(x => x.Members)
+                .SingleAsync(ct);
+
+            canonical.Id.Should().NotBe(oldCanonicalId);
+            canonical.Members.Select(x => x.ResolvedParticipantId)
+                .Should().BeEquivalentTo([firstId, secondId]);
+        }
     }
 
     [Fact]

@@ -44,6 +44,28 @@
             </NavLink>
         }
 
+
+        @if (ActiveSection == "roles")
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/registries/roles"
+                     Match="NavLinkMatch.All"
+                     title="Ролі"
+                     aria-label="Ролі">
+                <i class="bi bi-person-badge"></i>
+                <span class="visually-hidden">Ролі</span>
+            </NavLink>
+        }
+        else
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/registries/roles"
+                     title="Ролі"
+                     aria-label="Ролі">
+                <i class="bi bi-person-badge"></i>
+                <span class="visually-hidden">Ролі</span>
+            </NavLink>
+        }
         @if (ActiveSection == "actions")
         {
             <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"

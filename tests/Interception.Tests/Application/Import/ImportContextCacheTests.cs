@@ -13,6 +13,11 @@ public sealed class ImportContextCacheTests
     private static InterceptionAction MakeAction(string name)
         => InterceptionAction.Create(name, "");
 
+    private static ImportContextCache CreateCache(
+        IEnumerable<InterceptionAction>? actions = null,
+        IReadOnlyDictionary<string, string>? roleMap = null)
+        => new(actions ?? [], roleMap ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+
     // -------------------------------------------------------------------------
     // FindAction
     // -------------------------------------------------------------------------
@@ -20,7 +25,7 @@ public sealed class ImportContextCacheTests
     [Fact]
     public void FindAction_ExactMatch_ReturnsAction()
     {
-        var cache = new ImportContextCache([MakeAction("координація дій")]);
+        var cache = CreateCache([MakeAction("координація дій")]);
 
         var result = cache.FindAction("координація дій");
 
@@ -31,7 +36,7 @@ public sealed class ImportContextCacheTests
     [Fact]
     public void FindAction_CaseInsensitive_ReturnsAction()
     {
-        var cache = new ImportContextCache([MakeAction("координація дій")]);
+        var cache = CreateCache([MakeAction("координація дій")]);
 
         cache.FindAction("КООРДИНАЦІЯ ДІЙ").Should().NotBeNull();
         cache.FindAction("Координація Дій").Should().NotBeNull();
@@ -40,7 +45,7 @@ public sealed class ImportContextCacheTests
     [Fact]
     public void FindAction_TrimsWhitespace()
     {
-        var cache = new ImportContextCache([MakeAction("координація дій")]);
+        var cache = CreateCache([MakeAction("координація дій")]);
 
         cache.FindAction("  координація дій  ").Should().NotBeNull();
     }
@@ -48,7 +53,7 @@ public sealed class ImportContextCacheTests
     [Fact]
     public void FindAction_NotFound_ReturnsNull()
     {
-        var cache = new ImportContextCache([MakeAction("координація дій")]);
+        var cache = CreateCache([MakeAction("координація дій")]);
 
         cache.FindAction("невідома дія").Should().BeNull();
     }
@@ -56,7 +61,7 @@ public sealed class ImportContextCacheTests
     [Fact]
     public void FindAction_NullOrEmpty_ReturnsNull()
     {
-        var cache = new ImportContextCache([MakeAction("координація дій")]);
+        var cache = CreateCache([MakeAction("координація дій")]);
 
         cache.FindAction(null).Should().BeNull();
         cache.FindAction("").Should().BeNull();
@@ -64,69 +69,54 @@ public sealed class ImportContextCacheTests
     }
 
     // -------------------------------------------------------------------------
-    // ResolveParticipantRole
+    // ResolveRole
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void ResolveParticipantRole_WithRole_ReturnsAndCaches()
+    public void ResolveRole_WhenRoleExistsInCatalog_ReturnsCatalogValue()
     {
-        var cache = new ImportContextCache([]);
+        var cache = CreateCache(
+            roleMap: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ОПЕРАТОР БПЛА"] = "оператор БПЛА"
+            });
 
-        var role = cache.ResolveParticipantRole("ШАПКА", "центр (пехота)");
+        var result = cache.ResolveRole("  оператор бпла  ");
 
-        role.Should().Be("центр (пехота)");
+        result.Should().Be("оператор БПЛА");
     }
 
     [Fact]
-    public void ResolveParticipantRole_SecondCallWithoutRole_ReturnsCached()
+    public void ResolveRole_WhenRoleNotInCatalog_ReturnsNormalizedInput()
     {
-        var cache = new ImportContextCache([]);
+        var cache = CreateCache();
 
-        cache.ResolveParticipantRole("ШАПКА", "центр (пехота)");
-        var role = cache.ResolveParticipantRole("ШАПКА", null);
+        var result = cache.ResolveRole("  центр (піхота)  ");
 
-        role.Should().Be("центр (пехота)");
+        result.Should().Be("центр (піхота)");
     }
 
     [Fact]
-    public void ResolveParticipantRole_NewRoleOverridesCached()
+    public void ResolveRole_CaseInsensitive_MatchesCatalog()
     {
-        var cache = new ImportContextCache([]);
+        var cache = CreateCache(
+            roleMap: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["КОМАНДИР"] = "Командир"
+            });
 
-        cache.ResolveParticipantRole("ШАПКА", "стара роль");
-        var role = cache.ResolveParticipantRole("ШАПКА", "нова роль");
-
-        role.Should().Be("нова роль");
+        cache.ResolveRole("командир").Should().Be("Командир");
+        cache.ResolveRole("КОМАНДИР").Should().Be("Командир");
+        cache.ResolveRole("  Командир  ").Should().Be("Командир");
     }
 
     [Fact]
-    public void ResolveParticipantRole_UnknownParticipant_ReturnsNull()
+    public void ResolveRole_NullOrWhitespace_ReturnsNull()
     {
-        var cache = new ImportContextCache([]);
+        var cache = CreateCache();
 
-        var role = cache.ResolveParticipantRole(null, "роль");
-
-        role.Should().BeNull();
-    }
-
-    [Fact]
-    public void ResolveParticipantRole_NeverSeenWithoutRole_ReturnsNull()
-    {
-        var cache = new ImportContextCache([]);
-
-        var role = cache.ResolveParticipantRole("НЕВІДОМИЙ", null);
-
-        role.Should().BeNull();
-    }
-
-    [Fact]
-    public void ResolveParticipantRole_CaseInsensitiveKey()
-    {
-        var cache = new ImportContextCache([]);
-
-        cache.ResolveParticipantRole("шапка", "центр");
-        var role = cache.ResolveParticipantRole("ШАПКА", null);
-
-        role.Should().Be("центр");
+        cache.ResolveRole(null).Should().BeNull();
+        cache.ResolveRole("").Should().BeNull();
+        cache.ResolveRole("   ").Should().BeNull();
     }
 }

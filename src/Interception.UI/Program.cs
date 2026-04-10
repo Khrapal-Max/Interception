@@ -62,6 +62,8 @@ builder.Services.AddScoped<IInterceptionQueryService, InterceptionQueryService>(
 builder.Services.AddScoped<IInterceptionCommandService, InterceptionCommandService>();
 builder.Services.AddScoped<IInterceptionSuggestionService, InterceptionSuggestionService>();
 builder.Services.AddScoped<IFrequencyDivisionService, FrequencyDivisionService>();
+builder.Services.AddScoped<IParticipantRoleService, ParticipantRoleService>();
+builder.Services.AddScoped<IPersonRegistryService, PersonRegistryService>();
 
 // Нові candidate-сервіси
 builder.Services.AddScoped<ITopologySnapshotBuilder, TopologySnapshotBuilder>();

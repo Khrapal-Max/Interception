@@ -1,0 +1,88 @@
+@page "/registries/roles"
+@using Interception.UI.Components.Pages.Registry.Roles.Drawers
+@using Interception.UI.Components.Pages.Registry.Toolbar
+@using Interception.UI.Domain
+
+<PageTitle>Регістри — Ролі</PageTitle>
+
+<div class="page-shell">
+
+    <RegistriesToolbar ActiveSection="roles">
+        <MetaContent>
+            @if (_roles is not null)
+            {
+                <span>Всього: <strong>@_roles.Count</strong></span>
+            }
+        </MetaContent>
+        <ActionsContent>
+            <button class="btn btn-success btn-sm" @onclick="OpenCreate">
+                <i class="bi bi-plus-lg me-1"></i>Додати роль
+            </button>
+        </ActionsContent>
+    </RegistriesToolbar>
+
+    <div class="page-panel">
+        @if (_loading)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-sm me-2"></div>Завантаження...
+                </div>
+            </div>
+        }
+        else if (_roles is null || _roles.Count == 0)
+        {
+            <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
+                <div class="text-center py-5">
+                    <i class="bi bi-person-badge fs-1 d-block mb-2 opacity-25"></i>
+                    <div>Ролей ще немає</div>
+                    <button class="btn btn-success btn-sm mt-2" @onclick="OpenCreate">Додати першу роль</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="table table-hover table-sm align-middle data-table">
+                    <thead>
+                        <tr>
+                            <th>Назва</th>
+                            <th>Опис</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var role in _roles)
+                        {
+                            <tr>
+                                <td class="fw-medium">@role.Name</td>
+                                <td class="small">
+                                    @if (string.IsNullOrWhiteSpace(role.Description))
+                                    {
+                                        <span class="opacity-50">—</span>
+                                    }
+                                    else
+                                    {
+                                        @role.Description
+                                    }
+                                </td>
+                                <td class="text-end pe-2 text-nowrap">
+                                    <button class="btn btn-secondary btn-sm"
+                                            title="Редагувати"
+                                            @onclick="() => OpenEdit(role)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+</div>
+
+<RoleFormDrawer @bind-IsOpen="_drawerOpen"
+                EditingRole="_editingRole"
+                OnSaved="LoadAsync" />

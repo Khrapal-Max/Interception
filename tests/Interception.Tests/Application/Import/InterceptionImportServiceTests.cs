@@ -17,7 +17,7 @@ public sealed class InterceptionImportServiceTests
         => new(factory);
 
     [Fact]
-    public async Task ImportAsync_ValidRows_ImportsMessagesAndParticipants()
+    public async Task ImportAsync_ExportSheetFormat_ImportsMessageParticipantsAndLabels()
     {
         var ct = TestContext.Current.CancellationToken;
         var factory = TestDbFactory.CreateFactory();
@@ -31,16 +31,17 @@ public sealed class InterceptionImportServiceTests
 
         using var stream = BuildWorkbook((ws) =>
         {
-            ws.Cell(2, 1).Value = "2026-03-28";
-            ws.Cell(2, 2).Value = "10:30";
-            ws.Cell(2, 3).Value = "157.0250";
-            ws.Cell(2, 4).Value = "656 мсп";
-            ws.Cell(2, 7).Value = "ШАПКА";
-            ws.Cell(2, 8).Value = "центр";
-            ws.Cell(2, 9).Value = "ВОЛГА";
-            ws.Cell(2, 10).Value = "оператор";
-            ws.Cell(2, 11).Value = "координація дій";
-            ws.Cell(2, 12).Value = "імпорт тест";
+            ws.Cell(2, 1).Value = new DateTime(2026, 3, 28, 10, 30, 0);
+            ws.Cell(2, 2).Value = "157.0250";
+            ws.Cell(2, 3).Value = "656 мсп";
+            ws.Cell(2, 4).Value = "олексіївка";
+            ws.Cell(2, 5).Value = "степове";
+            ws.Cell(2, 6).Value = "координація дій";
+            ws.Cell(2, 7).Value = "імпорт тест";
+            ws.Cell(2, 8).Value = "ШАПКА (центр), ВОЛГА (оператор), НВ 1";
+            ws.Cell(2, 9).Value = 3;
+            ws.Cell(2, 10).Value = "мітка1, мітка2";
+            ws.Cell(2, 11).Value = 2;
         });
 
         var result = await service.ImportAsync(stream, "operator", ct);
@@ -51,11 +52,24 @@ public sealed class InterceptionImportServiceTests
         await using var checkDb = await factory.CreateDbContextAsync(ct);
         var messages = await checkDb.InterceptionMessages
             .Include(x => x.Participants)
+            .Include(x => x.Labels)
             .ToListAsync(ct);
 
         messages.Should().ContainSingle();
-        messages[0].Participants.Should().HaveCount(2);
-        messages[0].Participants.Select(x => x.Name).Should().BeEquivalentTo(["ШАПКА", "ВОЛГА"]);
+
+        var message = messages[0];
+        message.Frequency.Should().Be("157.0250");
+        message.Division.Should().Be("656 мсп");
+        message.VectorSignal.Should().Be("олексіївка");
+        message.PointSignal.Should().Be("степове");
+        message.Note.Should().Be("імпорт тест");
+
+        message.Participants.Should().HaveCount(3);
+        message.Participants.Should().Contain(x => x.Name == "ШАПКА" && x.Role == "центр" && !x.IsUnknown);
+        message.Participants.Should().Contain(x => x.Name == "ВОЛГА" && x.Role == "оператор" && !x.IsUnknown);
+        message.Participants.Should().Contain(x => x.IsUnknown);
+
+        message.Labels.Select(x => x.NameLabel).Should().BeEquivalentTo(["мітка1", "мітка2"]);
     }
 
     [Fact]
@@ -67,9 +81,9 @@ public sealed class InterceptionImportServiceTests
 
         using var stream = BuildWorkbook((ws) =>
         {
-            ws.Cell(2, 1).Value = "2026-03-28";
-            ws.Cell(2, 2).Value = "10:30";
-            ws.Cell(2, 11).Value = "невідома дія";
+            ws.Cell(2, 1).Value = new DateTime(2026, 3, 28, 10, 30, 0);
+            ws.Cell(2, 6).Value = "невідома дія";
+            ws.Cell(2, 8).Value = "ШАПКА (центр)";
         });
 
         var result = await service.ImportAsync(stream, "operator", ct);
@@ -88,7 +102,7 @@ public sealed class InterceptionImportServiceTests
         var stream = new MemoryStream();
         using (var workbook = new XLWorkbook())
         {
-            var sheet = workbook.AddWorksheet("Імпорт");
+            var sheet = workbook.AddWorksheet("Спостереження");
             FillHeaders(sheet);
             fill(sheet);
             workbook.SaveAs(stream);
@@ -100,17 +114,19 @@ public sealed class InterceptionImportServiceTests
 
     private static void FillHeaders(IXLWorksheet ws)
     {
-        ws.Cell(1, 1).Value = "Дата";
-        ws.Cell(1, 2).Value = "Час";
-        ws.Cell(1, 3).Value = "Частота";
-        ws.Cell(1, 4).Value = "Р/М";
+        ws.Cell(1, 1).Value = "Дата/час";
+        ws.Cell(1, 2).Value = "Частота";
+        ws.Cell(1, 3).Value = "Підрозділ";
+        ws.Cell(1, 4).Value = "Вектор";
         ws.Cell(1, 5).Value = "Точка";
-        ws.Cell(1, 6).Value = "Вектор";
-        ws.Cell(1, 7).Value = "Ініціатор";
-        ws.Cell(1, 8).Value = "Роль ініціатора";
-        ws.Cell(1, 9).Value = "Відповідач";
-        ws.Cell(1, 10).Value = "Роль відповідача";
-        ws.Cell(1, 11).Value = "Дія";
-        ws.Cell(1, 12).Value = "Деталі";
+        ws.Cell(1, 6).Value = "Дія";
+        ws.Cell(1, 7).Value = "Примітка";
+        ws.Cell(1, 8).Value = "Учасники";
+        ws.Cell(1, 9).Value = "Кількість учасників";
+        ws.Cell(1, 10).Value = "Мітки";
+        ws.Cell(1, 11).Value = "Кількість міток";
+        ws.Cell(1, 12).Value = "Створив";
+        ws.Cell(1, 13).Value = "Створено";
+        ws.Cell(1, 14).Value = "Оновлено";
     }
 }

@@ -4,6 +4,7 @@
 
 using Interception.UI.Application.Import.Abstractions;
 using Interception.UI.Application.Import.Dtos;
+using Interception.UI.Application.Registry.Services;
 using Interception.UI.Domain;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
@@ -15,53 +16,48 @@ public sealed class InterceptionImportService(
     IDbContextFactory<AppDbContext> dbFactory) : IInterceptionImportService
 {
     public async Task<ImportResultDto> ImportAsync(
-        Stream stream,
+        Stream excelStream,
         string operatorName,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
     {
-        // ClosedXML читає синхронно — копіюємо в MemoryStream асинхронно
-        using var memoryStream = new MemoryStream();
-        await stream.CopyToAsync(memoryStream, cancellationToken);
-        memoryStream.Position = 0;
+        ArgumentNullException.ThrowIfNull(excelStream);
+
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
 
         var parser = new ExcelImportParser();
-        var parsed = parser.Parse(memoryStream);
-
-        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var parsed = parser.Parse(excelStream);
 
         var actions = await db.InterceptionActions
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
+            .ToListAsync(ct);
+        var roleMap = await ParticipantRoleCatalogSupport.LoadRoleMapAsync(db, ct);
 
-        // FIX: Attach кожну дію один раз щоб EF не намагався їх вставити повторно.
-        // Без Attach — при db.InterceptionMessages.Add(message) EF бачить
-        // навігаційну властивість message.InterceptionAction і додає її в ChangeTracker
-        // як Added, що призводить до duplicate key (23505) при SaveChangesAsync.
-        foreach (var action in actions)
-            db.InterceptionActions.Attach(action);
-
-        var cache = new ImportContextCache(actions);
+        var cache = new ImportContextCache(actions, roleMap);
         var errors = new List<ImportRowErrorDto>();
         var imported = 0;
 
-        foreach (var (row, parseError) in parsed)
+        foreach (var item in parsed)
         {
-            if (parseError is not null) { errors.Add(parseError); continue; }
+            if (item.Error is not null)
+            {
+                errors.Add(item.Error);
+                continue;
+            }
 
-            var (Message, Error) = ProcessRow(row!, cache, operatorName);
+            var row = item.Row!;
+            var (message, error) = ProcessRow(row, cache, operatorName);
 
-            if (Error is not null) { errors.Add(Error); continue; }
+            if (error is not null)
+            {
+                errors.Add(error);
+                continue;
+            }
 
-            db.InterceptionMessages.Add(Message!);
+            db.InterceptionMessages.Add(message!);
             imported++;
         }
 
         if (imported > 0)
-        {
-            await db.SaveChangesAsync(cancellationToken);
-            await TopologySnapshotStateMarker.MarkAllCompletedSnapshotsAsStaleAsync(db, cancellationToken);
-            await db.SaveChangesAsync(cancellationToken);
-        }
+            await db.SaveChangesAsync(ct);
 
         return new ImportResultDto
         {
@@ -78,12 +74,9 @@ public sealed class InterceptionImportService(
     {
         var action = cache.FindAction(row.ActionName);
         if (action is null)
-            return (null, new ImportRowErrorDto(
-                row.RowNumber,
-                $"Дію '{row.ActionName}' не знайдено в довіднику. Рядок пропущено."));
+            return (null, new ImportRowErrorDto(row.RowNumber, $"Дію '{row.ActionName}' не знайдено в довіднику. Рядок пропущено."));
 
-        var rawDate = row.Date.ToDateTime(row.Time, DateTimeKind.Local);
-        var observedDate = ConverterDateTimeExtensions.ToUtc(rawDate);
+        var observedDate = ConverterDateTimeExtensions.ToUtc(row.ObservedAtLocal);
 
         InterceptionMessage message;
         try
@@ -94,7 +87,7 @@ public sealed class InterceptionImportService(
                 division: row.Division,
                 vectorSignal: row.VectorSignal,
                 interceptionAction: action,
-                note: row.Details,
+                note: row.Note,
                 createdBy: operatorName,
                 pointSignal: row.PointSignal);
         }
@@ -103,17 +96,11 @@ public sealed class InterceptionImportService(
             return (null, new ImportRowErrorDto(row.RowNumber, ex.Message));
         }
 
-        var initiatorRole = cache.ResolveParticipantRole(row.InitiatorName, row.InitiatorRole);
-        message.AddParticipant(row.InitiatorName, row.InitiatorName is null, initiatorRole, ordinal: 1);
+        foreach (var participant in row.Participants.OrderBy(x => x.Ordinal))
+            message.AddParticipant(participant.Name, participant.IsUnknown, cache.ResolveRole(participant.Role), participant.Ordinal);
 
-        var responderRole = cache.ResolveParticipantRole(row.ResponderName, row.ResponderRole);
-        var responderIsUnknown = row.ResponderName is null;
-
-        if (!string.Equals(row.InitiatorName, row.ResponderName, StringComparison.OrdinalIgnoreCase)
-            || row.InitiatorName is null || responderIsUnknown)
-        {
-            message.AddParticipant(row.ResponderName, responderIsUnknown, responderRole, ordinal: 2);
-        }
+        foreach (var label in row.Labels)
+            message.AddLabel(label);
 
         return (message, null);
     }

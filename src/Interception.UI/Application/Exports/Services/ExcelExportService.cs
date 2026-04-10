@@ -82,8 +82,6 @@ public sealed class ExcelExportService(
             .OrderByDescending(x => x.ObservedDate)
             .ToListAsync(ct);
 
-        var overlayMap = await BuildParticipantOverlayMapAsync(db, messages, ct);
-
         var sheet = workbook.Worksheets.Add("Спостереження");
         WriteHeader(sheet,
             "Дата/час", "Частота", "Підрозділ", "Вектор", "Точка",
@@ -100,7 +98,7 @@ public sealed class ExcelExportService(
             sheet.Cell(row, 5).Value = message.PointSignal;
             sheet.Cell(row, 6).Value = message.InterceptionAction?.Name;
             sheet.Cell(row, 7).Value = message.Note;
-            sheet.Cell(row, 8).Value = BuildParticipantsText(message, overlayMap);
+            sheet.Cell(row, 8).Value = BuildParticipantsText(message);
             sheet.Cell(row, 9).Value = message.Participants.Count;
             sheet.Cell(row, 10).Value = string.Join(", ", message.Labels
                 .OrderBy(x => x.NameLabel, StringComparer.OrdinalIgnoreCase)
@@ -639,19 +637,13 @@ public sealed class ExcelExportService(
         return result;
     }
 
-    private static string BuildParticipantsText(
-        InterceptionMessage message,
-        IReadOnlyDictionary<Guid, ParticipantOverlay> overlayMap)
+    private static string BuildParticipantsText(InterceptionMessage message)
     {
         return string.Join(", ", message.Participants
             .OrderBy(x => x.Ordinal)
             .Select(x =>
             {
-                overlayMap.TryGetValue(x.Id, out var overlay);
-
-                var name = !string.IsNullOrWhiteSpace(overlay?.Name)
-                    ? overlay!.Name
-                    : x.Name;
+                var name = x.Name;
 
                 if (string.IsNullOrWhiteSpace(name))
                     name = x.IsUnknown ? $"НВ {x.Ordinal}" : "—";

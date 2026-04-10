@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Abstractions;
+using Interception.UI.Application.Registry.Services;
 using Interception.UI.Domain;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
@@ -19,8 +20,9 @@ public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<Ap
 
     /// <summary>
     /// Підтверджує групу, зв'язуючи її з <see cref="ResolvedParticipant"/>.
-    /// Якщо встановлена особа з таким ім'ям вже існує — використовує її,
-    /// інакше створює новий запис.
+    /// Якщо існує точний контекстний збіг — використовує його.
+    /// Якщо існує один "порожній" запис (без ролі та підрозділу) — збагачує його.
+    /// Якщо збіг лише по імені, але контекст відрізняється — створює додатковий запис.
     /// </summary>
     public async Task ConfirmAsync(
         Guid groupId,
@@ -32,46 +34,27 @@ public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<Ap
     {
         var normalizedName = StringTextNormExtensions.NormalizeOption(resolvedName);
         var normalizedResolvedBy = StringTextNormExtensions.NormalizeRequired(resolvedBy);
-        var normalizedRole = StringTextNormExtensions.NormalizeOption(role);
         var normalizedDivision = StringTextNormExtensions.NormalizeOption(division);
 
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var roleMap = await ParticipantRoleCatalogSupport.LoadRoleMapAsync(db, ct);
+        var normalizedRole = ParticipantRoleCatalogSupport.NormalizeRole(role, roleMap);
 
         var group = await db.ParticipantCandidateGroups
             .SingleOrDefaultAsync(x => x.Id == groupId, ct)
             ?? throw new InvalidOperationException($"ParticipantCandidateGroup '{groupId}' не знайдено.");
 
-        var normalizedLookupName = StringTextNormExtensions.NormalizeOption(normalizedName)!;
+        var normalizedLookupName = StringTextNormExtensions.NormalizeOption(normalizedName);
 
         var sameNameResolved = await db.ResolvedParticipants
             .AsTracking()
             .Where(x => x.Name != null && StringTextNormExtensions.NormalizeOption(x.Name) == normalizedLookupName)
             .ToListAsync(ct);
 
-        ResolvedParticipant? resolved = null;
-
-        // 1) Якщо вже є точний збіг по контексту — пере використовуємо його.
-        var exactMatches = sameNameResolved
-            .Where(x =>
-                StringComparer.OrdinalIgnoreCase.Equals(StringTextNormExtensions.NormalizeOption(x.Role), normalizedRole) &&
-                StringComparer.OrdinalIgnoreCase.Equals(StringTextNormExtensions.NormalizeOption(x.Division), normalizedDivision))
-            .ToList();
-
-        if (exactMatches.Count == 1)
-        {
-            resolved = exactMatches[0];
-        }
-        else
-        {
-            // 2) Якщо існує лише один частковий запис з цим ім'ям без власного контексту —
-            //    можна безпечно дозаповнити його замість створення дубліката.
-            var enrichable = sameNameResolved
-                .Where(x => string.IsNullOrWhiteSpace(x.Role) && string.IsNullOrWhiteSpace(x.Division))
-                .ToList();
-
-            if (sameNameResolved.Count == 1 && enrichable.Count == 1)
-                resolved = enrichable[0];
-        }
+        var resolved = FindReusableResolvedParticipant(
+            sameNameResolved,
+            normalizedRole,
+            normalizedDivision);
 
         if (resolved is null)
         {
@@ -85,11 +68,13 @@ public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<Ap
         }
         else
         {
-            var entry = db.Entry(resolved);
-            entry.Property(nameof(ResolvedParticipant.Name)).CurrentValue = normalizedName;
-            entry.Property(nameof(ResolvedParticipant.Role)).CurrentValue = normalizedRole;
-            entry.Property(nameof(ResolvedParticipant.Division)).CurrentValue = normalizedDivision;
-            entry.Property(nameof(ResolvedParticipant.ConfirmedBy)).CurrentValue = normalizedResolvedBy;
+            ApplyResolvedParticipantState(
+                db,
+                resolved,
+                normalizedName!,
+                normalizedResolvedBy,
+                normalizedRole,
+                normalizedDivision);
         }
 
         group.Confirm(normalizedName!, normalizedResolvedBy, resolved.Id);
@@ -117,4 +102,55 @@ public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<Ap
 
         await db.SaveChangesAsync(ct);
     }
+
+    private static ResolvedParticipant? FindReusableResolvedParticipant(
+        IReadOnlyList<ResolvedParticipant> candidates,
+        string? normalizedRole,
+        string? normalizedDivision)
+    {
+        if (candidates.Count == 0)
+            return null;
+
+        var exactContextMatch = candidates.SingleOrDefault(x =>
+            AreSameOptionalValue(x.Role, normalizedRole) &&
+            AreSameOptionalValue(x.Division, normalizedDivision));
+
+        if (exactContextMatch is not null)
+            return exactContextMatch;
+
+        var contextFreeCandidates = candidates
+            .Where(x => string.IsNullOrWhiteSpace(StringTextNormExtensions.NormalizeOption(x.Role)) &&
+                        string.IsNullOrWhiteSpace(StringTextNormExtensions.NormalizeOption(x.Division)))
+            .ToList();
+
+        return contextFreeCandidates.Count == 1
+            ? contextFreeCandidates[0]
+            : null;
+    }
+
+    private static void ApplyResolvedParticipantState(
+        AppDbContext db,
+        ResolvedParticipant resolved,
+        string normalizedName,
+        string normalizedResolvedBy,
+        string? normalizedRole,
+        string? normalizedDivision)
+    {
+        var entry = db.Entry(resolved);
+
+        entry.Property(nameof(ResolvedParticipant.Name)).CurrentValue = normalizedName;
+        entry.Property(nameof(ResolvedParticipant.ConfirmedBy)).CurrentValue = normalizedResolvedBy;
+
+        if (!string.IsNullOrWhiteSpace(normalizedRole) || string.IsNullOrWhiteSpace(resolved.Role))
+            entry.Property(nameof(ResolvedParticipant.Role)).CurrentValue = normalizedRole;
+
+        if (!string.IsNullOrWhiteSpace(normalizedDivision) || string.IsNullOrWhiteSpace(resolved.Division))
+            entry.Property(nameof(ResolvedParticipant.Division)).CurrentValue = normalizedDivision;
+    }
+
+    private static bool AreSameOptionalValue(string? left, string? right)
+        => string.Equals(
+            StringTextNormExtensions.NormalizeOption(left),
+            StringTextNormExtensions.NormalizeOption(right),
+            StringComparison.OrdinalIgnoreCase);
 }

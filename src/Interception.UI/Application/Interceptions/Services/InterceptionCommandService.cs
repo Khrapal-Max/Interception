@@ -3,9 +3,9 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Registry.Services;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain;
-using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,6 +27,8 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
         var action = await db.InterceptionActions.FindAsync([form.InterceptionActionId], ct)
             ?? throw new InvalidOperationException($"InterceptionAction '{form.InterceptionActionId}' не знайдено.");
 
+        var roleMap = await ParticipantRoleCatalogSupport.LoadRoleMapAsync(db, ct);
+
         var message = InterceptionMessage.Create(
             form.ObservedDate,
             form.Frequency,
@@ -38,17 +40,14 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
             form.PointSignal);
 
         foreach (var p in form.Participants.OrderBy(p => p.Ordinal))
-            message.AddParticipant(p.Name, p.IsUnknown, p.Role, p.Ordinal);
+            message.AddParticipant(p.Name, p.IsUnknown, ParticipantRoleCatalogSupport.NormalizeRole(p.Role, roleMap), p.Ordinal);
 
         foreach (var label in form.Labels)
             message.AddLabel(label);
 
         db.InterceptionMessages.Add(message);
+        await MarkCompletedTopologySnapshotsAsStaleAsync(db, ct);
         await db.SaveChangesAsync(ct);
-
-        await TopologySnapshotStateMarker.MarkAllCompletedSnapshotsAsStaleAsync(db, ct);
-        await db.SaveChangesAsync(ct);
-
         return message;
     }
 
@@ -66,21 +65,21 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
         var action = await db.InterceptionActions.FindAsync([form.InterceptionActionId], ct)
             ?? throw new InvalidOperationException($"InterceptionAction '{form.InterceptionActionId}' не знайдено.");
 
+        var roleMap = await ParticipantRoleCatalogSupport.LoadRoleMapAsync(db, ct);
+
         message.Update(form.ObservedDate, form.Frequency, form.Division, form.VectorSignal, action, form.Note, form.PointSignal);
 
         foreach (var p in message.Participants.ToList())
             message.RemoveParticipant(p.Id);
         foreach (var p in form.Participants.OrderBy(p => p.Ordinal))
-            message.AddParticipant(p.Name, p.IsUnknown, p.Role, p.Ordinal);
+            message.AddParticipant(p.Name, p.IsUnknown, ParticipantRoleCatalogSupport.NormalizeRole(p.Role, roleMap), p.Ordinal);
 
         foreach (var l in message.Labels.ToList())
             message.RemoveLabel(l.Id);
         foreach (var label in form.Labels)
             message.AddLabel(label);
 
-        await db.SaveChangesAsync(ct);
-
-        await TopologySnapshotStateMarker.MarkAllCompletedSnapshotsAsStaleAsync(db, ct);
+        await MarkCompletedTopologySnapshotsAsStaleAsync(db, ct);
         await db.SaveChangesAsync(ct);
     }
 
@@ -91,9 +90,21 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
         var message = await db.InterceptionMessages.FindAsync([id], ct)
             ?? throw new InvalidOperationException($"InterceptionMessage '{id}' не знайдено.");
         db.InterceptionMessages.Remove(message);
-        await db.SaveChangesAsync(ct);
-
-        await TopologySnapshotStateMarker.MarkAllCompletedSnapshotsAsStaleAsync(db, ct);
+        await MarkCompletedTopologySnapshotsAsStaleAsync(db, ct);
         await db.SaveChangesAsync(ct);
     }
+
+
+    private static async Task MarkCompletedTopologySnapshotsAsStaleAsync(
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var completedRuns = await db.TopologySnapshotRuns
+            .Where(x => x.Status == Interception.UI.Domain.Enums.TopologySnapshotRunStatus.Completed && !x.IsStale)
+            .ToListAsync(ct);
+
+        foreach (var run in completedRuns)
+            run.MarkStale();
+    }
+
 }

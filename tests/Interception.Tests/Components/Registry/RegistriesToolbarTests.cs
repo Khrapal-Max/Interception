@@ -18,7 +18,7 @@ public sealed class RegistriesToolbarTests : BunitContext
         var cut = Render<RegistriesToolbar>();
 
         var links = cut.FindAll("a.registry-nav-link");
-        links.Should().HaveCount(3);
+        links.Should().HaveCount(4);
     }
 
     [Fact]

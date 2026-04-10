@@ -34,6 +34,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<TopologySnapshotBridgeAction> TopologySnapshotBridgeActions { get; init; }
     public DbSet<PersonDirectiveRelation> PersonDirectiveRelations { get; init; }
 
+    public DbSet<ParticipantRole> ParticipantRoles { get; init; }
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
