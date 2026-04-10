@@ -7,7 +7,7 @@ using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace Interception.UI.Application.Registry.Services;
+namespace Interception.UI.Application.Registry.Support;
 
 internal static class ParticipantRoleCatalogSupport
 {

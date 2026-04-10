@@ -2,8 +2,10 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
+using Interception.UI.Application.Common.Events;
+using Interception.UI.Application.Interceptions.Events;
 using Interception.UI.Application.Interceptions.Abstractions;
-using Interception.UI.Application.Registry.Services;
+using Interception.UI.Application.Registry.Support;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain;
 using Interception.UI.Domain.ValueObjects;
@@ -15,10 +17,12 @@ namespace Interception.UI.Application.Interceptions.Services;
 /// <summary>
 /// Реалізація write-side сценаріїв для повідомлень перехоплення.
 /// </summary>
-public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> dbFactory) : IInterceptionCommandService
+public sealed class InterceptionCommandService(
+    IDbContextFactory<AppDbContext> dbFactory,
+    IIntegrationEventPublisher? eventPublisher = null) : IInterceptionCommandService
 {
     /// <inheritdoc />
-    public async Task<InterceptionMessage> CreateAsync(
+    public async Task<Guid> CreateAsync(
         InterceptionFormDto form,
         string operatorName,
         CancellationToken ct = default)
@@ -47,9 +51,15 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
             message.AddLabel(label);
 
         db.InterceptionMessages.Add(message);
-        await MarkCompletedTopologySnapshotsAsStaleAsync(db, ct);
         await db.SaveChangesAsync(ct);
-        return message;
+        if (eventPublisher is not null)
+        {
+            await eventPublisher.PublishAsync(new InterceptionChangedIntegrationEvent(
+                message.Id,
+                InterceptionChangeType.Created,
+                DateTime.UtcNow), ct);
+        }
+        return message.Id;
     }
 
     /// <inheritdoc />
@@ -80,8 +90,14 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
         foreach (var label in form.Labels)
             message.AddLabel(label);
 
-        await MarkCompletedTopologySnapshotsAsStaleAsync(db, ct);
         await db.SaveChangesAsync(ct);
+        if (eventPublisher is not null)
+        {
+            await eventPublisher.PublishAsync(new InterceptionChangedIntegrationEvent(
+                id,
+                InterceptionChangeType.Updated,
+                DateTime.UtcNow), ct);
+        }
     }
 
     /// <inheritdoc />
@@ -91,21 +107,14 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
         var message = await db.InterceptionMessages.FindAsync([id], ct)
             ?? throw new InvalidOperationException($"InterceptionMessage '{id}' не знайдено.");
         db.InterceptionMessages.Remove(message);
-        await MarkCompletedTopologySnapshotsAsStaleAsync(db, ct);
         await db.SaveChangesAsync(ct);
-    }
-
-
-    private static async Task MarkCompletedTopologySnapshotsAsStaleAsync(
-        AppDbContext db,
-        CancellationToken ct)
-    {
-        var completedRuns = await db.TopologySnapshotRuns
-            .Where(x => x.Status == Interception.UI.Domain.Enums.TopologySnapshotRunStatus.Completed && !x.IsStale)
-            .ToListAsync(ct);
-
-        foreach (var run in completedRuns)
-            run.MarkStale();
+        if (eventPublisher is not null)
+        {
+            await eventPublisher.PublishAsync(new InterceptionChangedIntegrationEvent(
+                id,
+                InterceptionChangeType.Deleted,
+                DateTime.UtcNow), ct);
+        }
     }
 
 }

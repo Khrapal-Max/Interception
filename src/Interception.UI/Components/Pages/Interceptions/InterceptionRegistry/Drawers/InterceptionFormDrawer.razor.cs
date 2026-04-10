@@ -124,7 +124,7 @@ public partial class InterceptionFormDrawer : ComponentBase
                     Role = pt.Role,
                     IsUnknown = pt.IsUnknown
                 })],
-            Labels = [.. message.Labels.Select(l => l.NameLabel)]
+            Labels = [.. message.Labels]
         };
     }
 

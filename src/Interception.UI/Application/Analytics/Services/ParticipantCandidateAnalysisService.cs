@@ -6,6 +6,7 @@ using Interception.UI.Application.Analytics.Abstractions;
 using Interception.UI.Application.Analytics.Builders;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
+using Interception.UI.Domain.Policies;
 using Interception.UI.Domain.Records;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
@@ -143,7 +144,7 @@ public sealed class ParticipantCandidateAnalysisService(
                         continue;
 
                     var (Score, Reasons) = PatternRecognitionMath.ComputeGroupFit(newCandidate, groupContexts, _options);
-                    if (Score < _options.MinConfidenceScore)
+                    if (!ParticipantCandidateGroupingPolicy.IsConfident(Score, _options.MinConfidenceScore))
                         continue;
 
                     refsToAdd.Add(new ParticipantRef(newCandidate.MessageId, newCandidate.ParticipantId, newCandidate.Ordinal));
@@ -175,7 +176,7 @@ public sealed class ParticipantCandidateAnalysisService(
         }
 
         var remainingCandidates = unassigned.Where(p => !assigned.Contains(p.ParticipantId)).ToList();
-        if (remainingCandidates.Count < 2)
+        if (!ParticipantCandidateGroupingPolicy.IsValidGroupSize(remainingCandidates.Count))
             return changed;
 
         var newGroups = new List<ParticipantCandidateGroup>();
@@ -197,18 +198,18 @@ public sealed class ParticipantCandidateAnalysisService(
                     continue;
 
                 var fit = PatternRecognitionMath.ComputeGroupFit(remainingCandidates[j], group, _options);
-                if (fit.Score < _options.MinConfidenceScore)
+                if (!ParticipantCandidateGroupingPolicy.IsConfident(fit.Score, _options.MinConfidenceScore))
                     continue;
 
                 group.Add(remainingCandidates[j]);
                 newAssigned.Add(remainingCandidates[j].ParticipantId);
             }
 
-            if (group.Count < 2)
+            if (!ParticipantCandidateGroupingPolicy.IsValidGroupSize(group.Count))
                 continue;
 
             var (Score, Reasons) = PatternRecognitionMath.RecalculateGroupScore(group, _options);
-            if (Score < _options.MinConfidenceScore)
+            if (!ParticipantCandidateGroupingPolicy.IsConfident(Score, _options.MinConfidenceScore))
                 continue;
 
             newAssigned.Add(remainingCandidates[i].ParticipantId);

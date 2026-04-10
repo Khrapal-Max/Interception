@@ -5,6 +5,7 @@
 using Interception.UI.Application.Registry.Abstractions;
 using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Domain;
+using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -89,9 +90,10 @@ public sealed class PersonRegistryService(
 
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
-        var normalizedName = dto.Name.Trim();
-        var normalizedFrequency = NormalizeOptional(dto.Frequency);
-        var normalizedDivision = NormalizeOptional(dto.Division);
+        var normalizedName = PersonName.Create(dto.Name)?.Value
+            ?? throw new InvalidOperationException("Ім'я особи обов'язкове.");
+        var normalizedFrequency = FrequencyCode.Create(dto.Frequency)?.Value;
+        var normalizedDivision = DivisionName.Create(dto.Division)?.Value;
 
         var roleMap = await ParticipantRoleCatalogSupport.LoadRoleMapAsync(db, ct);
         var normalizedRole = ParticipantRoleCatalogSupport.NormalizeRole(dto.Role, roleMap);
