@@ -3,7 +3,6 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Interceptions.Dtos;
-using Interception.UI.Domain;
 
 namespace Interception.UI.Application.Interceptions.Abstractions;
 
@@ -15,7 +14,7 @@ public interface IInterceptionCommandService
     /// <summary>
     /// Створює нове повідомлення перехоплення.
     /// </summary>
-    Task<InterceptionMessage> CreateAsync(
+    Task<Guid> CreateAsync(
         InterceptionFormDto form,
         string operatorName,
         CancellationToken ct = default);

@@ -4,6 +4,7 @@
 
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Registry.Abstractions;
+using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -72,8 +73,10 @@ public sealed class FrequencyDivisionService(IDbContextFactory<AppDbContext> dbF
 
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
-        var normalizedFrequency = frequency.Trim();
-        var normalizedDivision = division.Trim();
+        var normalizedFrequency = FrequencyCode.Create(frequency)?.Value
+            ?? throw new ArgumentException("Частота не вказана.", nameof(frequency));
+        var normalizedDivision = DivisionName.Create(division)?.Value
+            ?? throw new ArgumentException("Підрозділ не вказано.", nameof(division));
 
         var messages = await db.InterceptionMessages
             .Where(x => x.Frequency == normalizedFrequency)

@@ -64,13 +64,16 @@ public sealed class InterceptionCommandServiceTests
         var svc = CreateService(factory);
         var action = await SeedActionAsync(factory, ct: ct);
 
-        var message = await svc.CreateAsync(MakeForm(action.Id), "operator", ct);
+        var messageId = await svc.CreateAsync(MakeForm(action.Id), "operator", ct);
+        var query = new InterceptionQueryService(factory);
+        var message = await query.GetByIdAsync(messageId, ct);
 
-        message.Id.Should().NotBeEmpty();
-        message.Frequency.Should().Be("157.0250");
+        messageId.Should().NotBeEmpty();
+        message.Should().NotBeNull();
+        message!.Frequency.Should().Be("157.0250");
         message.Division.Should().Be("1 мсб 656 мсп");
         message.Participants.Should().HaveCount(2);
-        message.Labels.Should().ContainSingle(l => l.NameLabel == "тест");
+        message.Labels.Should().ContainSingle(l => l == "тест");
     }
 
     [Fact]
@@ -90,9 +93,12 @@ public sealed class InterceptionCommandServiceTests
                 new ParticipantFormDto { Ordinal = 1, Name = "  ШАПКА  ", IsUnknown = false, Role = "центр" }
             ]);
 
-        var message = await svc.CreateAsync(form, "operator", ct);
+        var messageId = await svc.CreateAsync(form, "operator", ct);
+        var query = new InterceptionQueryService(factory);
+        var message = await query.GetByIdAsync(messageId, ct);
 
-        message.Frequency.Should().Be("157.0250");
+        message.Should().NotBeNull();
+        message!.Frequency.Should().Be("157.0250");
         message.Division.Should().Be("1 мсб 656 мсп");
         message.Participants.Should().ContainSingle(p => p.Name == "ШАПКА");
     }
@@ -133,14 +139,14 @@ public sealed class InterceptionCommandServiceTests
             ],
             labels: ["мітка-2"]);
 
-        await command.UpdateAsync(created.Id, updateForm, ct);
-        var updated = await query.GetByIdAsync(created.Id, ct);
+        await command.UpdateAsync(created, updateForm, ct);
+        var updated = await query.GetByIdAsync(created, ct);
 
         updated.Should().NotBeNull();
         updated!.Frequency.Should().Be("410.1370");
         updated.Division.Should().Be("4 мсб 186 мсп");
         updated.Participants.Should().ContainSingle(p => p.Name == "КАРАСУК");
-        updated.Labels.Should().ContainSingle(l => l.NameLabel == "мітка-2");
+        updated.Labels.Should().ContainSingle(l => l == "мітка-2");
     }
 
     [Fact]
@@ -167,9 +173,9 @@ public sealed class InterceptionCommandServiceTests
         var action = await SeedActionAsync(factory, ct: ct);
 
         var created = await command.CreateAsync(MakeForm(action.Id), "operator", ct);
-        await command.DeleteAsync(created.Id, ct);
+        await command.DeleteAsync(created, ct);
 
-        var found = await query.GetByIdAsync(created.Id, ct);
+        var found = await query.GetByIdAsync(created, ct);
         found.Should().BeNull();
     }
 

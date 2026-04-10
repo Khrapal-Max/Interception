@@ -63,12 +63,12 @@ public sealed class InterceptionQueryServiceTests
         var action = await SeedActionAsync(factory, ct: ct);
 
         var created = await command.CreateAsync(MakeForm(action.Id), "operator", ct);
-        var found = await query.GetByIdAsync(created.Id, ct);
+        var found = await query.GetByIdAsync(created, ct);
 
         found.Should().NotBeNull();
         found!.Participants.Should().HaveCount(2);
         found.Labels.Should().HaveCount(1);
-        found.InterceptionAction.Should().NotBeNull();
+        found.InterceptionActionId.Should().Be(action.Id);
     }
 
     [Fact]

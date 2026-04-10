@@ -3,7 +3,9 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Abstractions;
+using Interception.UI.Application.Analytics.Events;
 using Interception.UI.Application.Analytics.Services;
+using Interception.UI.Application.Common.Events;
 using Interception.UI.Application.Database.Abstractions;
 using Interception.UI.Application.Database.Services;
 using Interception.UI.Application.Exports.Abstractions;
@@ -11,6 +13,7 @@ using Interception.UI.Application.Exports.Services;
 using Interception.UI.Application.Import.Abstractions;
 using Interception.UI.Application.Import.Services;
 using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Interceptions.Events;
 using Interception.UI.Application.Interceptions.Services;
 using Interception.UI.Application.Registry.Abstractions;
 using Interception.UI.Application.Registry.Services;
@@ -51,6 +54,9 @@ builder.Services.AddDataProtection()
 builder.Services.AddScoped<ToastService>();
 
 // --- Application services ---
+builder.Services.AddScoped<IIntegrationEventPublisher, InProcessIntegrationEventPublisher>();
+builder.Services.AddScoped<IIntegrationEventHandler<InterceptionChangedIntegrationEvent>, MarkTopologySnapshotsStaleOnInterceptionChangedHandler>();
+
 // Поточні контракти, які ще використовує фронт.
 builder.Services.AddScoped<IExcelExportService, ExcelExportService>();
 builder.Services.AddScoped<IInterceptionImportService, InterceptionImportService>();

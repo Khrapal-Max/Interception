@@ -6,7 +6,6 @@ using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Registry.Builders;
-using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
 using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Infrastructure;
@@ -140,14 +139,36 @@ public sealed class InterceptionQueryService(IDbContextFactory<AppDbContext> dbF
     }
 
     /// <inheritdoc />
-    public async Task<InterceptionMessage?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<InterceptionDetailsDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
         return await db.InterceptionMessages
-            .Include(m => m.InterceptionAction)
-            .Include(m => m.Participants)
-            .Include(m => m.Labels)
-            .FirstOrDefaultAsync(m => m.Id == id, ct);
+            .AsNoTracking()
+            .Where(m => m.Id == id)
+            .Select(m => new InterceptionDetailsDto
+            {
+                Id = m.Id,
+                ObservedDate = m.ObservedDate,
+                Frequency = FrequencyCode.Create(m.Frequency)?.Value,
+                Division = DivisionName.Create(m.Division)?.Value,
+                PointSignal = m.PointSignal,
+                VectorSignal = m.VectorSignal,
+                InterceptionActionId = m.InterceptionActionId,
+                Note = m.Note,
+                Participants = [.. m.Participants
+                    .OrderBy(p => p.Ordinal)
+                    .Select(p => new InterceptionDetailsParticipantDto
+                    {
+                        Ordinal = p.Ordinal,
+                        Name = p.Name,
+                        Role = p.Role,
+                        IsUnknown = p.IsUnknown
+                    })],
+                Labels = [.. m.Labels
+                    .OrderBy(l => l.NameLabel)
+                    .Select(l => l.NameLabel)]
+            })
+            .FirstOrDefaultAsync(ct);
     }
 
     /// <summary>

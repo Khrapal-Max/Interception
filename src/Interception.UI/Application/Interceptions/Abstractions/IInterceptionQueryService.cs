@@ -3,7 +3,6 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Interceptions.Dtos;
-using Interception.UI.Domain;
 
 namespace Interception.UI.Application.Interceptions.Abstractions;
 
@@ -22,7 +21,7 @@ public interface IInterceptionQueryService
         CancellationToken ct = default);
 
     /// <summary>
-    /// Повертає доменне повідомлення з учасниками і мітками.
+    /// Повертає read-model деталізацію повідомлення.
     /// </summary>
-    Task<InterceptionMessage?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<InterceptionDetailsDto?> GetByIdAsync(Guid id, CancellationToken ct = default);
 }

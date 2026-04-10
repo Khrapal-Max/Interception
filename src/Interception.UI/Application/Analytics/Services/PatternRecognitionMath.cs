@@ -4,6 +4,7 @@
 
 using Interception.UI.Application.Analytics.Builders;
 using Interception.UI.Domain;
+using Interception.UI.Domain.Policies;
 using Interception.UI.Extensions;
 
 namespace Interception.UI.Application.Analytics.Services;
@@ -94,11 +95,7 @@ internal static class PatternRecognitionMath
             .Where(x => x.Score >= options.MinConfidenceScore)
             .ToList();
 
-        var requiredMatches = members.Count == 1
-            ? 1
-            : (int)Math.Ceiling(members.Count / 2.0);
-
-        if (strongMatches.Count < requiredMatches)
+        if (!ParticipantCandidateGroupingPolicy.CanJoinGroup(strongMatches.Count, members.Count))
             return (0.0, new PatternMatchReasons());
 
         return (

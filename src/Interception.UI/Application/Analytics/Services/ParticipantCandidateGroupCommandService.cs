@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Abstractions;
-using Interception.UI.Application.Registry.Services;
+using Interception.UI.Application.Registry.Support;
 using Interception.UI.Domain;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
