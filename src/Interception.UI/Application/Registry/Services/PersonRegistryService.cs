@@ -22,25 +22,23 @@ public sealed class PersonRegistryService(
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
-        var confirmed = await db.ResolvedParticipants
+        var confirmedEntities = await db.ResolvedParticipants
             .AsNoTracking()
+            .ToListAsync(ct);
+
+        var confirmed = confirmedEntities
             .Select(x => new PersonRegistryItemDto
             {
                 Id = x.Id,
                 Name = x.Name,
-                Frequency = EF.Property<string?>(x, "Frequency"),
+                Frequency = ReadFrequency(db, x),
                 Role = x.Role,
                 Division = x.Division,
                 IsConfirmed = true,
                 ConfirmedBy = x.ConfirmedBy,
                 ConfirmedAt = x.ConfirmedAt
             })
-            .ToListAsync(ct);
-
-        var singleConfirmedByName = confirmed
-            .GroupBy(x => x.Name.Trim(), StringComparer.OrdinalIgnoreCase)
-            .Where(x => x.Count() == 1)
-            .ToDictionary(x => x.Key, x => x.Single(), StringComparer.OrdinalIgnoreCase);
+            .ToList();
 
         var observedRows = await db.InterceptionMessages
             .AsNoTracking()
@@ -55,37 +53,26 @@ public sealed class PersonRegistryService(
                     message.Frequency,
                     message.Division
                 })
-            .Where(x =>
-                !x.IsUnknown &&
-                !string.IsNullOrWhiteSpace(x.Name))
+            .Where(x => !x.IsUnknown && !string.IsNullOrWhiteSpace(x.Name))
             .ToListAsync(ct);
 
         var observed = observedRows
             .GroupBy(x => new
             {
-                NameKey = x.Name!.Trim().ToUpperInvariant(),
-                FrequencyKey = (SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Frequency) ?? string.Empty).ToUpperInvariant(),
-                DivisionKey = (SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Division) ?? string.Empty).ToUpperInvariant()
+                NameKey = NormalizeKey(x.Name),
+                FrequencyKey = NormalizeKey(x.Frequency),
+                DivisionKey = NormalizeKey(x.Division)
             })
             .Select(group => new PersonRegistryItemDto
             {
                 Id = group.OrderBy(x => x.ParticipantId).Select(x => x.ParticipantId).First(),
                 Name = group.Select(x => x.Name!.Trim()).First(),
-                Frequency = string.IsNullOrWhiteSpace(group.Key.FrequencyKey)
-                    ? null
-                    : group.Select(x => SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Frequency))
-                        .FirstOrDefault(x => x is not null),
-                Role = group.Select(x => SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Role))
-                    .FirstOrDefault(x => x is not null),
-                Division = string.IsNullOrWhiteSpace(group.Key.DivisionKey)
-                    ? null
-                    : group.Select(x => SemanticValueExtensions.NormalizeMeaningfulOrNull(x.Division))
-                        .FirstOrDefault(x => x is not null),
-                IsConfirmed = false,
-                ConfirmedBy = null,
-                ConfirmedAt = null
+                Frequency = group.Select(x => NormalizeOptional(x.Frequency)).FirstOrDefault(x => x is not null),
+                Role = group.Select(x => NormalizeOptional(x.Role)).FirstOrDefault(x => x is not null),
+                Division = group.Select(x => NormalizeOptional(x.Division)).FirstOrDefault(x => x is not null),
+                IsConfirmed = false
             })
-            .Where(x => !ShouldHideObservedRow(x, singleConfirmedByName))
+            .Where(x => !HasMatchingConfirmedContext(x, confirmed))
             .ToList();
 
         return [.. confirmed
@@ -103,31 +90,23 @@ public sealed class PersonRegistryService(
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
         var normalizedName = dto.Name.Trim();
-        var normalizedFrequency = SemanticValueExtensions.NormalizeMeaningfulOrNull(dto.Frequency);
+        var normalizedFrequency = NormalizeOptional(dto.Frequency);
+        var normalizedDivision = NormalizeOptional(dto.Division);
+
         var roleMap = await ParticipantRoleCatalogSupport.LoadRoleMapAsync(db, ct);
         var normalizedRole = ParticipantRoleCatalogSupport.NormalizeRole(dto.Role, roleMap);
-        var normalizedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(dto.Division);
 
-        var resolved = await db.ResolvedParticipants
+        var resolvedById = await db.ResolvedParticipants
             .FirstOrDefaultAsync(x => x.Id == id, ct);
 
-        if (resolved is not null)
+        if (resolvedById is not null)
         {
-            resolved.Update(normalizedName, normalizedRole, normalizedDivision);
-            db.Entry(resolved).Property("Frequency").CurrentValue = normalizedFrequency;
+            resolvedById.Update(normalizedName, normalizedRole, normalizedDivision);
+            db.Entry(resolvedById).Property("Frequency").CurrentValue = normalizedFrequency;
+
             await db.SaveChangesAsync(ct);
 
-            return new PersonRegistryItemDto
-            {
-                Id = resolved.Id,
-                Name = resolved.Name,
-                Frequency = normalizedFrequency,
-                Role = resolved.Role,
-                Division = resolved.Division,
-                IsConfirmed = true,
-                ConfirmedBy = resolved.ConfirmedBy,
-                ConfirmedAt = resolved.ConfirmedAt
-            };
+            return MapResolved(db, resolvedById);
         }
 
         var participant = await db.InterceptionMessageParticipants
@@ -140,64 +119,131 @@ public sealed class PersonRegistryService(
         participant.ResolveAsKnown(normalizedName, normalizedRole);
 
         var effectiveFrequency = normalizedFrequency
-            ?? SemanticValueExtensions.NormalizeMeaningfulOrNull(participant.InterceptionMessage.Frequency);
+            ?? NormalizeOptional(participant.InterceptionMessage.Frequency);
 
-        var created = ResolvedParticipant.Create(
+        var reusable = await FindReusableResolvedAsync(
+            db,
             normalizedName,
-            confirmedBy: "registry",
-            role: normalizedRole,
-            division: normalizedDivision);
+            effectiveFrequency,
+            normalizedDivision,
+            ct);
 
-        db.Entry(created).Property("Frequency").CurrentValue = effectiveFrequency;
-
-        db.ResolvedParticipants.Add(created);
-        await db.SaveChangesAsync(ct);
-
-        return new PersonRegistryItemDto
+        if (reusable is null)
         {
-            Id = created.Id,
-            Name = created.Name,
-            Frequency = effectiveFrequency,
-            Role = created.Role,
-            Division = created.Division,
-            IsConfirmed = true,
-            ConfirmedBy = created.ConfirmedBy,
-            ConfirmedAt = created.ConfirmedAt
-        };
-    }
+            reusable = ResolvedParticipant.Create(
+                normalizedName,
+                confirmedBy: "registry",
+                role: normalizedRole,
+                division: normalizedDivision);
 
-    /// <summary>
-    /// Визначає, чи треба приховати observed-рядок, якщо для нього вже існує
-    /// однозначний confirmed row.
-    /// </summary>
-    private static bool ShouldHideObservedRow(
-        PersonRegistryItemDto observed,
-        Dictionary<string, PersonRegistryItemDto> singleConfirmedByName)
-    {
-        if (!singleConfirmedByName.TryGetValue(observed.Name, out var confirmed))
-            return false;
-
-        var observedFrequency = SemanticValueExtensions.NormalizeMeaningfulOrNull(observed.Frequency);
-        var confirmedFrequency = SemanticValueExtensions.NormalizeMeaningfulOrNull(confirmed.Frequency);
-
-        if (!string.IsNullOrWhiteSpace(observedFrequency) && !string.IsNullOrWhiteSpace(confirmedFrequency))
+            db.Entry(reusable).Property("Frequency").CurrentValue = effectiveFrequency;
+            db.ResolvedParticipants.Add(reusable);
+        }
+        else
         {
-            if (!string.Equals(observedFrequency, confirmedFrequency, StringComparison.OrdinalIgnoreCase))
-                return false;
+            reusable.Update(normalizedName, normalizedRole, normalizedDivision);
+            db.Entry(reusable).Property("Frequency").CurrentValue = effectiveFrequency;
         }
 
-        var observedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(observed.Division);
-        var confirmedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(confirmed.Division);
+        await db.SaveChangesAsync(ct);
 
-        if (observedDivision is null)
-            return true;
-
-        if (confirmedDivision is null)
-            return true;
-
-        return string.Equals(
-            observedDivision,
-            confirmedDivision,
-            StringComparison.OrdinalIgnoreCase);
+        return MapResolved(db, reusable);
     }
+
+    private static async Task<ResolvedParticipant?> FindReusableResolvedAsync(
+        AppDbContext db,
+        string normalizedName,
+        string? frequency,
+        string? division,
+        CancellationToken ct)
+    {
+        var allSameName = await db.ResolvedParticipants
+            .AsTracking()
+            .ToListAsync(ct);
+
+        var sameName = allSameName
+            .Where(x => string.Equals(
+                NormalizeOptional(x.Name),
+                NormalizeOptional(normalizedName),
+                StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (sameName.Count == 0)
+            return null;
+
+        var exact = sameName.FirstOrDefault(x =>
+            AreSameOptional(ReadFrequency(db, x), frequency) &&
+            AreSameOptional(x.Division, division));
+
+        if (exact is not null)
+            return exact;
+
+        var contextFree = sameName
+            .Where(x =>
+                string.IsNullOrWhiteSpace(ReadFrequency(db, x)) &&
+                string.IsNullOrWhiteSpace(x.Division))
+            .ToList();
+
+        return contextFree.Count == 1
+            ? contextFree[0]
+            : null;
+    }
+
+    private static bool HasMatchingConfirmedContext(
+        PersonRegistryItemDto observed,
+        IReadOnlyList<PersonRegistryItemDto> confirmed)
+    {
+        var observedName = NormalizeOptional(observed.Name);
+        var observedFrequency = NormalizeOptional(observed.Frequency);
+        var observedDivision = NormalizeOptional(observed.Division);
+
+        return confirmed.Any(item =>
+        {
+            if (!string.Equals(NormalizeOptional(item.Name), observedName, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var confirmedFrequency = NormalizeOptional(item.Frequency);
+            var confirmedDivision = NormalizeOptional(item.Division);
+
+            if (!string.IsNullOrWhiteSpace(observedFrequency)
+                && !string.IsNullOrWhiteSpace(confirmedFrequency)
+                && !string.Equals(observedFrequency, confirmedFrequency, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(observedDivision)
+                && !string.IsNullOrWhiteSpace(confirmedDivision)
+                && !string.Equals(observedDivision, confirmedDivision, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            return true;
+        });
+    }
+
+    private static PersonRegistryItemDto MapResolved(AppDbContext db, ResolvedParticipant resolved)
+        => new()
+        {
+            Id = resolved.Id,
+            Name = resolved.Name,
+            Frequency = ReadFrequency(db, resolved),
+            Role = resolved.Role,
+            Division = resolved.Division,
+            IsConfirmed = true,
+            ConfirmedBy = resolved.ConfirmedBy,
+            ConfirmedAt = resolved.ConfirmedAt
+        };
+
+    private static string? ReadFrequency(AppDbContext db, ResolvedParticipant resolved)
+        => NormalizeOptional(db.Entry(resolved).Property<string?>("Frequency").CurrentValue);
+
+    private static bool AreSameOptional(string? left, string? right)
+        => string.Equals(
+            NormalizeOptional(left),
+            NormalizeOptional(right),
+            StringComparison.OrdinalIgnoreCase);
+
+    private static string NormalizeKey(string? value)
+        => NormalizeOptional(value)?.ToUpperInvariant() ?? string.Empty;
+
+    private static string? NormalizeOptional(string? value)
+        => SemanticValueExtensions.NormalizeMeaningfulOrNull(value);
 }
