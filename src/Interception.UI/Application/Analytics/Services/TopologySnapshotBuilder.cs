@@ -640,20 +640,12 @@ public sealed class TopologySnapshotBuilder(IDbContextFactory<AppDbContext> dbFa
         IEnumerable<string> members,
         string keyPersonName)
     {
-        var stablePart = BuildStableGroupKey(division, members, keyPersonName);
-        return $"{frequency.Trim().ToUpperInvariant()}::{stablePart}";
+        return GroupKeyBuilder.BuildFrequencyScopedGroupKey(frequency, division, members, keyPersonName);
     }
 
     private static string BuildStableGroupKey(string? division, IEnumerable<string> members, string keyPersonName)
     {
-        var divisionPart = string.IsNullOrWhiteSpace(division) ? "NO-DIVISION" : division.Trim().ToUpperInvariant();
-        var membersPart = string.Join(";", members
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Select(x => x.Trim().ToUpperInvariant())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
-
-        return $"{divisionPart}|{keyPersonName.Trim().ToUpperInvariant()}|{membersPart}";
+        return GroupKeyBuilder.BuildStableGroupKey(division, members, keyPersonName);
     }
 
     private static string BuildPairKey(string leftGroupKey, string rightGroupKey)
