@@ -4,6 +4,7 @@
 
 using Interception.UI.Application.Registry.Abstractions;
 using Interception.UI.Application.Registry.Dtos;
+using Interception.UI.Application.Registry.Support;
 using Interception.UI.Domain;
 using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Extensions;
