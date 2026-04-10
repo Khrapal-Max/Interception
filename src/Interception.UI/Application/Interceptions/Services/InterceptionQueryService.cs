@@ -144,6 +144,8 @@ public sealed class InterceptionQueryService(IDbContextFactory<AppDbContext> dbF
         await using var db = await dbFactory.CreateDbContextAsync(ct);
         var message = await db.InterceptionMessages
             .AsNoTracking()
+            .Include(m => m.Participants)
+            .Include(m => m.Labels)
             .Where(m => m.Id == id)
             .FirstOrDefaultAsync(ct);
 

@@ -9,6 +9,7 @@ using Interception.UI.Application.Registry.Support;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain;
 using Interception.UI.Domain.ValueObjects;
+using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -50,6 +51,7 @@ public sealed class InterceptionCommandService(
         foreach (var label in form.Labels)
             message.AddLabel(label);
 
+        await TopologySnapshotStateMarker.MarkAllCompletedSnapshotsAsStaleAsync(db, ct);
         db.InterceptionMessages.Add(message);
         await db.SaveChangesAsync(ct);
         if (eventPublisher is not null)
@@ -90,6 +92,7 @@ public sealed class InterceptionCommandService(
         foreach (var label in form.Labels)
             message.AddLabel(label);
 
+        await TopologySnapshotStateMarker.MarkAllCompletedSnapshotsAsStaleAsync(db, ct);
         await db.SaveChangesAsync(ct);
         if (eventPublisher is not null)
         {
@@ -106,6 +109,7 @@ public sealed class InterceptionCommandService(
         await using var db = await dbFactory.CreateDbContextAsync(ct);
         var message = await db.InterceptionMessages.FindAsync([id], ct)
             ?? throw new InvalidOperationException($"InterceptionMessage '{id}' не знайдено.");
+        await TopologySnapshotStateMarker.MarkAllCompletedSnapshotsAsStaleAsync(db, ct);
         db.InterceptionMessages.Remove(message);
         await db.SaveChangesAsync(ct);
         if (eventPublisher is not null)
