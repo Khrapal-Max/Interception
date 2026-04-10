@@ -15,7 +15,7 @@ public static class DatabaseSeedDefaults
 {
     public static readonly IReadOnlyList<(string Name, string Description)> ActionSeed =
      [
-         ("взаємодія по місцезнаходженню ос",               ""),
+        ("взаємодія по місцезнаходженню ос",               ""),
         ("доповідь 200",                                   ""),
         ("доповідь 300",                                   ""),
         ("доповідь 500",                                   ""),

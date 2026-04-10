@@ -19,6 +19,7 @@ public partial class InterceptionFormBody : ComponentBase
     [Parameter] public IReadOnlyList<InterceptionAction> Actions { get; set; } = [];
     [Parameter] public IReadOnlyList<FrequencySuggestionDto> FrequencySuggestions { get; set; } = [];
     [Parameter] public IReadOnlyList<string> VectorSuggestions { get; set; } = [];
+    [Parameter] public IReadOnlyList<string> RoleSuggestions { get; set; } = [];
 
     [Parameter] public EventCallback<string?> OnFrequencySearch { get; set; }
     [Parameter] public EventCallback<FrequencySuggestionDto> OnFrequencySelected { get; set; }
@@ -183,7 +184,7 @@ public partial class InterceptionFormBody : ComponentBase
     private void ApplyParticipantSuggestion(ParticipantFormDto p, ParticipantSuggestionDto s)
     {
         p.Name = s.Name;
-        p.Role = s.Role;
+        p.Role = NormalizeRoleFromCatalog(s.Role) ?? s.Role;
         p.IsUnknown = false;
 
         if (string.IsNullOrWhiteSpace(Form.Division) && !string.IsNullOrWhiteSpace(s.Division))
@@ -194,6 +195,22 @@ public partial class InterceptionFormBody : ComponentBase
 
         _participantSuggestions.Remove(p.Ordinal);
         _participantOpen.Remove(p.Ordinal);
+    }
+
+    private void OnParticipantRoleInput(ParticipantFormDto p, string? value)
+        => p.Role = value;
+
+    private void OnParticipantRoleChanged(ParticipantFormDto p, string? value)
+        => p.Role = NormalizeRoleFromCatalog(value) ?? value?.Trim();
+
+    private string? NormalizeRoleFromCatalog(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var trimmed = value.Trim();
+        var matched = RoleSuggestions.FirstOrDefault(x => string.Equals(x, trimmed, StringComparison.OrdinalIgnoreCase));
+        return matched ?? trimmed;
     }
 
     private void AddLabel()

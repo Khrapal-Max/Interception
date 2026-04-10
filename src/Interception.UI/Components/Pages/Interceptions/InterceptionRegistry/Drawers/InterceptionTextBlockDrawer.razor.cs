@@ -6,6 +6,7 @@ using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Interceptions.TextBlock;
+using Interception.UI.Application.Registry.Abstractions;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Domain;
 using Interception.UI.Extensions;
@@ -18,6 +19,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
 {
     [Inject] private IInterceptionCommandService InterceptionCommandService { get; set; } = default!;
     [Inject] private IInterceptionSuggestionService InterceptionSuggestionService { get; set; } = default!;
+    [Inject] private IParticipantRoleService ParticipantRoleService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
     [Parameter] public bool IsOpen { get; set; }
@@ -33,6 +35,27 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
     private bool _saving;
     private readonly HashSet<int> _participantOpen = [];
     private readonly Dictionary<int, IReadOnlyList<ParticipantSuggestionDto>> _participantSuggestions = [];
+    private IReadOnlyList<string> _roleSuggestions = [];
+    private bool _rolesLoaded;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsOpen)
+        {
+            _rolesLoaded = false;
+            return;
+        }
+
+        if (_rolesLoaded)
+            return;
+
+        _roleSuggestions = [.. (await ParticipantRoleService.GetAllAsync())
+            .Select(x => x.Name)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)];
+        _rolesLoaded = true;
+    }
 
     private void OnDrawerClosed() => ResetState();
 
@@ -334,7 +357,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
     private void ApplyParticipantSuggestion(ParticipantFormDto participant, ParticipantSuggestionDto suggestion)
     {
         participant.Name = suggestion.Name;
-        participant.Role = suggestion.Role;
+        participant.Role = NormalizeRoleFromCatalog(suggestion.Role) ?? suggestion.Role;
         participant.IsUnknown = false;
 
         if (string.IsNullOrWhiteSpace(_form?.Division) && !string.IsNullOrWhiteSpace(suggestion.Division))
@@ -345,6 +368,22 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
 
         _participantSuggestions.Remove(participant.Ordinal);
         _participantOpen.Remove(participant.Ordinal);
+    }
+
+    private void OnParticipantRoleInput(ParticipantFormDto participant, string? value)
+        => participant.Role = value;
+
+    private void OnParticipantRoleChanged(ParticipantFormDto participant, string? value)
+        => participant.Role = NormalizeRoleFromCatalog(value) ?? value?.Trim();
+
+    private string? NormalizeRoleFromCatalog(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var trimmed = value.Trim();
+        var matched = _roleSuggestions.FirstOrDefault(x => string.Equals(x, trimmed, StringComparison.OrdinalIgnoreCase));
+        return matched ?? trimmed;
     }
 
     private async Task SaveAsync()
@@ -362,11 +401,8 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         try
         {
             await InterceptionCommandService.CreateAsync(_form, "operator");
-            Toasts.Success(
-                "Збережено",
-                $"Запис від {ConverterDateTimeExtensions.ToDisplay(_form.ObservedDate):dd.MM HH:mm} створено.");
+            Toasts.Success("Збережено", $"Запис від {ConverterDateTimeExtensions.ToDisplay(_form.ObservedDate):dd.MM HH:mm} створено.");
 
-            ResetState();
             await CloseAsync();
             await OnSaved.InvokeAsync();
         }
@@ -380,6 +416,9 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         }
     }
 
+    private async Task CloseAsync()
+        => await IsOpenChanged.InvokeAsync(false);
+
     private void ResetState()
     {
         _rawText = null;
@@ -387,10 +426,8 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         _parsed = null;
         _form = null;
         _newLabel = null;
+        _saving = false;
         _participantOpen.Clear();
         _participantSuggestions.Clear();
     }
-
-    private async Task CloseAsync()
-        => await IsOpenChanged.InvokeAsync(false);
 }

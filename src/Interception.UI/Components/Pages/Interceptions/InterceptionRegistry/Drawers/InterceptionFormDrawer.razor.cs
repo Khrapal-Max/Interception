@@ -19,6 +19,7 @@ public partial class InterceptionFormDrawer : ComponentBase
     [Inject] private IInterceptionQueryService InterceptionQueryService { get; set; } = default!;
     [Inject] private IInterceptionCommandService InterceptionCommandService { get; set; } = default!;
     [Inject] private IInterceptionActionService ActionService { get; set; } = default!;
+    [Inject] private IParticipantRoleService ParticipantRoleService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
     [Parameter] public bool IsOpen { get; set; }
@@ -30,6 +31,7 @@ public partial class InterceptionFormDrawer : ComponentBase
     private IReadOnlyList<InterceptionAction> _actions = [];
     private IReadOnlyList<FrequencySuggestionDto> _frequencySuggestions = [];
     private IReadOnlyList<string> _vectorSuggestions = [];
+    private IReadOnlyList<string> _roleSuggestions = [];
     private bool _saving;
     private bool _initialized;
 
@@ -46,6 +48,11 @@ public partial class InterceptionFormDrawer : ComponentBase
 
         _initialized = true;
         _actions = await ActionService.GetAllAsync();
+        _roleSuggestions = [.. (await ParticipantRoleService.GetAllAsync())
+            .Select(x => x.Name)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)];
 
         if (EditingId.HasValue)
             await InitEditAsync(EditingId.Value);
@@ -58,10 +65,6 @@ public partial class InterceptionFormDrawer : ComponentBase
         _initialized = false;
         _form = null;
     }
-
-    // -------------------------------------------------------------------------
-    // Ініціалізація
-    // -------------------------------------------------------------------------
 
     private async Task InitCreateAsync()
     {
@@ -125,10 +128,6 @@ public partial class InterceptionFormDrawer : ComponentBase
         };
     }
 
-    // -------------------------------------------------------------------------
-    // Suggestions
-    // -------------------------------------------------------------------------
-
     internal async Task SearchFrequencyAsync(string? query)
     {
         _frequencySuggestions = await InterceptionSuggestionService
@@ -136,10 +135,6 @@ public partial class InterceptionFormDrawer : ComponentBase
         await InvokeAsync(StateHasChanged);
     }
 
-    /// <summary>
-    /// Оператор вибрав частоту з dropdown.
-    /// Оновлюємо VectorSuggestions контекстно — тільки вектори цієї частоти.
-    /// </summary>
     internal async Task ApplyFrequencySuggestion(FrequencySuggestionDto s)
     {
         _vectorSuggestions = await InterceptionSuggestionService
@@ -147,10 +142,6 @@ public partial class InterceptionFormDrawer : ComponentBase
         await InvokeAsync(StateHasChanged);
     }
 
-    /// <summary>
-    /// Оператор набирає текст у полі вектора.
-    /// Шукаємо в межах поточної частоти форми (контекстний пошук).
-    /// </summary>
     internal async Task SearchVectorAsync(string? query)
     {
         _vectorSuggestions = await InterceptionSuggestionService
@@ -160,10 +151,6 @@ public partial class InterceptionFormDrawer : ComponentBase
 
     internal Task<IReadOnlyList<ParticipantSuggestionDto>> SearchParticipantsAsync(string? query, string? frequency, string? division)
         => InterceptionSuggestionService.GetParticipantSuggestionsAsync(query, frequency, division);
-
-    // -------------------------------------------------------------------------
-    // Save / Close
-    // -------------------------------------------------------------------------
 
     private async Task SaveAsync()
     {

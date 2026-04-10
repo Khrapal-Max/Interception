@@ -580,64 +580,8 @@ public sealed class ExcelExportService(
 
         return null;
     }
-
-    private static async Task<Dictionary<Guid, ParticipantOverlay>> BuildParticipantOverlayMapAsync(
-        AppDbContext db,
-        IReadOnlyList<InterceptionMessage> messages,
-        CancellationToken ct)
-    {
-        var unknownIds = messages
-            .SelectMany(x => x.Participants.Where(p => p.IsUnknown).Select(p => p.Id))
-            .ToHashSet();
-
-        var result = new Dictionary<Guid, ParticipantOverlay>();
-        if (unknownIds.Count == 0)
-            return result;
-
-        var confirmedGroups = await db.ParticipantCandidateGroups
-            .Include(x => x.ParticipantRefs)
-            .Where(x => x.Status == CandidateGroupStatus.Confirmed && x.ResolvedParticipantId != null)
-            .AsNoTracking()
-            .ToListAsync(ct);
-
-        if (confirmedGroups.Count > 0)
-        {
-            var resolvedIds = confirmedGroups
-                .Select(x => x.ResolvedParticipantId!.Value)
-                .Distinct()
-                .ToList();
-
-            var resolvedNames = await db.ResolvedParticipants
-                .Where(x => resolvedIds.Contains(x.Id))
-                .AsNoTracking()
-                .ToDictionaryAsync(x => x.Id, x => x.Name, ct);
-
-            foreach (var group in confirmedGroups)
-            {
-                if (!group.ResolvedParticipantId.HasValue || !resolvedNames.TryGetValue(group.ResolvedParticipantId.Value, out var resolvedName))
-                    continue;
-
-                foreach (var reference in group.ParticipantRefs.Where(x => unknownIds.Contains(x.ParticipantId)))
-                    result.TryAdd(reference.ParticipantId, new ParticipantOverlay(resolvedName, "confirmed"));
-            }
-        }
-
-        var openGroups = await db.ParticipantCandidateGroups
-            .Include(x => x.ParticipantRefs)
-            .Where(x => x.Status == CandidateGroupStatus.Open && x.SuggestedName != null)
-            .AsNoTracking()
-            .ToListAsync(ct);
-
-        foreach (var group in openGroups)
-        {
-            foreach (var reference in group.ParticipantRefs.Where(x => unknownIds.Contains(x.ParticipantId)))
-                result.TryAdd(reference.ParticipantId, new ParticipantOverlay(group.SuggestedName, "open"));
-        }
-
-        return result;
-    }
-
     private static string BuildParticipantsText(InterceptionMessage message)
+    
     {
         return string.Join(", ", message.Participants
             .OrderBy(x => x.Ordinal)
@@ -715,7 +659,6 @@ public sealed class ExcelExportService(
             : normalized;
     }
 
-    private sealed record ParticipantOverlay(string? Name, string State);
     private sealed record FrequencyMessageRow(Guid Id, string Frequency, string? Division, DateTime ObservedDate);
     private sealed record FrequencyParticipantRow(Guid Id, Guid MessageId, string? Name, bool IsUnknown, string? MessageDivision);
     private sealed record FrequencyResolvedRow(Guid Id, string Name, string? Division);

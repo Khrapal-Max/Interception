@@ -4,7 +4,6 @@
 
 <div class="row g-2">
 
-    <!-- Дата та час -->
     <div class="col-6">
         <label class="form-label form-label-sm">Дата та час</label>
         <input type="datetime-local" class="form-control form-control-sm"
@@ -12,7 +11,6 @@
                @onchange="OnObservedDateChange" />
     </div>
 
-    <!-- Дія -->
     <div class="col-6">
         <label class="form-label form-label-sm">
             Дія <span class="text-danger">*</span>
@@ -38,7 +36,6 @@
         }
     </div>
 
-    <!-- Частота — autocomplete -->
     <div class="col-6">
         <label class="form-label form-label-sm">Частота</label>
         <div class="autocomplete-wrap">
@@ -70,7 +67,6 @@
         </div>
     </div>
 
-    <!-- Р/М -->
     <div class="col-6">
         <label class="form-label form-label-sm">Р/М (підрозділ)</label>
         <input type="text" class="form-control form-control-sm"
@@ -79,7 +75,6 @@
                @oninput="e => Form.Division = e.Value?.ToString()" />
     </div>
 
-    <!-- Вектор — autocomplete -->
     <div class="col-8">
         <label class="form-label form-label-sm">Вектор сигналу</label>
         <div class="autocomplete-wrap">
@@ -107,7 +102,6 @@
         </div>
     </div>
 
-    <!-- Точка перехвату -->
     <div class="col-4">
         <label class="form-label form-label-sm">Точка перехвату</label>
         <input type="text" class="form-control form-control-sm"
@@ -115,7 +109,6 @@
                @oninput="e => Form.PointSignal = e.Value?.ToString()" />
     </div>
 
-    <!-- Учасники -->
     <div class="col-12 mt-1">
         <div class="d-flex align-items-center justify-content-between mb-1">
             <label class="form-label form-label-sm mb-0">Учасники</label>
@@ -129,11 +122,8 @@
         {
             var participant = pt;
             <div class="row g-1 align-items-center mb-1">
-
-                <!-- Номер -->
                 <div class="col-auto text-muted small" style="width:22px">@participant.Ordinal</div>
 
-                <!-- НВ toggle -->
                 <div class="col-auto">
                     <div class="form-check form-switch mb-0" title="Невідомий (НВ)">
                         <input class="form-check-input" type="checkbox"
@@ -142,7 +132,6 @@
                     </div>
                 </div>
 
-                <!-- Ім'я / позивний — autocomplete як у частоти -->
                 <div class="col autocomplete-wrap">
                     <input type="text" class="form-control form-control-sm"
                            placeholder="@(participant.IsUnknown ? "НВ" : "Позивний")"
@@ -187,15 +176,15 @@
                     }
                 </div>
 
-                <!-- Роль -->
                 <div class="col">
                     <input type="text" class="form-control form-control-sm"
                            placeholder="Роль"
                            value="@participant.Role"
-                           @oninput="e => participant.Role = e.Value?.ToString()" />
+                           list="participant-role-catalog"
+                           @oninput="e => OnParticipantRoleInput(participant, e.Value?.ToString())"
+                           @onchange="e => OnParticipantRoleChanged(participant, e.Value?.ToString())" />
                 </div>
 
-                <!-- Видалити -->
                 <div class="col-auto">
                     <button type="button" class="btn btn-outline-danger btn-sm py-0 px-1"
                             @onclick="() => RemoveParticipant(participant)"
@@ -203,12 +192,20 @@
                         <i class="bi bi-x"></i>
                     </button>
                 </div>
-
             </div>
+        }
+
+        @if (RoleSuggestions.Count > 0)
+        {
+            <datalist id="participant-role-catalog">
+                @foreach (var role in RoleSuggestions)
+                {
+                    <option value="@role"></option>
+                }
+            </datalist>
         }
     </div>
 
-    <!-- Нотатка -->
     <div class="col-12">
         <label class="form-label form-label-sm">Деталі / нотатка</label>
         <textarea class="form-control form-control-sm" rows="2"
@@ -216,31 +213,37 @@
                   @oninput="e => Form.Note = e.Value?.ToString()"></textarea>
     </div>
 
-    <!-- Мітки -->
     <div class="col-12">
         <label class="form-label form-label-sm">Мітки</label>
-        <div class="d-flex flex-wrap gap-1 mb-1">
-            @foreach (var lbl in Form.Labels)
-            {
-                var label = lbl;
-                <span class="badge bg-secondary d-flex align-items-center gap-1">
-                    @label
-                    <button type="button" class="btn-close btn-close-white"
-                            style="font-size:.55rem"
-                            @onclick="() => Form.Labels.Remove(label)"></button>
-                </span>
-            }
-        </div>
+
         <div class="input-group input-group-sm">
-            <input type="text" class="form-control form-control-sm"
-                   placeholder="Нова мітка…"
+            <input type="text" class="form-control"
+                   placeholder="напр. бпс, арт, логістика"
                    value="@_newLabel"
                    @oninput="e => _newLabel = e.Value?.ToString()"
                    @onkeydown="OnLabelKeyDown" />
-            <button class="btn btn-outline-secondary" type="button" @onclick="AddLabel">
-                <i class="bi bi-plus"></i>
+            <button type="button" class="btn btn-outline-secondary"
+                    @onclick="AddLabel">
+                Додати
             </button>
         </div>
+
+        @if (Form.Labels.Count > 0)
+        {
+            <div class="d-flex flex-wrap gap-1 mt-2">
+                @foreach (var label in Form.Labels)
+                {
+                    <span class="badge bg-secondary">
+                        @label
+                        <button type="button"
+                                class="btn btn-sm btn-link text-white text-decoration-none ms-1 p-0"
+                                @onclick="() => Form.Labels.Remove(label)">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </span>
+                }
+            </div>
+        }
     </div>
 
 </div>
