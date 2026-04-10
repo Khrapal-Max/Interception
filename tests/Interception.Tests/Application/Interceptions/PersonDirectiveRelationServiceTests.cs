@@ -181,8 +181,8 @@ public sealed class PersonDirectiveRelationServiceTests
         var rows = await verifyDb.PersonDirectiveRelations.ToListAsync(ct);
 
         rows.Should().ContainSingle();
-        rows[0].RelationType.Should().Be(DirectiveRelationTypeDto.Control);
-        rows[0].Confidence.Should().Be(DirectiveRelationConfidenceDto.Medium);
+        rows[0].RelationType.Should().Be(DirectiveRelationType.Control);
+        rows[0].Confidence.Should().Be(DirectiveRelationConfidence.Medium);
         rows[0].Comment.Should().Be("оновлено");
     }
 

@@ -7,7 +7,6 @@ using Interception.UI.Application.Import.Dtos;
 using Interception.UI.Application.Registry.Support;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
-using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -81,41 +80,7 @@ public sealed class InterceptionImportService(
         ImportContextCache cache,
         string operatorName)
     {
-        var action = cache.FindAction(row.ActionName);
-        if (action is null)
-            return (null, new ImportRowErrorDto(row.RowNumber, $"Дію '{row.ActionName}' не знайдено в довіднику. Рядок пропущено."));
-
-        var observedDate = ConverterDateTimeExtensions.ToUtc(row.ObservedAtLocal);
-
-        InterceptionMessage message;
-        try
-        {
-            message = InterceptionMessage.Create(
-                observedDate: observedDate,
-                frequency: row.Frequency,
-                division: row.Division,
-                vectorSignal: row.VectorSignal,
-                interceptionAction: action,
-                note: row.Note,
-                createdBy: operatorName,
-                pointSignal: row.PointSignal);
-        }
-        catch (Exception ex)
-        {
-            return (null, new ImportRowErrorDto(row.RowNumber, ex.Message));
-        }
-
-        foreach (var participant in row.Participants.OrderBy(x => x.Ordinal))
-            message.AddParticipant(
-                participant.Name,
-                participant.IsUnknown,
-                cache.ResolveRole(participant.Role),
-                participant.Ordinal);
-
-        foreach (var label in row.Labels)
-            message.AddLabel(label);
-
-        return (message, null);
+        return ImportRowToMessageMapper.TryMap(row, cache, operatorName);
     }
 
     private static async Task MarkCompletedTopologySnapshotsAsStaleAsync(
