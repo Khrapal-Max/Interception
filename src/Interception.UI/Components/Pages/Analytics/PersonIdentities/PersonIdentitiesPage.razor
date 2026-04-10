@@ -14,7 +14,7 @@
             }
         </MetaContent>
         <ActionsContent>
-            <button class="btn btn-success btn-sm rounded-0" @onclick="LoadAsync" disabled="@_loading" aria-label="Оновити">
+            <button type="button" class="btn btn-success btn-sm rounded-0" @onclick="LoadAsync" disabled="@_loading" aria-label="Оновити">
                 <i class="bi bi-arrow-repeat me-1"></i>Оновити
             </button>
         </ActionsContent>
@@ -85,15 +85,19 @@
                         <div class="pane-head px-3 py-3 border-bottom d-flex justify-content-between align-items-center gap-3 flex-wrap flex-shrink-0">
                             <div>
                                 <h4 class="mb-1">@_selected.DisplayName</h4>
-                                <div class="small text-muted">Аналітичний крок для об’єднання кількох підтверджених записів в один об’єднаний профіль.</div>
+                                <div class="small text-muted">Аналітичний крок для злиття кількох підтверджених записів в одну особу.</div>
                             </div>
-                            @if (_selected.HasCanonicalPerson)
+                            @if (_selected.HasSingleProfile)
                             {
-                                <span class="badge text-bg-success">Об’єднаний профіль уже створений</span>
+                                <span class="badge text-bg-success">Є об’єднаний профіль</span>
+                            }
+                            else if (_selected.HasMultipleProfiles)
+                            {
+                                <span class="badge text-bg-warning">Є кілька окремих профілів</span>
                             }
                             else
                             {
-                                <span class="badge text-bg-secondary">Ще без об’єднаного профілю</span>
+                                <span class="badge text-bg-secondary">Ще без профілю</span>
                             }
                         </div>
 
@@ -115,10 +119,14 @@
                                 <div class="col-12 col-lg-6">
                                     <div class="border rounded-0 p-3 h-100">
                                         <div class="fw-semibold mb-2">Об’єднаний профіль</div>
-                                        @if (_selected.HasCanonicalPerson)
+                                        @if (_selected.HasSingleProfile)
                                         {
                                             <div class="small mb-1"><strong>Назва:</strong> @_selected.CanonicalDisplayName</div>
                                             <div class="small"><strong>Нотатка:</strong> @(string.IsNullOrWhiteSpace(_selected.CanonicalNote) ? "—" : _selected.CanonicalNote)</div>
+                                        }
+                                        else if (_selected.HasMultipleProfiles)
+                                        {
+                                            <div class="small text-muted">Для цього кандидата вже існує кілька окремих профілів. Оператор може звести їх в один профіль.</div>
                                         }
                                         else
                                         {
@@ -129,8 +137,8 @@
                             </div>
 
                             <div class="border rounded-0 p-3 mb-3">
-                                <div class="fw-semibold mb-2">Рядки для об’єднання</div>
-                                <div class="small text-muted mb-3">Показуємо кожен рядок окремо: назва, частота, роль і підрозділ.</div>
+                                <div class="fw-semibold mb-2">Підтверджені рядки для об’єднання</div>
+                                <div class="small text-muted mb-3">Для поодиноких осіб нічого робити не потрібно. Тут працюємо лише з тими випадками, де є сенс у злитті.</div>
 
                                 <div class="table-wrap identities-table-wrap">
                                     <table class="table table-hover table-sm align-middle data-table mb-0">
@@ -148,13 +156,14 @@
                                         <tbody>
                                             @foreach (var row in _selected.Rows)
                                             {
+                                                var disableRow = _saving || (_selected.HasSingleProfile && row.IsLinkedToCanonical);
                                                 <tr>
                                                     <td>
                                                         <input type="checkbox"
                                                                class="form-check-input"
                                                                checked="@IsChecked(row.ResolvedParticipantId)"
-                                                               disabled="@row.IsLinkedToCanonical || _saving"
-                                                               @onchange="e => ToggleRow(row.ResolvedParticipantId, e.Value)" />
+                                                               disabled="@disableRow"
+                                                               @onchange="@(e => ToggleRow(row.ResolvedParticipantId, e.Value is bool b && b))" />
                                                     </td>
                                                     <td class="fw-medium">@row.Name</td>
                                                     <td class="small text-muted">@(string.IsNullOrWhiteSpace(row.Frequency) ? "—" : row.Frequency)</td>
@@ -164,7 +173,7 @@
                                                     <td>
                                                         @if (row.IsLinkedToCanonical)
                                                         {
-                                                            <span class="badge text-bg-success">У основній</span>
+                                                            <span class="badge text-bg-success">У профілі</span>
                                                         }
                                                         else
                                                         {
@@ -182,7 +191,7 @@
                         <div class="identity-actions border-top px-3 py-3">
                             <div class="d-flex flex-column gap-3">
                                 <div>
-                                    <label class="form-label">Назва основної особи</label>
+                                    <label class="form-label">Назва профілю</label>
                                     <input class="form-control rounded-0"
                                            @bind="_displayName"
                                            placeholder="Наприклад: СЛОНИК" />
@@ -197,23 +206,26 @@
                                 </div>
 
                                 <div class="d-flex justify-content-end gap-2 flex-wrap">
-                                    @if (_selected.HasCanonicalPerson)
+                                    @if (_selected.HasSingleProfile)
                                     {
-                                        <button class="btn btn-outline-light btn-sm rounded-0"
+                                        <button type="button"
+                                                class="btn btn-outline-light btn-sm rounded-0"
                                                 @onclick="UpdateAsync"
                                                 disabled="@_saving">
                                             <i class="bi bi-pencil-square me-1"></i>Редагувати
                                         </button>
-                                        <button class="btn btn-outline-danger btn-sm rounded-0"
+                                        <button type="button"
+                                                class="btn btn-outline-danger btn-sm rounded-0"
                                                 @onclick="DeleteAsync"
                                                 disabled="@_saving">
                                             <i class="bi bi-trash me-1"></i>Видалити
                                         </button>
                                     }
 
-                                    <button class="btn btn-success btn-sm rounded-0"
+                                    <button type="button"
+                                            class="btn btn-success btn-sm rounded-0"
                                             @onclick="SaveAsync"
-                                            disabled="@_saving || _selectedRows.Count == 0">
+                                            disabled="@(_saving || _selectedRows.Count == 0)">
                                         @if (_saving)
                                         {
                                             <span class="spinner-border spinner-border-sm me-1"></span>
@@ -222,7 +234,7 @@
                                         {
                                             <i class="bi bi-person-check me-1"></i>
                                         }
-                                        @(_selected.HasCanonicalPerson ? "Додати в профіль" : "Об’єднати в один профіль")
+                                        @(_selected.HasSingleProfile ? "Додати в профіль" : _selected.HasMultipleProfiles ? "Звести в один профіль" : "Об’єднати в один профіль")
                                     </button>
                                 </div>
                             </div>

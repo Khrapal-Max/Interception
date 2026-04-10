@@ -16,5 +16,7 @@ public sealed class CanonicalPersonCandidateRowDto
     public string? Division { get; init; }
     public DateTime ConfirmedAtUtc { get; init; }
     public bool IsLinkedToCanonical { get; init; }
+    public Guid? CanonicalPersonId { get; init; }
+    public string? CanonicalDisplayName { get; init; }
     public int ObservationCount { get; init; }
 }

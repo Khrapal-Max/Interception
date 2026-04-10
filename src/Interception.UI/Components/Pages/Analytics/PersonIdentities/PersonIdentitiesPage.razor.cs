@@ -44,7 +44,7 @@ public partial class PersonIdentitiesPage : ComponentBase
             if (!string.IsNullOrWhiteSpace(selectedKey))
                 await LoadDetailsAsync(selectedKey);
             else
-                await LoadDetailsAsync(_candidates.FirstOrDefault()?.CandidateKey);
+                await LoadDetailsAsync(_candidates?.FirstOrDefault()?.CandidateKey);
         }
         catch (Exception ex)
         {
@@ -67,9 +67,8 @@ public partial class PersonIdentitiesPage : ComponentBase
 
     protected bool IsChecked(Guid id) => _selectedRows.Contains(id);
 
-    protected void ToggleRow(Guid id, object? value)
+    protected void ToggleRow(Guid id, bool isChecked)
     {
-        var isChecked = value as bool? == true;
         if (isChecked)
             _selectedRows.Add(id);
         else
@@ -90,15 +89,15 @@ public partial class PersonIdentitiesPage : ComponentBase
         _saving = true;
         try
         {
-            var createdNew = !_selected.HasCanonicalPerson;
+            var createdNew = !_selected.HasSingleProfile;
 
-            _selected = _selected.HasCanonicalPerson && _selected.CanonicalPersonId.HasValue
+            _selected = _selected.HasSingleProfile && _selected.CanonicalPersonId.HasValue
                 ? await CanonicalPersonAnalysisService.AttachToCanonicalAsync(_selected.CanonicalPersonId.Value, [.. _selectedRows], _note)
                 : await CanonicalPersonAnalysisService.CreateCanonicalAsync(_selected.CandidateKey, [.. _selectedRows], _displayName, _note);
 
             _displayName = _selected.CanonicalDisplayName ?? _selected.DisplayName;
             _note = _selected.CanonicalNote;
-            _selectedRows = [];
+            await ResetSelectionFromDetailsAsync();
 
             Toasts.Success(
                 createdNew ? "Об’єднаний профіль створено" : "Об’єднаний профіль оновлено",
@@ -119,7 +118,7 @@ public partial class PersonIdentitiesPage : ComponentBase
 
     protected async Task UpdateAsync()
     {
-        if (_selected?.CanonicalPersonId is null)
+        if (_selected?.CanonicalPersonId is null || !_selected.HasSingleProfile)
             return;
 
         if (string.IsNullOrWhiteSpace(_displayName))
@@ -139,6 +138,7 @@ public partial class PersonIdentitiesPage : ComponentBase
 
             _displayName = _selected.CanonicalDisplayName ?? _selected.DisplayName;
             _note = _selected.CanonicalNote;
+            await ResetSelectionFromDetailsAsync();
 
             Toasts.Success("Об’єднаний профіль оновлено", $"Кандидат '{_selected.DisplayName}' оновлено.");
             _candidates = await CanonicalPersonAnalysisService.GetCandidatesAsync();
@@ -156,7 +156,7 @@ public partial class PersonIdentitiesPage : ComponentBase
 
     protected async Task DeleteAsync()
     {
-        if (_selected?.CanonicalPersonId is null)
+        if (_selected?.CanonicalPersonId is null || !_selected.HasSingleProfile)
             return;
 
         _saving = true;
@@ -195,8 +195,21 @@ public partial class PersonIdentitiesPage : ComponentBase
         _selected = await CanonicalPersonAnalysisService.GetCandidateDetailsAsync(candidateKey);
         _displayName = _selected?.CanonicalDisplayName ?? _selected?.DisplayName;
         _note = _selected?.CanonicalNote;
-        _selectedRows = _selected is null
-            ? []
-            : [.. _selected.Rows.Where(x => !x.IsLinkedToCanonical).Select(x => x.ResolvedParticipantId)];
+        await ResetSelectionFromDetailsAsync();
+    }
+
+    private Task ResetSelectionFromDetailsAsync()
+    {
+        if (_selected is null)
+        {
+            _selectedRows = [];
+            return Task.CompletedTask;
+        }
+
+        _selectedRows = _selected.HasSingleProfile
+            ? [.. _selected.Rows.Where(x => !x.IsLinkedToCanonical).Select(x => x.ResolvedParticipantId)]
+            : [.. _selected.Rows.Select(x => x.ResolvedParticipantId)];
+
+        return Task.CompletedTask;
     }
 }

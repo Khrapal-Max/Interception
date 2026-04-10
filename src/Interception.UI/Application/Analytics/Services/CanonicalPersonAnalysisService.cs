@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Interception.UI.Application.Analytics.Services;
 
 /// <summary>
-/// Сервіс пошуку та створення основних осіб для проблемних дубльованих випадків.
+/// Сервіс пошуку та зведення підтверджених записів в один об’єднаний профіль.
 /// </summary>
 public sealed class CanonicalPersonAnalysisService(
     IDbContextFactory<AppDbContext> dbFactory) : ICanonicalPersonAnalysisService
@@ -99,9 +99,13 @@ public sealed class CanonicalPersonAnalysisService(
             .Distinct()
             .ToList();
 
-        var primaryCanonical = resolvedRows
-            .Select(x => canonicalMap.TryGetValue(x.Id, out var item) ? item : null)
-            .FirstOrDefault(x => x is not null);
+        CanonicalLookupItem? singleCanonical = null;
+        if (linkedCanonicalIds.Count == 1)
+        {
+            singleCanonical = resolvedRows
+                .Select(x => canonicalMap.TryGetValue(x.Id, out var item) ? item : null)
+                .FirstOrDefault(x => x is not null);
+        }
 
         var context = contexts.ByCandidateKey.TryGetValue(candidateKey, out var value)
             ? value
@@ -111,12 +115,13 @@ public sealed class CanonicalPersonAnalysisService(
         {
             CandidateKey = candidateKey,
             DisplayName = resolvedRows.Select(x => x.Name.Trim()).First(),
-            HasCanonicalPerson = primaryCanonical is not null,
-            CanonicalPersonId = primaryCanonical?.Id,
-            CanonicalDisplayName = primaryCanonical?.DisplayName,
-            CanonicalNote = primaryCanonical?.Note,
+            HasCanonicalPerson = linkedCanonicalIds.Count > 0,
+            CanonicalPersonId = linkedCanonicalIds.Count == 1 ? singleCanonical?.Id : null,
+            CanonicalDisplayName = linkedCanonicalIds.Count == 1 ? singleCanonical?.DisplayName : null,
+            CanonicalNote = linkedCanonicalIds.Count == 1 ? singleCanonical?.Note : null,
+            LinkedProfileCount = linkedCanonicalIds.Count,
             Warning = linkedCanonicalIds.Count > 1
-                ? "Для цього імені вже існує більше однієї основної особи. Потрібна ручна перевірка."
+                ? "Для цього імені вже існує більше одного окремого профілю. Їх можна звести в один профіль оператором."
                 : null,
             Frequencies = [.. context.Frequencies],
             Divisions = [.. context.Divisions],
@@ -127,6 +132,8 @@ public sealed class CanonicalPersonAnalysisService(
                     ? count
                     : 0;
 
+                var rowCanonical = canonicalMap.TryGetValue(x.Id, out var linked) ? linked : null;
+
                 return new CanonicalPersonCandidateRowDto
                 {
                     ResolvedParticipantId = x.Id,
@@ -135,7 +142,9 @@ public sealed class CanonicalPersonAnalysisService(
                     Role = x.Role,
                     Division = x.Division,
                     ConfirmedAtUtc = x.ConfirmedAtUtc,
-                    IsLinkedToCanonical = canonicalMap.ContainsKey(x.Id),
+                    IsLinkedToCanonical = rowCanonical is not null,
+                    CanonicalPersonId = rowCanonical?.Id,
+                    CanonicalDisplayName = rowCanonical?.DisplayName,
                     ObservationCount = rowObservationCount
                 };
             })]
@@ -152,37 +161,63 @@ public sealed class CanonicalPersonAnalysisService(
         if (string.IsNullOrWhiteSpace(candidateKey))
             throw new ArgumentException("Ключ кандидата обов'язковий.", nameof(candidateKey));
 
-        if (resolvedParticipantIds is null || resolvedParticipantIds.Count == 0)
-            throw new InvalidOperationException("Оберіть хоча б один підтверджений рядок для створення основної особи.");
+        var selectedIds = resolvedParticipantIds?.Distinct().ToList() ?? [];
+        if (selectedIds.Count == 0)
+            throw new InvalidOperationException("Оберіть хоча б один підтверджений рядок для створення об’єднаного профілю.");
 
         if (string.IsNullOrWhiteSpace(displayName))
-            throw new InvalidOperationException("Назва основної особи обов'язкова.");
+            throw new InvalidOperationException("Назва об’єднаного профілю обов'язкова.");
 
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
         var selected = await db.ResolvedParticipants
-            .Where(x => resolvedParticipantIds.Contains(x.Id))
+            .Where(x => selectedIds.Contains(x.Id))
             .ToListAsync(ct);
 
-        if (selected.Count != resolvedParticipantIds.Count)
+        if (selected.Count != selectedIds.Count)
             throw new InvalidOperationException("Частину підтверджених рядків не знайдено.");
 
-        var alreadyLinked = await db.CanonicalPersonMembers
-            .Where(x => resolvedParticipantIds.Contains(x.ResolvedParticipantId))
-            .AnyAsync(ct);
+        var selectedMemberships = await db.CanonicalPersonMembers
+            .AsNoTracking()
+            .Where(x => selectedIds.Contains(x.ResolvedParticipantId))
+            .ToListAsync(ct);
 
-        if (alreadyLinked)
-            throw new InvalidOperationException("Один або кілька рядків уже входять до іншої основної особи.");
+        if (selectedMemberships.Count > 0)
+        {
+            var foreignProfileIds = selectedMemberships
+                .Select(x => x.CanonicalPersonId)
+                .Distinct()
+                .ToList();
 
-        var canonical = CanonicalPerson.Create(displayName, note);
-        foreach (var rowId in resolvedParticipantIds.Distinct())
+            var profileSizes = await db.CanonicalPersonMembers
+                .AsNoTracking()
+                .Where(x => foreignProfileIds.Contains(x.CanonicalPersonId))
+                .GroupBy(x => x.CanonicalPersonId)
+                .Select(x => new { CanonicalPersonId = x.Key, Count = x.Count() })
+                .ToListAsync(ct);
+
+            var nonSingletonProfile = profileSizes.FirstOrDefault(x => x.Count > 1);
+            if (nonSingletonProfile is not null)
+                throw new InvalidOperationException("Один або кілька рядків уже входять до сформованого об’єднаного профілю. Склад готового профілю через цю дію не змінюється.");
+
+            var singletonProfiles = await db.CanonicalPersons
+                .Include(x => x.Members)
+                .Where(x => foreignProfileIds.Contains(x.Id))
+                .ToListAsync(ct);
+
+            db.CanonicalPersons.RemoveRange(singletonProfiles);
+            await db.SaveChangesAsync(ct);
+        }
+
+        var canonical = CanonicalPerson.Create(displayName.Trim(), note);
+        foreach (var rowId in selectedIds)
             canonical.AddMember(rowId);
 
         db.CanonicalPersons.Add(canonical);
         await db.SaveChangesAsync(ct);
 
         return await GetCandidateDetailsAsync(candidateKey, ct)
-            ?? throw new InvalidOperationException("Не вдалося перечитати створену основну особу.");
+            ?? throw new InvalidOperationException("Не вдалося перечитати створений об’єднаний профіль.");
     }
 
     public async Task<CanonicalPersonCandidateDetailsDto> AttachToCanonicalAsync(
@@ -191,7 +226,8 @@ public sealed class CanonicalPersonAnalysisService(
         string? note,
         CancellationToken ct = default)
     {
-        if (resolvedParticipantIds is null || resolvedParticipantIds.Count == 0)
+        var selectedIds = resolvedParticipantIds?.Distinct().ToList() ?? [];
+        if (selectedIds.Count == 0)
             throw new InvalidOperationException("Оберіть хоча б один підтверджений рядок для додавання.");
 
         await using var db = await dbFactory.CreateDbContextAsync(ct);
@@ -199,23 +235,52 @@ public sealed class CanonicalPersonAnalysisService(
         var canonical = await db.CanonicalPersons
             .Include(x => x.Members)
             .FirstOrDefaultAsync(x => x.Id == canonicalPersonId, ct)
-            ?? throw new InvalidOperationException("Основну особу не знайдено.");
+            ?? throw new InvalidOperationException("Об’єднаний профіль не знайдено.");
 
         var selected = await db.ResolvedParticipants
-            .Where(x => resolvedParticipantIds.Contains(x.Id))
+            .Where(x => selectedIds.Contains(x.Id))
             .ToListAsync(ct);
 
-        if (selected.Count != resolvedParticipantIds.Count)
+        if (selected.Count != selectedIds.Count)
             throw new InvalidOperationException("Частину підтверджених рядків не знайдено.");
 
-        var foreignMembers = await db.CanonicalPersonMembers
-            .Where(x => resolvedParticipantIds.Contains(x.ResolvedParticipantId) && x.CanonicalPersonId != canonicalPersonId)
-            .AnyAsync(ct);
+        var foreignMemberships = await db.CanonicalPersonMembers
+            .AsNoTracking()
+            .Where(x => selectedIds.Contains(x.ResolvedParticipantId) && x.CanonicalPersonId != canonicalPersonId)
+            .ToListAsync(ct);
 
-        if (foreignMembers)
-            throw new InvalidOperationException("Один або кілька рядків уже входять до іншої основної особи.");
+        if (foreignMemberships.Count > 0)
+        {
+            var foreignProfileIds = foreignMemberships
+                .Select(x => x.CanonicalPersonId)
+                .Distinct()
+                .ToList();
 
-        foreach (var rowId in resolvedParticipantIds.Distinct())
+            var profileSizes = await db.CanonicalPersonMembers
+                .AsNoTracking()
+                .Where(x => foreignProfileIds.Contains(x.CanonicalPersonId))
+                .GroupBy(x => x.CanonicalPersonId)
+                .Select(x => new { CanonicalPersonId = x.Key, Count = x.Count() })
+                .ToListAsync(ct);
+
+            var nonSingletonProfile = profileSizes.FirstOrDefault(x => x.Count > 1);
+            if (nonSingletonProfile is not null)
+                throw new InvalidOperationException("Один або кілька рядків уже входять до іншого сформованого об’єднаного профілю.");
+
+            var singletonProfiles = await db.CanonicalPersons
+                .Include(x => x.Members)
+                .Where(x => foreignProfileIds.Contains(x.Id))
+                .ToListAsync(ct);
+
+            db.CanonicalPersons.RemoveRange(singletonProfiles);
+            await db.SaveChangesAsync(ct);
+
+            canonical = await db.CanonicalPersons
+                .Include(x => x.Members)
+                .FirstAsync(x => x.Id == canonicalPersonId, ct);
+        }
+
+        foreach (var rowId in selectedIds)
         {
             if (canonical.Members.Any(x => x.ResolvedParticipantId == rowId))
                 continue;
@@ -230,7 +295,7 @@ public sealed class CanonicalPersonAnalysisService(
 
         var candidateKey = NormalizeCandidateKey(selected.Select(x => x.Name).First());
         return await GetCandidateDetailsAsync(candidateKey, ct)
-            ?? throw new InvalidOperationException("Не вдалося перечитати оновлену основну особу.");
+            ?? throw new InvalidOperationException("Не вдалося перечитати оновлений об’єднаний профіль.");
     }
 
     public async Task<CanonicalPersonCandidateDetailsDto> UpdateCanonicalAsync(
@@ -247,13 +312,13 @@ public sealed class CanonicalPersonAnalysisService(
 
         var canonical = await db.CanonicalPersons
             .FirstOrDefaultAsync(x => x.Id == canonicalPersonId, ct)
-            ?? throw new InvalidOperationException("Основну особу не знайдено.");
+            ?? throw new InvalidOperationException("Об’єднаний профіль не знайдено.");
 
         canonical.Update(displayName, note);
         await db.SaveChangesAsync(ct);
 
         return await GetCandidateDetailsAsync(candidateKey, ct)
-            ?? throw new InvalidOperationException("Не вдалося перечитати оновлену основну особу.");
+            ?? throw new InvalidOperationException("Не вдалося перечитати оновлений об’єднаний профіль.");
     }
 
     public async Task DeleteCanonicalAsync(Guid canonicalPersonId, CancellationToken ct = default)
@@ -263,7 +328,7 @@ public sealed class CanonicalPersonAnalysisService(
         var canonical = await db.CanonicalPersons
             .Include(x => x.Members)
             .FirstOrDefaultAsync(x => x.Id == canonicalPersonId, ct)
-            ?? throw new InvalidOperationException("Основну особу не знайдено.");
+            ?? throw new InvalidOperationException("Об’єднаний профіль не знайдено.");
 
         db.CanonicalPersons.Remove(canonical);
         await db.SaveChangesAsync(ct);

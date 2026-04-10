@@ -16,6 +16,9 @@ public sealed class CanonicalPersonCandidateDetailsDto
     public string? CanonicalDisplayName { get; init; }
     public string? CanonicalNote { get; init; }
     public string? Warning { get; init; }
+    public int LinkedProfileCount { get; init; }
+    public bool HasSingleProfile => LinkedProfileCount == 1;
+    public bool HasMultipleProfiles => LinkedProfileCount > 1;
     public IReadOnlyList<CanonicalPersonCandidateRowDto> Rows { get; init; } = [];
     public IReadOnlyList<string> Frequencies { get; init; } = [];
     public IReadOnlyList<string> Divisions { get; init; } = [];
