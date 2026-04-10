@@ -1,4 +1,4 @@
-@using Interception.UI.Domain.Enums
+@using Interception.UI.Application.Analytics.Dtos
 @using Interception.UI.Extensions
 
 <Drawer IsOpen="@IsOpen"
@@ -20,11 +20,11 @@
             <div class="d-flex flex-column gap-1">
 
                 <!-- Статус Confirmed/Dismissed -->
-                @if (Group.Status != CandidateGroupStatus.Open)
+                @if (Group.Status != CandidateGroupStatusDto.Open)
                 {
-                    <div class="alert @(Group.Status == CandidateGroupStatus.Confirmed
+                    <div class="alert @(Group.Status == CandidateGroupStatusDto.Confirmed
                         ? "alert-success" : "alert-secondary") py-2 px-3 small mb-0">
-                        @if (Group.Status == CandidateGroupStatus.Confirmed)
+                        @if (Group.Status == CandidateGroupStatusDto.Confirmed)
                         {
                             <i class="bi bi-check-circle me-1"></i>
                             <strong>Підтверджено</strong> 
@@ -41,7 +41,7 @@
                                 — @Group.ResolvedBy · @(Group.ResolvedAt is null ? "—" : ConverterDateTimeExtensions.ToDisplay(Group.ResolvedAt.Value).ToString("dd.MM.yy HH:mm"))
                             </span>
                         }
-                        @if (Group.Status == CandidateGroupStatus.Confirmed)
+                        @if (Group.Status == CandidateGroupStatusDto.Confirmed)
                         {
                             <div class="mt-2">
                                 <a class="btn btn-outline-success btn-sm"
@@ -272,7 +272,7 @@
                 </div>
 
                 <!-- Форма підтвердження — тільки для Open -->
-                @if (Group.Status == CandidateGroupStatus.Open)
+                @if (Group.Status == CandidateGroupStatusDto.Open)
                 {
                     <div class="border-top border-secondary">
                         <div class="form-label form-label-sm text-muted mb-2">
@@ -327,7 +327,7 @@
                 disabled="@_saving">
             Закрити
         </button>
-        @if (Group?.Status == CandidateGroupStatus.Open)
+        @if (Group?.Status == CandidateGroupStatusDto.Open)
         {
             <button class="btn btn-outline-danger btn-sm"
                     @onclick="DismissAsync"

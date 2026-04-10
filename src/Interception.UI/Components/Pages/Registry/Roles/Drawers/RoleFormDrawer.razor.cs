@@ -3,8 +3,8 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Registry.Abstractions;
+using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Application.Toasts;
-using Interception.UI.Domain;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.UI.Components.Pages.Registry.Roles.Drawers;
@@ -16,7 +16,7 @@ public partial class RoleFormDrawer : ComponentBase
 
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
-    [Parameter] public ParticipantRole? EditingRole { get; set; }
+    [Parameter] public ParticipantRoleListItemDto? EditingRole { get; set; }
     [Parameter] public EventCallback OnSaved { get; set; }
 
     private string? _name;

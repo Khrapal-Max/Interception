@@ -5,6 +5,8 @@
 using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
+using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -68,8 +70,8 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
             ToCanonicalPersonId = x.ToCanonicalPersonId,
             ToResolvedParticipantId = x.ToResolvedParticipantId,
             ToDisplayName = ResolveEndpointLabel(x.ToCanonicalPersonId, x.ToResolvedParticipantId, canonicalMap, resolvedMap),
-            RelationType = x.RelationType,
-            Confidence = x.Confidence,
+            RelationType = MapRelationTypeToDto(x.RelationType),
+            Confidence = MapConfidenceToDto(x.Confidence),
             SourceObservationId = x.SourceObservationId,
             IsManual = x.IsManual,
             Comment = x.Comment,
@@ -172,8 +174,8 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
                 dto.FromResolvedParticipantId,
                 dto.ToCanonicalPersonId,
                 dto.ToResolvedParticipantId,
-                dto.RelationType,
-                dto.Confidence,
+                MapRelationTypeToDomain(dto.RelationType),
+                MapConfidenceToDomain(dto.Confidence),
                 dto.SourceObservationId,
                 dto.IsManual,
                 dto.Comment));
@@ -181,8 +183,8 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
         else
         {
             existing.Update(
-                dto.RelationType,
-                dto.Confidence,
+                MapRelationTypeToDomain(dto.RelationType),
+                MapConfidenceToDomain(dto.Confidence),
                 dto.SourceObservationId,
                 dto.IsManual,
                 dto.Comment);
@@ -296,6 +298,49 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
             throw new InvalidOperationException("Зв'язок особи із самою собою не підтримується.");
     }
 
+
+    private static DirectiveRelationType MapRelationTypeToDomain(DirectiveRelationTypeDto value)
+        => value switch
+        {
+            DirectiveRelationTypeDto.Command => DirectiveRelationType.Command,
+            DirectiveRelationTypeDto.ReportUp => DirectiveRelationType.ReportUp,
+            DirectiveRelationTypeDto.Control => DirectiveRelationType.Control,
+            DirectiveRelationTypeDto.Correction => DirectiveRelationType.Correction,
+            DirectiveRelationTypeDto.Coordination => DirectiveRelationType.Coordination,
+            DirectiveRelationTypeDto.Other => DirectiveRelationType.Other,
+            _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
+        };
+
+    private static DirectiveRelationConfidence MapConfidenceToDomain(DirectiveRelationConfidenceDto value)
+        => value switch
+        {
+            DirectiveRelationConfidenceDto.Low => DirectiveRelationConfidence.Low,
+            DirectiveRelationConfidenceDto.Medium => DirectiveRelationConfidence.Medium,
+            DirectiveRelationConfidenceDto.High => DirectiveRelationConfidence.High,
+            _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
+        };
+
+    private static DirectiveRelationTypeDto MapRelationTypeToDto(DirectiveRelationType value)
+        => value switch
+        {
+            DirectiveRelationType.Command => DirectiveRelationTypeDto.Command,
+            DirectiveRelationType.ReportUp => DirectiveRelationTypeDto.ReportUp,
+            DirectiveRelationType.Control => DirectiveRelationTypeDto.Control,
+            DirectiveRelationType.Correction => DirectiveRelationTypeDto.Correction,
+            DirectiveRelationType.Coordination => DirectiveRelationTypeDto.Coordination,
+            DirectiveRelationType.Other => DirectiveRelationTypeDto.Other,
+            _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
+        };
+
+    private static DirectiveRelationConfidenceDto MapConfidenceToDto(DirectiveRelationConfidence value)
+        => value switch
+        {
+            DirectiveRelationConfidence.Low => DirectiveRelationConfidenceDto.Low,
+            DirectiveRelationConfidence.Medium => DirectiveRelationConfidenceDto.Medium,
+            DirectiveRelationConfidence.High => DirectiveRelationConfidenceDto.High,
+            _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
+        };
+
     private static Guid? Normalize(Guid? value)
         => value.HasValue && value.Value != Guid.Empty ? value.Value : null;
 
@@ -318,10 +363,10 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
     {
         var parts = new List<string>();
 
-        var normalizedName = SemanticValueExtensions.NormalizeMeaningfulOrNull(name);
+        var normalizedName = PersonName.Create(name)?.Value;
         var normalizedRole = SemanticValueExtensions.NormalizeMeaningfulOrNull(role);
-        var normalizedDivision = SemanticValueExtensions.NormalizeMeaningfulOrNull(division);
-        var normalizedFrequency = SemanticValueExtensions.NormalizeMeaningfulOrNull(frequency);
+        var normalizedDivision = DivisionName.Create(division)?.Value;
+        var normalizedFrequency = FrequencyCode.Create(frequency)?.Value;
 
         if (!string.IsNullOrWhiteSpace(normalizedName))
             parts.Add(normalizedName);
@@ -339,5 +384,5 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
     }
 
     private static string NormalizeKey(string? value)
-        => SemanticValueExtensions.NormalizeMeaningfulOrNull(value)?.Trim().ToUpperInvariant() ?? string.Empty;
+        => PersonName.Create(value)?.ToLookupKey() ?? string.Empty;
 }

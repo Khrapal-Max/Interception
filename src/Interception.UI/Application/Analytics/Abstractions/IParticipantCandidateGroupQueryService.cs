@@ -4,7 +4,6 @@
 
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Interceptions.Dtos;
-using Interception.UI.Domain.Enums;
 
 namespace Interception.UI.Application.Analytics.Abstractions;
 
@@ -17,7 +16,7 @@ public interface IParticipantCandidateGroupQueryService
     /// Повертає групи кандидатів за статусом із пагінацією.
     /// </summary>
     Task<PagedResultDto<CandidateGroupDto>> GetGroupsByStatusAsync(
-        CandidateGroupStatus status,
+        CandidateGroupStatusDto status,
         int page = 1,
         int pageSize = 50,
         CancellationToken ct = default);

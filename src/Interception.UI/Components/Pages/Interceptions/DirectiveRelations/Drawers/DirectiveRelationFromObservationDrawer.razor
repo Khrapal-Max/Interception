@@ -1,4 +1,4 @@
-@using Interception.UI.Domain.Enums
+@using Interception.UI.Application.Interceptions.Dtos
 
 <Drawer IsOpen="@IsOpen"
         IsOpenChanged="IsOpenChanged"
@@ -74,7 +74,7 @@
                     <div class="col-12 col-lg-6">
                         <label class="form-label">Тип факту</label>
                         <select class="form-select rounded-0" @bind="_form.RelationType" disabled="@_saving">
-                            @foreach (var relationType in Enum.GetValues<DirectiveRelationType>())
+                            @foreach (var relationType in Enum.GetValues<DirectiveRelationTypeDto>())
                             {
                                 <option value="@relationType">@BuildRelationTypeLabel(relationType)</option>
                             }
@@ -83,7 +83,7 @@
                     <div class="col-12 col-lg-6">
                         <label class="form-label">Впевненість</label>
                         <select class="form-select rounded-0" @bind="_form.Confidence" disabled="@_saving">
-                            @foreach (var confidence in Enum.GetValues<DirectiveRelationConfidence>())
+                            @foreach (var confidence in Enum.GetValues<DirectiveRelationConfidenceDto>())
                             {
                                 <option value="@confidence">@BuildConfidenceLabel(confidence)</option>
                             }

@@ -7,8 +7,8 @@ using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Interceptions.TextBlock;
 using Interception.UI.Application.Registry.Abstractions;
+using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Application.Toasts;
-using Interception.UI.Domain;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -24,7 +24,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
 
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
-    [Parameter] public IReadOnlyList<InterceptionAction> Actions { get; set; } = [];
+    [Parameter] public IReadOnlyList<InterceptionActionListItemDto> Actions { get; set; } = [];
     [Parameter] public EventCallback OnSaved { get; set; }
 
     private string? _rawText = null;

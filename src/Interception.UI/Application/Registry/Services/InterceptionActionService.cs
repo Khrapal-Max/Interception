@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Registry.Abstractions;
+using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Domain;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +25,7 @@ public sealed class InterceptionActionService(
     // Read
     // -------------------------------------------------------------------------
 
-    public async Task<IReadOnlyList<InterceptionAction>> GetAllAsync(
+    public async Task<IReadOnlyList<InterceptionActionListItemDto>> GetAllAsync(
         CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
@@ -32,6 +33,7 @@ public sealed class InterceptionActionService(
         return await db.InterceptionActions
             .AsNoTracking()
             .OrderBy(a => a.Name)
+            .Select(a => MapToDto(a))
             .ToListAsync(ct);
     }
 
@@ -39,7 +41,7 @@ public sealed class InterceptionActionService(
     // Create
     // -------------------------------------------------------------------------
 
-    public async Task<InterceptionAction> CreateAsync(
+    public async Task<InterceptionActionListItemDto> CreateAsync(
         string name,
         string description,
         CancellationToken ct = default)
@@ -61,14 +63,14 @@ public sealed class InterceptionActionService(
         db.InterceptionActions.Add(action);
         await db.SaveChangesAsync(ct);
 
-        return action;
+        return MapToDto(action);
     }
 
     // -------------------------------------------------------------------------
     // Update
     // -------------------------------------------------------------------------
 
-    public async Task<InterceptionAction> UpdateAsync(
+    public async Task<InterceptionActionListItemDto> UpdateAsync(
         Guid id,
         string name,
         string description,
@@ -93,7 +95,7 @@ public sealed class InterceptionActionService(
         action.Update(normalized, description ?? string.Empty);
         await db.SaveChangesAsync(ct);
 
-        return action;
+        return MapToDto(action);
     }
 
     // -------------------------------------------------------------------------
@@ -124,4 +126,12 @@ public sealed class InterceptionActionService(
 
         return toAdd.Count;
     }
+
+    private static InterceptionActionListItemDto MapToDto(InterceptionAction action)
+        => new()
+        {
+            Id = action.Id,
+            Name = action.Name,
+            Description = action.Description
+        };
 }

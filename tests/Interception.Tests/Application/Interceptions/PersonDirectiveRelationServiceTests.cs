@@ -112,8 +112,8 @@ public sealed class PersonDirectiveRelationServiceTests
         {
             FromCanonicalPersonId = canonicalId,
             ToResolvedParticipantId = resolvedId,
-            RelationType = DirectiveRelationType.Command,
-            Confidence = DirectiveRelationConfidence.High,
+            RelationType = DirectiveRelationTypeDto.Command,
+            Confidence = DirectiveRelationConfidenceDto.High,
             SourceObservationId = observationId,
             IsManual = true,
             Comment = "Явний наказ"
@@ -128,8 +128,8 @@ public sealed class PersonDirectiveRelationServiceTests
         item.ToResolvedParticipantId.Should().Be(resolvedId);
         item.FromDisplayName.Should().Be("ШАПКА");
         item.ToDisplayName.Should().Contain("ГРОМ");
-        item.RelationType.Should().Be(DirectiveRelationType.Command);
-        item.Confidence.Should().Be(DirectiveRelationConfidence.High);
+        item.RelationType.Should().Be(DirectiveRelationTypeDto.Command);
+        item.Confidence.Should().Be(DirectiveRelationConfidenceDto.High);
         item.SourceObservationId.Should().Be(observationId);
         item.IsManual.Should().BeTrue();
         item.Comment.Should().Be("Явний наказ");
@@ -161,8 +161,8 @@ public sealed class PersonDirectiveRelationServiceTests
         {
             FromResolvedParticipantId = leftId,
             ToResolvedParticipantId = rightId,
-            RelationType = DirectiveRelationType.Command,
-            Confidence = DirectiveRelationConfidence.High,
+            RelationType = DirectiveRelationTypeDto.Command,
+            Confidence = DirectiveRelationConfidenceDto.High,
             IsManual = true,
             Comment = "перше збереження"
         }, ct);
@@ -171,8 +171,8 @@ public sealed class PersonDirectiveRelationServiceTests
         {
             FromResolvedParticipantId = leftId,
             ToResolvedParticipantId = rightId,
-            RelationType = DirectiveRelationType.Control,
-            Confidence = DirectiveRelationConfidence.Medium,
+            RelationType = DirectiveRelationTypeDto.Control,
+            Confidence = DirectiveRelationConfidenceDto.Medium,
             IsManual = true,
             Comment = "оновлено"
         }, ct);
@@ -181,8 +181,8 @@ public sealed class PersonDirectiveRelationServiceTests
         var rows = await verifyDb.PersonDirectiveRelations.ToListAsync(ct);
 
         rows.Should().ContainSingle();
-        rows[0].RelationType.Should().Be(DirectiveRelationType.Control);
-        rows[0].Confidence.Should().Be(DirectiveRelationConfidence.Medium);
+        rows[0].RelationType.Should().Be(DirectiveRelationTypeDto.Control);
+        rows[0].Confidence.Should().Be(DirectiveRelationConfidenceDto.Medium);
         rows[0].Comment.Should().Be("оновлено");
     }
 
@@ -207,8 +207,8 @@ public sealed class PersonDirectiveRelationServiceTests
         {
             FromResolvedParticipantId = resolvedId,
             ToResolvedParticipantId = resolvedId,
-            RelationType = DirectiveRelationType.Command,
-            Confidence = DirectiveRelationConfidence.High,
+            RelationType = DirectiveRelationTypeDto.Command,
+            Confidence = DirectiveRelationConfidenceDto.High,
             IsManual = true
         }, ct);
 

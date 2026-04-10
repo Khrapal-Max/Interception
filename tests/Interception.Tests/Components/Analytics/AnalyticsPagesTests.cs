@@ -10,7 +10,6 @@ using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Components.Pages.Analytics.Candidates;
 using Interception.UI.Components.Pages.Analytics.Candidates.Drawers;
-using Interception.UI.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 
@@ -36,7 +35,7 @@ public sealed class CandidatesPageTests : BunitContext
     [Fact]
     public void Render_EmptyData_ShowsEmptyStateAndLoadsData()
     {
-        _queryService.GetGroupsByStatusAsync(Arg.Any<CandidateGroupStatus>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _queryService.GetGroupsByStatusAsync(Arg.Any<CandidateGroupStatusDto>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResultDto<CandidateGroupDto>([], 0, 1, 50));
 
         _analysisService.RunAsync(Arg.Any<CancellationToken>()).Returns(0);
@@ -46,7 +45,7 @@ public sealed class CandidatesPageTests : BunitContext
         cut.Markup.Should().Contain("Груп для розгляду немає");
         cut.Markup.Should().Contain("Запустити аналіз");
 
-        _queryService.Received(1).GetGroupsByStatusAsync(CandidateGroupStatus.Open, 1, 1, Arg.Any<CancellationToken>());
-        _queryService.Received(1).GetGroupsByStatusAsync(CandidateGroupStatus.Open, 1, 50, Arg.Any<CancellationToken>());
+        _queryService.Received(1).GetGroupsByStatusAsync(CandidateGroupStatusDto.Open, 1, 1, Arg.Any<CancellationToken>());
+        _queryService.Received(1).GetGroupsByStatusAsync(CandidateGroupStatusDto.Open, 1, 50, Arg.Any<CancellationToken>());
     }
 }

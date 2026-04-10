@@ -7,6 +7,7 @@ using Interception.UI.Application.Analytics.Builders;
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain.Enums;
+using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -20,17 +21,17 @@ public sealed class ParticipantCandidateGroupQueryService(IDbContextFactory<AppD
 {
     /// <inheritdoc />
     public async Task<PagedResultDto<CandidateGroupDto>> GetGroupsByStatusAsync(
-        CandidateGroupStatus status,
+        CandidateGroupStatusDto status,
         int page = 1,
         int pageSize = 50,
         CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
-        var total = await db.ParticipantCandidateGroups.CountAsync(g => g.Status == status, ct);
+        var total = await db.ParticipantCandidateGroups.CountAsync(g => g.Status == MapStatusToDomain(status), ct);
 
         var groups = await db.ParticipantCandidateGroups
-            .Where(g => g.Status == status)
+            .Where(g => g.Status == MapStatusToDomain(status))
             .OrderByDescending(g => g.ConfidenceScore)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -95,16 +96,16 @@ public sealed class ParticipantCandidateGroupQueryService(IDbContextFactory<AppD
                 ParticipantId = r.ParticipantId,
                 Ordinal = r.Ordinal,
                 ObservedDate = msg?.ObservedDate ?? default,
-                Frequency = SemanticValueExtensions.NormalizeMeaningfulOrNull(msg?.Frequency),
+                Frequency = FrequencyCode.Create(msg?.Frequency)?.Value,
                 VectorSignal = SemanticValueExtensions.NormalizeMeaningfulOrNull(msg?.VectorSignal),
-                Division = SemanticValueExtensions.NormalizeMeaningfulOrNull(msg?.Division),
+                Division = DivisionName.Create(msg?.Division)?.Value,
             };
         }).ToList();
 
         return new CandidateGroupDto
         {
             Id = group.Id,
-            Status = group.Status,
+            Status = MapStatusToDto(group.Status),
             ConfidenceScore = group.ConfidenceScore,
             SuggestedName = group.SuggestedName,
             SuggestedRole = group.SuggestedRole,
@@ -126,4 +127,22 @@ public sealed class ParticipantCandidateGroupQueryService(IDbContextFactory<AppD
             Refs = refs,
         };
     }
+
+    private static CandidateGroupStatus MapStatusToDomain(CandidateGroupStatusDto status)
+        => status switch
+        {
+            CandidateGroupStatusDto.Open => CandidateGroupStatus.Open,
+            CandidateGroupStatusDto.Confirmed => CandidateGroupStatus.Confirmed,
+            CandidateGroupStatusDto.Dismissed => CandidateGroupStatus.Dismissed,
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+        };
+
+    private static CandidateGroupStatusDto MapStatusToDto(CandidateGroupStatus status)
+        => status switch
+        {
+            CandidateGroupStatus.Open => CandidateGroupStatusDto.Open,
+            CandidateGroupStatus.Confirmed => CandidateGroupStatusDto.Confirmed,
+            CandidateGroupStatus.Dismissed => CandidateGroupStatusDto.Dismissed,
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+        };
 }

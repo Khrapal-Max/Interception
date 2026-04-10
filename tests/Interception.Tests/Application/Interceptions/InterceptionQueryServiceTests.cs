@@ -102,6 +102,24 @@ public sealed class InterceptionQueryServiceTests
     }
 
     [Fact]
+    public async Task GetPagedAsync_FilterByFrequency_NormalizesFilterValue()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var command = new InterceptionCommandService(factory);
+        var query = new InterceptionQueryService(factory);
+        var action = await SeedActionAsync(factory, ct: ct);
+
+        await command.CreateAsync(MakeForm(action.Id, frequency: "157.0250"), "op", ct);
+        await command.CreateAsync(MakeForm(action.Id, frequency: "410.1370"), "op", ct);
+
+        var result = await query.GetPagedAsync(new InterceptionFilterDto { Frequency = " 157.0250 " }, ct: ct);
+
+        result.TotalCount.Should().Be(1);
+        result.Items.Should().ContainSingle(i => i.Frequency == "157.0250");
+    }
+
+    [Fact]
     public async Task GetPagedAsync_FilterByVectorSignal_ReturnsOnlyMatching()
     {
         var ct = TestContext.Current.CancellationToken;

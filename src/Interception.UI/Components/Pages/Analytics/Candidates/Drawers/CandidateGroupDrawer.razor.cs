@@ -5,7 +5,6 @@
 using Interception.UI.Application.Analytics.Abstractions;
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Toasts;
-using Interception.UI.Domain.Enums;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 
@@ -38,9 +37,9 @@ public partial class CandidateGroupDrawer : ComponentBase
 
     private string DrawerTitle => Group?.Status switch
     {
-        CandidateGroupStatus.Confirmed =>
+        CandidateGroupStatusDto.Confirmed =>
             $"Підтверджено · {Group.SuggestedName}",
-        CandidateGroupStatus.Dismissed =>
+        CandidateGroupStatusDto.Dismissed =>
             "Відхилена група",
         _ => Group is null ? "Група"
             : $"Група · {Group.ConfidenceScore * 100:F0}% впевненість"
@@ -88,7 +87,7 @@ public partial class CandidateGroupDrawer : ComponentBase
         _contextSuggestions = [];
 
         // Завантажуємо підказки асинхронно тільки для Open груп
-        if (Group?.Status == CandidateGroupStatus.Open)
+        if (Group?.Status == CandidateGroupStatusDto.Open)
             await LoadSuggestionsAsync();
     }
 

@@ -6,7 +6,6 @@ using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Toasts;
-using Interception.UI.Domain.Enums;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.UI.Components.Pages.Interceptions.DirectiveRelations.Drawers;
@@ -210,32 +209,32 @@ public partial class DirectiveRelationFromObservationDrawer : ComponentBase
     private static string BuildOptionLabel(PersonDirectiveRelationOptionDto option)
         => $"{option.DisplayName} [{option.KindLabel}]";
 
-    private static string BuildRelationTypeLabel(DirectiveRelationType relationType)
+    private static string BuildRelationTypeLabel(DirectiveRelationTypeDto relationType)
         => relationType switch
         {
-            DirectiveRelationType.Command => "Наказ / завдання",
-            DirectiveRelationType.ReportUp => "Доповідь вгору",
-            DirectiveRelationType.Control => "Контроль",
-            DirectiveRelationType.Correction => "Коригування",
-            DirectiveRelationType.Coordination => "Координація",
-            DirectiveRelationType.Other => "Інше",
+            DirectiveRelationTypeDto.Command => "Наказ / завдання",
+            DirectiveRelationTypeDto.ReportUp => "Доповідь вгору",
+            DirectiveRelationTypeDto.Control => "Контроль",
+            DirectiveRelationTypeDto.Correction => "Коригування",
+            DirectiveRelationTypeDto.Coordination => "Координація",
+            DirectiveRelationTypeDto.Other => "Інше",
             _ => relationType.ToString()
         };
 
-    private static string BuildConfidenceLabel(DirectiveRelationConfidence confidence)
+    private static string BuildConfidenceLabel(DirectiveRelationConfidenceDto confidence)
         => confidence switch
         {
-            DirectiveRelationConfidence.Low => "Низька",
-            DirectiveRelationConfidence.Medium => "Середня",
-            DirectiveRelationConfidence.High => "Висока",
+            DirectiveRelationConfidenceDto.Low => "Низька",
+            DirectiveRelationConfidenceDto.Medium => "Середня",
+            DirectiveRelationConfidenceDto.High => "Висока",
             _ => confidence.ToString()
         };
 
     private static PersonDirectiveRelationSaveDto CreateDefaultForm()
         => new()
         {
-            RelationType = DirectiveRelationType.Command,
-            Confidence = DirectiveRelationConfidence.High,
+            RelationType = DirectiveRelationTypeDto.Command,
+            Confidence = DirectiveRelationConfidenceDto.High,
             IsManual = true
         };
 }

@@ -6,6 +6,7 @@ using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Registry.Services;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain;
+using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,8 +32,8 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
 
         var message = InterceptionMessage.Create(
             form.ObservedDate,
-            form.Frequency,
-            form.Division,
+            FrequencyCode.Create(form.Frequency)?.Value,
+            DivisionName.Create(form.Division)?.Value,
             form.VectorSignal,
             action,
             form.Note,
@@ -40,7 +41,7 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
             form.PointSignal);
 
         foreach (var p in form.Participants.OrderBy(p => p.Ordinal))
-            message.AddParticipant(p.Name, p.IsUnknown, ParticipantRoleCatalogSupport.NormalizeRole(p.Role, roleMap), p.Ordinal);
+            message.AddParticipant(PersonName.Create(p.Name)?.Value, p.IsUnknown, ParticipantRoleCatalogSupport.NormalizeRole(p.Role, roleMap), p.Ordinal);
 
         foreach (var label in form.Labels)
             message.AddLabel(label);
@@ -67,12 +68,12 @@ public sealed class InterceptionCommandService(IDbContextFactory<AppDbContext> d
 
         var roleMap = await ParticipantRoleCatalogSupport.LoadRoleMapAsync(db, ct);
 
-        message.Update(form.ObservedDate, form.Frequency, form.Division, form.VectorSignal, action, form.Note, form.PointSignal);
+        message.Update(form.ObservedDate, FrequencyCode.Create(form.Frequency)?.Value, DivisionName.Create(form.Division)?.Value, form.VectorSignal, action, form.Note, form.PointSignal);
 
         foreach (var p in message.Participants.ToList())
             message.RemoveParticipant(p.Id);
         foreach (var p in form.Participants.OrderBy(p => p.Ordinal))
-            message.AddParticipant(p.Name, p.IsUnknown, ParticipantRoleCatalogSupport.NormalizeRole(p.Role, roleMap), p.Ordinal);
+            message.AddParticipant(PersonName.Create(p.Name)?.Value, p.IsUnknown, ParticipantRoleCatalogSupport.NormalizeRole(p.Role, roleMap), p.Ordinal);
 
         foreach (var l in message.Labels.ToList())
             message.RemoveLabel(l.Id);

@@ -5,6 +5,7 @@
 using Interception.UI.Application.Analytics.Abstractions;
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Domain.Enums;
+using Interception.UI.Domain.Policies;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -192,8 +193,8 @@ public sealed class GroupHierarchyService(
                 foreach (var child in distinctChildren.Where(x => !x.GroupKey.Equals(parent.GroupKey, StringComparison.OrdinalIgnoreCase)))
                 {
                     var score = 1_000_000
-                                + GetDirectiveConfidenceScore(directive.Confidence)
-                                + GetDirectiveTypeScore(directive.RelationType)
+                                + DirectiveRelationPolicy.GetConfidenceScore(directive.Confidence)
+                                + DirectiveRelationPolicy.GetTypeScore(directive.RelationType)
                                 + (HasDirectBridge(parent, child.GroupKey) ? 25 : 0)
                                 + (HasMeaningfulSharedDivision(parent.Division, child.Division) ? 5 : 0);
 
@@ -207,7 +208,7 @@ public sealed class GroupHierarchyService(
                         Score: score,
                         IsAmbiguous: isAmbiguous,
                         IsDirective: true,
-                        DirectiveLabel: BuildDirectiveLabel(directive)));
+                        DirectiveLabel: DirectiveRelationPolicy.BuildLabel(directive.RelationType, directive.Confidence)));
                 }
             }
         }
@@ -680,47 +681,6 @@ public sealed class GroupHierarchyService(
             Confidence: relation.Confidence,
             Comment: SemanticValueExtensions.NormalizeMeaningfulOrNull(relation.Comment));
     }
-
-    private static string BuildDirectiveLabel(DirectiveHint directive)
-    {
-        var relationLabel = directive.RelationType switch
-        {
-            DirectiveRelationType.Command => "явний наказ",
-            DirectiveRelationType.ReportUp => "явний зв'язок керування",
-            DirectiveRelationType.Control => "явний контроль",
-            DirectiveRelationType.Correction => "явне коригування",
-            DirectiveRelationType.Coordination => "явна координація",
-            _ => "явний структурний зв'язок"
-        };
-
-        var confidenceSuffix = directive.Confidence switch
-        {
-            DirectiveRelationConfidence.High => " (висока впевненість)",
-            DirectiveRelationConfidence.Medium => " (середня впевненість)",
-            _ => " (потребує підтвердження)"
-        };
-
-        return relationLabel + confidenceSuffix;
-    }
-
-    private static int GetDirectiveConfidenceScore(DirectiveRelationConfidence confidence)
-        => confidence switch
-        {
-            DirectiveRelationConfidence.High => 300,
-            DirectiveRelationConfidence.Medium => 200,
-            _ => 100
-        };
-
-    private static int GetDirectiveTypeScore(DirectiveRelationType relationType)
-        => relationType switch
-        {
-            DirectiveRelationType.Command => 60,
-            DirectiveRelationType.Control => 50,
-            DirectiveRelationType.Correction => 45,
-            DirectiveRelationType.ReportUp => 35,
-            DirectiveRelationType.Coordination => 20,
-            _ => 10
-        };
 
     /// <summary>
     /// Технічна candidate-модель ребра до вибору найкращого батька.
