@@ -8,7 +8,7 @@ using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 
-namespace Interception.UI.Components.Pages.Interceptions.Drawers;
+namespace Interception.UI.Components.Pages.Interceptions.InterceptionRegistry.Drawers;
 
 public partial class InterceptionImportDrawer : ComponentBase
 {

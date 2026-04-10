@@ -1,14 +1,16 @@
 @page "/observations"
 @using Interception.UI.Application.Exports.Models
-@using Interception.UI.Components.Pages.Interceptions.Drawers
+@using Interception.UI.Components.Pages.Interceptions.DirectiveRelations.Drawers
+@using Interception.UI.Components.Pages.Interceptions.InterceptionRegistry.Drawers
+@using Interception.UI.Components.Pages.Interceptions.Toolbar
 @using Interception.UI.Extensions
 
 <PageTitle>Реєстр спостережень</PageTitle>
 
 <div class="page-shell">
 
-    <div class="registry-toolbar flex-shrink-0">
-        <div class="registry-toolbar-meta toolbar-meta d-flex align-items-center gap-2">
+    <InterceptionsToolbar ActiveSection="observations">
+        <MetaContent>
             @if (_pagedResult is not null)
             {
                 <span>Записів: <strong>@_pagedResult.TotalCount</strong></span>
@@ -17,28 +19,26 @@
             {
                 <span class="badge text-bg-warning">Фільтр активний</span>
             }
-        </div>      
-
-        <div class="toolbar-actions d-flex align-items-center gap-2 justify-content-end">
-
+        </MetaContent>
+        <ActionsContent>
             <ExportLauncher Kind="ExportKind.Interceptions"
                             Title="Експорт спостережень"
                             ButtonClass="btn btn-outline-secondary btn-sm rounded-0"/>
 
-            <button class="btn btn-secondary btn-sm" @onclick="OpenTextBlock">
+            <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenTextBlock">
                 <i class="bi bi-text-paragraph me-1"></i>З тексту
             </button>
-            <button class="btn btn-primary btn-sm" @onclick="OpenCreate">
+            <button type="button" class="btn btn-primary btn-sm" @onclick="OpenCreate">
                 <i class="bi bi-plus-lg me-1"></i>Додати
             </button>
-            <button class="btn btn-light btn-sm" @onclick="OpenFilter">
+            <button type="button" class="btn btn-light btn-sm" @onclick="OpenFilter">
                 <i class="bi bi-funnel me-1"></i>Фільтр
             </button>
-            <button class="btn btn-light btn-sm" @onclick="OpenImport">
+            <button type="button" class="btn btn-light btn-sm" @onclick="OpenImport">
                 <i class="bi bi-upload me-1"></i>Імпорт
             </button>
-        </div>
-    </div>
+        </ActionsContent>
+    </InterceptionsToolbar>
 
     <div class="page-panel">
         @if (_loading)
@@ -108,6 +108,11 @@
                                             @onclick="() => OpenEdit(item.Id)">
                                         <i class="bi bi-pencil"></i>
                                     </button>
+                                    <button class="btn btn-outline-primary btn-sm me-1"
+                                            title="Зафіксувати команду"
+                                            @onclick="() => OpenDirectiveDrawer(item)">
+                                        <i class="bi bi-diagram-2"></i>
+                                    </button>
                                     <button class="btn btn-danger btn-sm"
                                             title="Видалити"
                                             @onclick="() => DeleteAsync(item.Id, item.ObservedDate)">
@@ -170,3 +175,10 @@
 <InterceptionTextBlockDrawer @bind-IsOpen="_textBlockOpen"
                              Actions="_actions"
                              OnSaved="LoadPageAsync" />
+
+
+<DirectiveRelationFromObservationDrawer @bind-IsOpen="_directiveDrawerOpen"
+                                      ObservationId="_directiveObservationId"
+                                      ObservedDate="_directiveObservedDate"
+                                      Participants="_directiveParticipants"
+                                      OnSaved="LoadPageAsync" />

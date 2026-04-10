@@ -2,14 +2,14 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Analytics.Abstractions;
-using Interception.UI.Application.Analytics.Dtos;
+using Interception.UI.Application.Interceptions.Abstractions;
+using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Domain;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace Interception.UI.Application.Analytics.Services;
+namespace Interception.UI.Application.Interceptions.Services;
 
 /// <summary>
 /// Простий сервіс ручного ведення контуру структурного керування.
@@ -77,34 +77,59 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
         })];
     }
 
-    public async Task<IReadOnlyList<PersonDirectiveRelationOptionDto>> GetIdentityOptionsAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<PersonDirectiveRelationOptionDto>> GetIdentityOptionsAsync(
+        IReadOnlyList<string>? participantNames = null,
+        CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
-        var canonicalRows = await db.CanonicalPersons
+        var normalizedNames = (participantNames ?? [])
+            .Select(NormalizeKey)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (normalizedNames.Count == 0)
+            return await GetAllIdentityOptionsAsync(db, ct);
+
+        var canonicalMemberships = await db.CanonicalPersonMembers
             .AsNoTracking()
-            .OrderBy(x => x.DisplayName)
-            .Select(x => new PersonDirectiveRelationOptionDto
-            {
-                IdentityId = x.Id,
-                IsCanonicalPerson = true,
-                DisplayName = x.DisplayName,
-                KindLabel = "Канонічна особа"
-            })
+            .Include(x => x.CanonicalPerson)
+            .Include(x => x.ResolvedParticipant)
             .ToListAsync(ct);
 
-        var linkedResolvedIds = await db.CanonicalPersonMembers
-            .AsNoTracking()
+        var canonicalRows = canonicalMemberships
+            .Where(x => normalizedNames.Contains(NormalizeKey(x.ResolvedParticipant.Name)))
+            .GroupBy(x => x.CanonicalPersonId)
+            .Select(group =>
+            {
+                var first = group.First();
+                return new PersonDirectiveRelationOptionDto
+                {
+                    IdentityId = first.CanonicalPersonId,
+                    IsCanonicalPerson = true,
+                    DisplayName = first.CanonicalPerson.DisplayName,
+                    KindLabel = "Об’єднаний профіль"
+                };
+            })
+            .OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var linkedResolvedIds = canonicalMemberships
             .Select(x => x.ResolvedParticipantId)
             .Distinct()
-            .ToListAsync(ct);
+            .ToHashSet();
 
         var standaloneResolvedRows = await db.ResolvedParticipants
             .AsNoTracking()
             .Where(x => !linkedResolvedIds.Contains(x.Id))
-            .OrderBy(x => x.Name)
-            .ThenBy(x => x.Division)
-            .ThenBy(x => x.Frequency)
+            .ToListAsync(ct);
+
+        var standaloneOptions = standaloneResolvedRows
+            .Where(x => normalizedNames.Contains(NormalizeKey(x.Name)))
+            .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Division, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Frequency, StringComparer.OrdinalIgnoreCase)
             .Select(x => new PersonDirectiveRelationOptionDto
             {
                 IdentityId = x.Id,
@@ -115,9 +140,9 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
                 Frequency = x.Frequency,
                 KindLabel = "Підтверджена особа"
             })
-            .ToListAsync(ct);
+            .ToList();
 
-        return [.. canonicalRows, .. standaloneResolvedRows];
+        return [.. canonicalRows, .. standaloneOptions];
     }
 
     public async Task SaveAsync(PersonDirectiveRelationSaveDto dto, CancellationToken ct = default)
@@ -178,6 +203,49 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
         await db.SaveChangesAsync(ct);
     }
 
+    private static async Task<IReadOnlyList<PersonDirectiveRelationOptionDto>> GetAllIdentityOptionsAsync(
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var canonicalRows = await db.CanonicalPersons
+            .AsNoTracking()
+            .OrderBy(x => x.DisplayName)
+            .Select(x => new PersonDirectiveRelationOptionDto
+            {
+                IdentityId = x.Id,
+                IsCanonicalPerson = true,
+                DisplayName = x.DisplayName,
+                KindLabel = "Об’єднаний профіль"
+            })
+            .ToListAsync(ct);
+
+        var linkedResolvedIds = await db.CanonicalPersonMembers
+            .AsNoTracking()
+            .Select(x => x.ResolvedParticipantId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var standaloneResolvedRows = await db.ResolvedParticipants
+            .AsNoTracking()
+            .Where(x => !linkedResolvedIds.Contains(x.Id))
+            .OrderBy(x => x.Name)
+            .ThenBy(x => x.Division)
+            .ThenBy(x => x.Frequency)
+            .Select(x => new PersonDirectiveRelationOptionDto
+            {
+                IdentityId = x.Id,
+                IsCanonicalPerson = false,
+                DisplayName = BuildResolvedLabel(x.Name, x.Role, x.Division, x.Frequency),
+                Role = x.Role,
+                Division = x.Division,
+                Frequency = x.Frequency,
+                KindLabel = "Підтверджена особа"
+            })
+            .ToListAsync(ct);
+
+        return [.. canonicalRows, .. standaloneResolvedRows];
+    }
+
     private static async Task EnsureEndpointExistsAsync(
         AppDbContext db,
         Guid? canonicalPersonId,
@@ -191,7 +259,7 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
         {
             var existsCanonical = await db.CanonicalPersons.AnyAsync(x => x.Id == canonicalPersonId.Value, ct);
             if (!existsCanonical)
-                throw new InvalidOperationException("Канонічну особу не знайдено.");
+                throw new InvalidOperationException("Об’єднаний профіль не знайдено.");
 
             return;
         }
@@ -269,4 +337,7 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
 
         return parts.Count == 0 ? "—" : string.Join(" • ", parts);
     }
+
+    private static string NormalizeKey(string? value)
+        => SemanticValueExtensions.NormalizeMeaningfulOrNull(value)?.Trim().ToUpperInvariant() ?? string.Empty;
 }

@@ -1,0 +1,115 @@
+@using Interception.UI.Domain.Enums
+
+<Drawer IsOpen="@IsOpen"
+        IsOpenChanged="IsOpenChanged"
+        Title="Факт командування"
+        DisableClose="@_saving"
+        CloseOnBackdrop="true"
+        CloseOnEscape="true"
+        OnClosed="OnDrawerClosed">
+    <ChildContent>
+        @if (_loading)
+        {
+            <div class="p-3 text-center">
+                <div class="spinner-border spinner-border-sm me-2"></div>Завантаження…
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-3 p-1">
+                <div class="small text-muted">
+                    @if (ObservedDate.HasValue)
+                    {
+                        <span>Спостереження: <strong>@Interception.UI.Extensions.ConverterDateTimeExtensions.ToDisplay(ObservedDate.Value).ToString("dd.MM.yy HH:mm")</strong></span>
+                    }
+                </div>
+
+                @if (_participantLabels.Count > 0)
+                {
+                    <div>
+                        <div class="form-label mb-2">Учасники спостереження</div>
+                        <div class="d-flex flex-wrap gap-1">
+                            @foreach (var label in _participantLabels)
+                            {
+                                <span class="badge bg-secondary">@label</span>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(_warning))
+                {
+                    <div class="alert alert-warning rounded-0 mb-0">@_warning</div>
+                }
+
+                <div>
+                    <label class="form-label">Хто дав команду</label>
+                    <select class="form-select rounded-0"
+                            value="@_fromSelection"
+                            @onchange="OnFromSelectionChanged"
+                            disabled="@(!_options.Any() || _saving)">
+                        <option value="">— оберіть особу —</option>
+                        @foreach (var option in _options)
+                        {
+                            <option value="@BuildOptionValue(option)">@BuildOptionLabel(option)</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label class="form-label">Кому дана команда</label>
+                    <select class="form-select rounded-0"
+                            value="@_toSelection"
+                            @onchange="OnToSelectionChanged"
+                            disabled="@(!_options.Any() || _saving)">
+                        <option value="">— оберіть особу —</option>
+                        @foreach (var option in _options)
+                        {
+                            <option value="@BuildOptionValue(option)">@BuildOptionLabel(option)</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label">Тип факту</label>
+                        <select class="form-select rounded-0" @bind="_form.RelationType" disabled="@_saving">
+                            @foreach (var relationType in Enum.GetValues<DirectiveRelationType>())
+                            {
+                                <option value="@relationType">@BuildRelationTypeLabel(relationType)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label">Впевненість</label>
+                        <select class="form-select rounded-0" @bind="_form.Confidence" disabled="@_saving">
+                            @foreach (var confidence in Enum.GetValues<DirectiveRelationConfidence>())
+                            {
+                                <option value="@confidence">@BuildConfidenceLabel(confidence)</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label">Коментар</label>
+                    <textarea class="form-control rounded-0"
+                              rows="4"
+                              @bind="_form.Comment"
+                              disabled="@_saving"
+                              placeholder="Коротко: наказ, коригування, доповідь, контроль тощо"></textarea>
+                </div>
+            </div>
+        }
+    </ChildContent>
+    <FooterContent>
+        <button type="button" class="btn btn-secondary btn-sm" @onclick="CloseAsync" disabled="@_saving">Скасувати</button>
+        <button type="button" class="btn btn-primary btn-sm" @onclick="SaveAsync" disabled="@(_saving || !CanSave)">
+            @if (_saving)
+            {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            Зафіксувати
+        </button>
+    </FooterContent>
+</Drawer>

@@ -11,7 +11,7 @@ using Interception.UI.Domain;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Pages.Interceptions.Drawers;
+namespace Interception.UI.Components.Pages.Interceptions.InterceptionRegistry.Drawers;
 
 public partial class InterceptionFormDrawer : ComponentBase
 {

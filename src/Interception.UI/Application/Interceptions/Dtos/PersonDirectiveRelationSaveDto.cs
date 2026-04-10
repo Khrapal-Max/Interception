@@ -4,7 +4,7 @@
 
 using Interception.UI.Domain.Enums;
 
-namespace Interception.UI.Application.Analytics.Dtos;
+namespace Interception.UI.Application.Interceptions.Dtos;
 
 /// <summary>
 /// Дані збереження простого ручного зв'язку керування.

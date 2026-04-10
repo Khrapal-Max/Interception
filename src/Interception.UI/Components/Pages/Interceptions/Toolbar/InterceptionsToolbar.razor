@@ -1,0 +1,61 @@
+<div class="registry-toolbar flex-shrink-0">
+    <div class="toolbar-start d-flex align-items-center gap-2">
+        @if (ActiveSection == "observations")
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/observations"
+                     Match="NavLinkMatch.All"
+                     title="Реєстр спостережень"
+                     aria-label="Реєстр спостережень">
+                <i class="bi bi-binoculars"></i>
+                <span class="visually-hidden">Реєстр спостережень</span>
+            </NavLink>
+        }
+        else
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/observations"
+                     title="Реєстр спостережень"
+                     aria-label="Реєстр спостережень">
+                <i class="bi bi-binoculars"></i>
+                <span class="visually-hidden">Реєстр спостережень</span>
+            </NavLink>
+        }
+
+        @if (ActiveSection == "directive-relations")
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/observations/directive-relations"
+                     Match="NavLinkMatch.All"
+                     title="Контур керування"
+                     aria-label="Контур керування">
+                <i class="bi bi-diagram-2"></i>
+                <span class="visually-hidden">Контур керування</span>
+            </NavLink>
+        }
+        else
+        {
+            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
+                     href="/observations/directive-relations"
+                     title="Контур керування"
+                     aria-label="Контур керування">
+                <i class="bi bi-diagram-2"></i>
+                <span class="visually-hidden">Контур керування</span>
+            </NavLink>
+        }
+    </div>
+
+    <div class="registry-toolbar-meta toolbar-meta">
+        @if (MetaContent is not null)
+        {
+            @MetaContent
+        }
+    </div>
+
+    <div class="toolbar-actions d-flex align-items-center gap-2 justify-content-end">
+        @if (ActionsContent is not null)
+        {
+            @ActionsContent
+        }
+    </div>
+</div>

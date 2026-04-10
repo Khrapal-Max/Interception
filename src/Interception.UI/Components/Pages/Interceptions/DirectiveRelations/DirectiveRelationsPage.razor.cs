@@ -8,7 +8,7 @@ using Interception.UI.Application.Toasts;
 using Interception.UI.Domain.Enums;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Pages.Analytics.DirectiveRelations;
+namespace Interception.UI.Components.Pages.Interceptions.DirectiveRelations;
 
 /// <summary>
 /// Проста сторінка ручного ведення зв'язків структурного керування.
@@ -37,7 +37,7 @@ public partial class DirectiveRelationsPage : ComponentBase
         try
         {
             _rows = await PersonDirectiveRelationService.GetAllAsync();
-            _options = await PersonDirectiveRelationService.GetIdentityOptionsAsync();
+            _options = await PersonDirectiveRelationService.GetIdentityOptionsAsync(null);
         }
         catch (Exception ex)
         {

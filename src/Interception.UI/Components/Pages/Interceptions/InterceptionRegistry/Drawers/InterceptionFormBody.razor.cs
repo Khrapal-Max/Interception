@@ -9,7 +9,7 @@ using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
-namespace Interception.UI.Components.Pages.Interceptions.Drawers;
+namespace Interception.UI.Components.Pages.Interceptions.InterceptionRegistry.Drawers;
 
 public partial class InterceptionFormBody : ComponentBase
 {

@@ -7,7 +7,7 @@ using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Pages.Interceptions.Drawers;
+namespace Interception.UI.Components.Pages.Interceptions.InterceptionRegistry.Drawers;
 
 public partial class InterceptionFilterDrawer : ComponentBase
 {

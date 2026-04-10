@@ -2,18 +2,21 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Analytics.Dtos;
+using Interception.UI.Application.Interceptions.Dtos;
 
-namespace Interception.UI.Application.Analytics.Abstractions;
+namespace Interception.UI.Application.Interceptions.Abstractions;
 
 /// <summary>
-/// Сервіс ручного ведення контуру структурного керування.
-/// Працює як з канонічними особами, так і з поодинокими підтвердженими особами.
+/// Контур ручного ведення фактів структурного керування.
 /// </summary>
 public interface IPersonDirectiveRelationService
 {
     Task<IReadOnlyList<PersonDirectiveRelationListItemDto>> GetAllAsync(CancellationToken ct = default);
-    Task<IReadOnlyList<PersonDirectiveRelationOptionDto>> GetIdentityOptionsAsync(CancellationToken ct = default);
+
+    Task<IReadOnlyList<PersonDirectiveRelationOptionDto>> GetIdentityOptionsAsync(
+        IReadOnlyList<string>? participantNames = null,
+        CancellationToken ct = default);
+
     Task SaveAsync(PersonDirectiveRelationSaveDto dto, CancellationToken ct = default);
     Task DeleteAsync(Guid id, CancellationToken ct = default);
 }
