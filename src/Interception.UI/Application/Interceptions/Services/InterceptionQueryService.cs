@@ -160,7 +160,7 @@ public sealed class InterceptionQueryService(IDbContextFactory<AppDbContext> dbF
             VectorSignal = message.VectorSignal,
             InterceptionActionId = message.InterceptionActionId,
             Note = message.Note,
-            Participants = message.Participants
+            Participants = [.. message.Participants
                 .OrderBy(p => p.Ordinal)
                 .Select(p => new InterceptionDetailsParticipantDto
                 {
@@ -168,12 +168,10 @@ public sealed class InterceptionQueryService(IDbContextFactory<AppDbContext> dbF
                     Name = p.Name,
                     Role = p.Role,
                     IsUnknown = p.IsUnknown
-                })
-                .ToList(),
-            Labels = message.Labels
+                })],
+            Labels = [.. message.Labels
                 .OrderBy(l => l.NameLabel)
-                .Select(l => l.NameLabel)
-                .ToList()
+                .Select(l => l.NameLabel)]
         };
     }
 
