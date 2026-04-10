@@ -42,7 +42,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
     {
         if (!IsOpen)
         {
-            _rolesLoaded = false;
+            ResetState(keepRoleCatalog: true);
             return;
         }
 
@@ -50,14 +50,15 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
             return;
 
         _roleSuggestions = [.. (await ParticipantRoleService.GetAllAsync())
-            .Select(x => x.Name)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)];
+        .Select(x => x.Name)
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)];
+
         _rolesLoaded = true;
     }
 
-    private void OnDrawerClosed() => ResetState();
+    private void OnDrawerClosed() => ResetState(keepRoleCatalog: true);
 
     private async Task ParseAsync()
     {
@@ -419,7 +420,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
     private async Task CloseAsync()
         => await IsOpenChanged.InvokeAsync(false);
 
-    private void ResetState()
+    private void ResetState(bool keepRoleCatalog = false)
     {
         _rawText = null;
         _parseError = null;
@@ -429,5 +430,11 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         _saving = false;
         _participantOpen.Clear();
         _participantSuggestions.Clear();
+
+        if (!keepRoleCatalog)
+        {
+            _roleSuggestions = [];
+            _rolesLoaded = false;
+        }
     }
 }

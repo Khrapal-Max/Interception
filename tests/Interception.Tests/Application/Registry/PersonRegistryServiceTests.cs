@@ -6,14 +6,15 @@ using FluentAssertions;
 using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Application.Registry.Services;
 using Interception.UI.Domain;
-using Interception.UI.Domain.Records;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace Interception.Tests.Application.Registry;
 
 /// <summary>
-/// TDD-тести для реєстру осіб.
+/// Тести для сервісу реєстру осіб.
+/// Покривають приховування partial/observed дубля після confirm
+/// і перевикористання confirmed context без створення дубліката.
 /// </summary>
 public sealed class PersonRegistryServiceTests
 {
@@ -21,253 +22,225 @@ public sealed class PersonRegistryServiceTests
         => new(factory);
 
     [Fact]
-    public async Task GetAllAsync_ReturnsConfirmedObservedKnownAndPartialPersons()
+    public async Task GetAllAsync_HidesObservedRow_WhenMatchingConfirmedContextExists()
     {
         var ct = TestContext.Current.CancellationToken;
         var factory = TestDbFactory.CreateFactory();
-        var svc = CreateService(factory);
+        var service = CreateService(factory);
 
         await using (var db = await factory.CreateDbContextAsync(ct))
         {
-            db.ResolvedParticipants.Add(ResolvedParticipant.Create("ШТОРМ", "seed", "старший", "РЕР"));
-
-            var action = CreateAction();
+            var action = InterceptionAction.Create("доповідь", string.Empty);
             db.InterceptionActions.Add(action);
 
-            var known = CreateMessage(action, division: "РЕР");
-            known.AddParticipant("БОНИК", isUnknown: false, role: "оператор");
+            var message = InterceptionMessage.Create(
+                new DateTime(2026, 04, 10, 12, 00, 00, DateTimeKind.Utc),
+                "402.0000",
+                "336 мсп",
+                "р-н Шевченко",
+                action,
+                note: null,
+                createdBy: "seed");
 
-            var partial = CreateMessage(action, division: null);
-            partial.AddParticipant("ГРОМ", isUnknown: false, role: null);
+            message.AddParticipant("КЛИМ", isUnknown: false, role: "водитель", ordinal: 1);
+            db.InterceptionMessages.Add(message);
 
-            var unknown = CreateMessage(action, division: "РЕР");
-            unknown.AddParticipant("НВ 1", isUnknown: true, role: null);
-
-            db.InterceptionMessages.AddRange(known, partial, unknown);
-            await db.SaveChangesAsync(ct);
-        }
-
-        var all = await svc.GetAllAsync(ct);
-
-        all.Select(x => x.Name)
-            .Should()
-            .Contain(["ШТОРМ", "БОНИК", "ГРОМ"])
-            .And.NotContain("НВ 1");
-
-        all.Should().ContainSingle(x => x.Name == "ШТОРМ" && x.IsConfirmed);
-        all.Should().ContainSingle(x => x.Name == "БОНИК" && !x.IsConfirmed && x.Role == "оператор" && x.Division == "РЕР");
-        all.Should().ContainSingle(x => x.Name == "ГРОМ" && !x.IsConfirmed && x.Role == null);
-    }
-
-    [Fact]
-    public async Task GetAllAsync_DoesNotReturnCandidateGroupsWithoutKnownPerson()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        var factory = TestDbFactory.CreateFactory();
-        var svc = CreateService(factory);
-
-        await using (var db = await factory.CreateDbContextAsync(ct))
-        {
-            var action = CreateAction();
-            db.InterceptionActions.Add(action);
-
-            var messageA = CreateMessage(action, division: null);
-            var p1 = messageA.AddParticipant("НВ 1", isUnknown: true);
-
-            var messageB = CreateMessage(action, division: null);
-            var p2 = messageB.AddParticipant("НВ 2", isUnknown: true);
-
-            db.InterceptionMessages.AddRange(messageA, messageB);
-            await db.SaveChangesAsync(ct);
-
-            var group = ParticipantCandidateGroup.Create(
-                [new ParticipantRef(messageA.Id, p1.Id, p1.Ordinal), new ParticipantRef(messageB.Id, p2.Id, p2.Ordinal)],
-                0.87,
-                new PatternMatchReasons { SameFrequency = true, SharedPartners = true },
-                suggestedName: "ВОВК");
-
-            db.ParticipantCandidateGroups.Add(group);
-            await db.SaveChangesAsync(ct);
-        }
-
-        var all = await svc.GetAllAsync(ct);
-
-        all.Select(x => x.Name).Should().NotContain("ВОВК");
-        all.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task UpdateAsync_ForConfirmedPerson_UpdatesCanonicalRecord()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        var factory = TestDbFactory.CreateFactory();
-        var svc = CreateService(factory);
-        Guid id;
-
-        await using (var db = await factory.CreateDbContextAsync(ct))
-        {
-            var resolved = ResolvedParticipant.Create("ГРОМ", "seed", "оператор", "БПЛА");
-            id = resolved.Id;
+            var resolved = ResolvedParticipant.Create("КЛИМ", "registry", "водитель", "336 мсп");
             db.ResolvedParticipants.Add(resolved);
+            db.Entry(resolved).Property("Frequency").CurrentValue = "402.0000";
+
             await db.SaveChangesAsync(ct);
         }
 
-        var dto = await svc.UpdateAsync(
-            id,
-            new PersonRegistryUpdateDto
-            {
-                Name = "  ШТОРМ  ",
-                Role = "  старший  ",
-                Division = "  РЕР  "
-            },
-            ct);
+        var rows = await service.GetAllAsync(ct);
 
-        dto.Name.Should().Be("ШТОРМ");
-        dto.Role.Should().Be("старший");
-        dto.Division.Should().Be("РЕР");
-        dto.IsConfirmed.Should().BeTrue();
+        rows.Should().ContainSingle();
+        rows[0].IsConfirmed.Should().BeTrue();
+        rows[0].Name.Should().Be("КЛИМ");
+        rows[0].Frequency.Should().Be("402.0000");
+        rows[0].Division.Should().Be("336 мсп");
+    }
+
+    [Fact]
+    public async Task GetAllAsync_KeepsObservedRow_WhenConfirmedHasDifferentFrequency()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var action = InterceptionAction.Create("доповідь", string.Empty);
+            db.InterceptionActions.Add(action);
+
+            var message = InterceptionMessage.Create(
+                new DateTime(2026, 04, 10, 12, 00, 00, DateTimeKind.Utc),
+                "402.0000",
+                "336 мсп",
+                "р-н Шевченко",
+                action,
+                note: null,
+                createdBy: "seed");
+
+            message.AddParticipant("КЛИМ", isUnknown: false, role: "водитель", ordinal: 1);
+            db.InterceptionMessages.Add(message);
+
+            var resolved = ResolvedParticipant.Create("КЛИМ", "registry", "водитель", "336 мсп");
+            db.ResolvedParticipants.Add(resolved);
+            db.Entry(resolved).Property("Frequency").CurrentValue = "145.1000";
+
+            await db.SaveChangesAsync(ct);
+        }
+
+        var rows = await service.GetAllAsync(ct);
+
+        rows.Should().HaveCount(2);
+        rows.Should().Contain(x => x.IsConfirmed && x.Name == "КЛИМ" && x.Frequency == "145.1000");
+        rows.Should().Contain(x => !x.IsConfirmed && x.Name == "КЛИМ" && x.Frequency == "402.0000");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ForObservedRowWithSameContext_ReusesExistingConfirmedWithoutDuplicate()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+
+        Guid observedParticipantId;
+        Guid existingResolvedId;
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var action = InterceptionAction.Create("доповідь", string.Empty);
+            db.InterceptionActions.Add(action);
+
+            var message = InterceptionMessage.Create(
+                new DateTime(2026, 04, 10, 12, 00, 00, DateTimeKind.Utc),
+                "402.0000",
+                "336 мсп",
+                "р-н Шевченко",
+                action,
+                note: null,
+                createdBy: "seed");
+
+            var participant = message.AddParticipant("КЛИМ", isUnknown: false, role: "водитель", ordinal: 1);
+            observedParticipantId = participant.Id;
+            db.InterceptionMessages.Add(message);
+
+            var resolved = ResolvedParticipant.Create("КЛИМ", "registry", "старий", "336 мсп");
+            existingResolvedId = resolved.Id;
+            db.ResolvedParticipants.Add(resolved);
+            db.Entry(resolved).Property("Frequency").CurrentValue = "402.0000";
+
+            await db.SaveChangesAsync(ct);
+        }
+
+        var result = await service.UpdateAsync(observedParticipantId, new PersonRegistryUpdateDto
+        {
+            Name = "КЛИМ",
+            Frequency = "402.0000",
+            Role = "водитель",
+            Division = "336 мсп"
+        }, ct);
+
+        result.Id.Should().Be(existingResolvedId);
+        result.IsConfirmed.Should().BeTrue();
+        result.Frequency.Should().Be("402.0000");
+        result.Role.Should().Be("водитель");
+
+        await using (var verifyDb = await factory.CreateDbContextAsync(ct))
+        {
+            (await verifyDb.ResolvedParticipants.CountAsync(ct)).Should().Be(1);
+
+            var persisted = await verifyDb.ResolvedParticipants.SingleAsync(ct);
+            persisted.Id.Should().Be(existingResolvedId);
+            persisted.Name.Should().Be("КЛИМ");
+            persisted.Role.Should().Be("водитель");
+            persisted.Division.Should().Be("336 мсп");
+
+            verifyDb.Entry(persisted).Property<string?>("Frequency").CurrentValue.Should().Be("402.0000");
+        }
+
+        var rows = await service.GetAllAsync(ct);
+        rows.Should().ContainSingle(x => x.IsConfirmed && x.Name == "КЛИМ" && x.Frequency == "402.0000");
+        rows.Should().NotContain(x => !x.IsConfirmed && x.Name == "КЛИМ" && x.Frequency == "402.0000");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ForObservedRowWithDifferentContext_CreatesNewConfirmedRow()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+
+        Guid observedParticipantId;
+        Guid existingResolvedId;
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var action = InterceptionAction.Create("доповідь", string.Empty);
+            db.InterceptionActions.Add(action);
+
+            var message = InterceptionMessage.Create(
+                new DateTime(2026, 04, 10, 12, 00, 00, DateTimeKind.Utc),
+                "402.0000",
+                "336 мсп",
+                "р-н Шевченко",
+                action,
+                note: null,
+                createdBy: "seed");
+
+            var participant = message.AddParticipant("КЛИМ", isUnknown: false, role: "водитель", ordinal: 1);
+            observedParticipantId = participant.Id;
+            db.InterceptionMessages.Add(message);
+
+            var resolved = ResolvedParticipant.Create("КЛИМ", "registry", "водитель", "336 мсп");
+            existingResolvedId = resolved.Id;
+            db.ResolvedParticipants.Add(resolved);
+            db.Entry(resolved).Property("Frequency").CurrentValue = "145.1000";
+
+            await db.SaveChangesAsync(ct);
+        }
+
+        var result = await service.UpdateAsync(observedParticipantId, new PersonRegistryUpdateDto
+        {
+            Name = "КЛИМ",
+            Frequency = "402.0000",
+            Role = "водитель",
+            Division = "336 мсп"
+        }, ct);
+
+        result.Id.Should().NotBe(existingResolvedId);
+        result.IsConfirmed.Should().BeTrue();
+        result.Frequency.Should().Be("402.0000");
 
         await using var verifyDb = await factory.CreateDbContextAsync(ct);
-        var result = await verifyDb.ResolvedParticipants.SingleAsync(r => r.Id == id, ct);
-        result.Name.Should().Be("ШТОРМ");
-        result.Role.Should().Be("старший");
-        result.Division.Should().Be("РЕР");
+        (await verifyDb.ResolvedParticipants.CountAsync(ct)).Should().Be(2);
     }
 
-    [Fact]
-    public async Task UpdateAsync_ForObservedKnown_CreatesCanonicalPersonAtFirstEdit()
+    private sealed class TestDbFactory : IDbContextFactory<AppDbContext>
     {
-        var ct = TestContext.Current.CancellationToken;
-        var factory = TestDbFactory.CreateFactory();
-        var svc = CreateService(factory);
-        Guid observedId;
+        private readonly DbContextOptions<AppDbContext> _options;
 
-        await using (var db = await factory.CreateDbContextAsync(ct))
+        private TestDbFactory(DbContextOptions<AppDbContext> options)
         {
-            var action = CreateAction();
-            db.InterceptionActions.Add(action);
-
-            var message = CreateMessage(action, division: "ВЖ 1 мсб 656 мсп");
-            var participant = message.AddParticipant("МАНДЖЕСТИК", isUnknown: false, role: null);
-            observedId = participant.Id;
-
-            db.InterceptionMessages.Add(message);
-            await db.SaveChangesAsync(ct);
+            _options = options;
         }
 
-        var dto = await svc.UpdateAsync(
-            observedId,
-            new PersonRegistryUpdateDto
-            {
-                Name = "МАДЖЕСТИК",
-                Role = "оператор бпла",
-                Division = "ВЖ 1 мсб 656 мсп"
-            },
-            ct);
-
-        dto.IsConfirmed.Should().BeTrue();
-        dto.Name.Should().Be("МАДЖЕСТИК");
-        dto.Role.Should().Be("оператор бпла");
-        dto.Division.Should().Be("ВЖ 1 мсб 656 мсп");
-
-        await using (var verifyDb = await factory.CreateDbContextAsync(ct))
+        public static IDbContextFactory<AppDbContext> CreateFactory()
         {
-            verifyDb.ResolvedParticipants.Should().ContainSingle(x =>
-                x.Name == "МАДЖЕСТИК" &&
-                x.Role == "оператор бпла" &&
-                x.Division == "ВЖ 1 мсб 656 мсп");
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase($"person-registry-tests-{Guid.NewGuid()}")
+                .EnableSensitiveDataLogging()
+                .Options;
 
-            var participant = await verifyDb.InterceptionMessages
-                .SelectMany(x => x.Participants)
-                .SingleAsync(x => x.Id == observedId, ct);
-
-            participant.IsUnknown.Should().BeFalse();
-            participant.Name.Should().Be("МАДЖЕСТИК");
-            participant.Role.Should().Be("оператор бпла");
+            return new TestDbFactory(options);
         }
 
-        var all = await svc.GetAllAsync(ct);
-        all.Should().ContainSingle(x =>
-            x.Name == "МАДЖЕСТИК" &&
-            x.IsConfirmed &&
-            x.Role == "оператор бпла" &&
-            x.Division == "ВЖ 1 мсб 656 мсп");
-        all.Should().NotContain(x => x.Name == "МАНДЖЕСТИК");
-        all.Should().NotContain(x =>
-            x.Name == "МАДЖЕСТИК" &&
-            !x.IsConfirmed &&
-            x.Division == "ВЖ 1 мсб 656 мсп");
+        public AppDbContext CreateDbContext()
+            => new(_options);
+
+        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(CreateDbContext());
     }
-
-    [Fact]
-    public async Task UpdateAsync_ForPartialPerson_CreatesCanonicalPersonAtFirstEdit()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        var factory = TestDbFactory.CreateFactory();
-        var svc = CreateService(factory);
-        Guid partialId;
-
-        await using (var db = await factory.CreateDbContextAsync(ct))
-        {
-            var action = CreateAction();
-            db.InterceptionActions.Add(action);
-
-            var message = CreateMessage(action, division: null);
-            var participant = message.AddParticipant("ГРОМ", isUnknown: false, role: null);
-            partialId = participant.Id;
-
-            db.InterceptionMessages.Add(message);
-            await db.SaveChangesAsync(ct);
-        }
-
-        var dto = await svc.UpdateAsync(
-            partialId,
-            new PersonRegistryUpdateDto
-            {
-                Name = "ГРОМ",
-                Role = "старший",
-                Division = "РЕР"
-            },
-            ct);
-
-        dto.IsConfirmed.Should().BeTrue();
-        dto.Name.Should().Be("ГРОМ");
-        dto.Role.Should().Be("старший");
-        dto.Division.Should().Be("РЕР");
-
-        await using (var verifyDb = await factory.CreateDbContextAsync(ct))
-        {
-            verifyDb.ResolvedParticipants.Should().ContainSingle(x =>
-                x.Name == "ГРОМ" &&
-                x.Role == "старший" &&
-                x.Division == "РЕР");
-        }
-
-        var all = await svc.GetAllAsync(ct);
-        all.Should().ContainSingle(x =>
-            x.Name == "ГРОМ" &&
-            x.IsConfirmed &&
-            x.Role == "старший" &&
-            x.Division == "РЕР");
-        all.Should().NotContain(x =>
-            x.Name == "ГРОМ" &&
-            !x.IsConfirmed &&
-            x.Role == "старший");
-    }
-
-    private static InterceptionAction CreateAction()
-        => InterceptionAction.Create("Робота", "seed");
-
-    private static InterceptionMessage CreateMessage(
-        InterceptionAction action,
-        string? division)
-        => InterceptionMessage.Create(
-            observedDate: new DateTime(2026, 03, 28, 10, 00, 00, DateTimeKind.Utc),
-            frequency: "402.0000",
-            division: division,
-            vectorSignal: null,
-            interceptionAction: action,
-            note: null,
-            createdBy: "seed",
-            pointSignal: null);
 }
