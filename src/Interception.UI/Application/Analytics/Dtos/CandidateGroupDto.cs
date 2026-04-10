@@ -2,15 +2,13 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Domain.Enums;
-
 namespace Interception.UI.Application.Analytics.Dtos;
 
 /// <summary>Група кандидатів для відображення на сторінці /analytics/candidates.</summary>
 public sealed class CandidateGroupDto
 {
     public Guid Id { get; init; }
-    public CandidateGroupStatus Status { get; init; }
+    public CandidateGroupStatusDto Status { get; init; }
     public double ConfidenceScore { get; init; }
 
     /// <summary>Запропонована системою назва (позивний).</summary>

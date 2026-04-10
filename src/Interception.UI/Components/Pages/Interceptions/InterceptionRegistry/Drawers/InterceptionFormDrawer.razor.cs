@@ -6,8 +6,8 @@ using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Registry.Abstractions;
+using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Application.Toasts;
-using Interception.UI.Domain;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 
@@ -28,7 +28,7 @@ public partial class InterceptionFormDrawer : ComponentBase
     [Parameter] public EventCallback OnSaved { get; set; }
 
     private InterceptionFormDto? _form;
-    private IReadOnlyList<InterceptionAction> _actions = [];
+    private IReadOnlyList<InterceptionActionListItemDto> _actions = [];
     private IReadOnlyList<FrequencySuggestionDto> _frequencySuggestions = [];
     private IReadOnlyList<string> _vectorSuggestions = [];
     private IReadOnlyList<string> _roleSuggestions = [];

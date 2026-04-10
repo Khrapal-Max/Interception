@@ -3,8 +3,8 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Registry.Abstractions;
+using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Application.Toasts;
-using Interception.UI.Domain;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.UI.Components.Pages.Registry.InterceptionActions.Drawers;
@@ -22,7 +22,7 @@ public partial class ActionFormDrawer : ComponentBase
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
 
     /// <summary>null = створення, не null = редагування</summary>
-    [Parameter] public InterceptionAction? EditingAction { get; set; }
+    [Parameter] public InterceptionActionListItemDto? EditingAction { get; set; }
 
     [Parameter] public EventCallback OnSaved { get; set; }
 

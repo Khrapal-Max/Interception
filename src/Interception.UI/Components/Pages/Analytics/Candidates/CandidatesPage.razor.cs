@@ -6,7 +6,6 @@ using Interception.UI.Application.Analytics.Abstractions;
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Toasts;
-using Interception.UI.Domain.Enums;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.UI.Components.Pages.Analytics.Candidates;
@@ -26,7 +25,7 @@ public partial class CandidatesPage : ComponentBase
     // Лічильник Open — для бейджа на табі, завжди актуальний
     private int _openCount;
 
-    private CandidateGroupStatus _activeTab = CandidateGroupStatus.Open;
+    private CandidateGroupStatusDto _activeTab = CandidateGroupStatusDto.Open;
 
     private bool _drawerOpen;
     private CandidateGroupDto? _selectedGroup;
@@ -66,7 +65,7 @@ public partial class CandidatesPage : ComponentBase
         try
         {
             var open = await ParticipantCandidateGroupQueryService.GetGroupsByStatusAsync(
-                CandidateGroupStatus.Open, 1, 1);
+                CandidateGroupStatusDto.Open, 1, 1);
             _openCount = open.TotalCount;
         }
         catch { /* не критично */ }
@@ -114,7 +113,7 @@ public partial class CandidatesPage : ComponentBase
         yield return total;
     }
 
-    private async Task SwitchTabAsync(CandidateGroupStatus status)
+    private async Task SwitchTabAsync(CandidateGroupStatusDto status)
     {
         _activeTab = status;
         _currentPage = 1;

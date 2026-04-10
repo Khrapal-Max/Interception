@@ -8,6 +8,7 @@ using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Registry.Builders;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
+using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,13 +34,15 @@ public sealed class InterceptionQueryService(IDbContextFactory<AppDbContext> dbF
             .Include(m => m.Labels)
             .AsNoTracking()
             .AsQueryable();
+        var hasImpossibleParticipantFilter = false;
 
         if (filter.DateFrom.HasValue)
             q = q.Where(m => m.ObservedDate >= filter.DateFrom.Value);
         if (filter.DateTo.HasValue)
             q = q.Where(m => m.ObservedDate <= filter.DateTo.Value);
-        if (!string.IsNullOrWhiteSpace(filter.Frequency))
-            q = q.Where(m => m.Frequency == filter.Frequency);
+        var frequencyFilter = FrequencyCode.Create(filter.Frequency)?.Value;
+        if (!string.IsNullOrWhiteSpace(frequencyFilter))
+            q = q.Where(m => m.Frequency == frequencyFilter);
         if (!string.IsNullOrWhiteSpace(filter.VectorSignal))
             q = q.Where(m => m.VectorSignal != null && m.VectorSignal.Contains(filter.VectorSignal));
         if (!string.IsNullOrWhiteSpace(filter.ParticipantName))
@@ -47,31 +50,43 @@ public sealed class InterceptionQueryService(IDbContextFactory<AppDbContext> dbF
             // Шукаємо по відомих учасниках (Name Contains)
             // АБО по НВ що підтверджені як ця особа через ResolvedParticipant.
             // Без цього фільтр ігнорує записи де НВ [= ШАПКА ✓].
-            var resolvedParticipantIds = await db.ResolvedParticipants
-                .Where(r => r.Name.Contains(filter.ParticipantName))
-                .Select(r => r.Id)
-                .ToListAsync(ct);
-
-            // ParticipantId НВ що належать підтвердженим особам
-            HashSet<Guid> resolvedUnknownParticipantIds = [];
-
-            if (resolvedParticipantIds.Count > 0)
+            var participantNameFilter = PersonName.Create(filter.ParticipantName)?.Value;
+            if (string.IsNullOrWhiteSpace(participantNameFilter))
             {
-                resolvedUnknownParticipantIds = await db.ParticipantCandidateGroups
-                    .Where(g => g.Status == CandidateGroupStatus.Confirmed
-                             && g.ResolvedParticipantId != null
-                             && resolvedParticipantIds.Contains(g.ResolvedParticipantId!.Value))
-                    .SelectMany(g => g.ParticipantRefs.Select(r => r.ParticipantId))
-                    .ToHashSetAsync(ct);
+                hasImpossibleParticipantFilter = true;
             }
+            else
+            {
+                var resolvedParticipantIds = await db.ResolvedParticipants
+                    .Where(r => r.Name.Contains(participantNameFilter!))
+                    .Select(r => r.Id)
+                    .ToListAsync(ct);
 
-            q = resolvedUnknownParticipantIds.Count > 0
-                ? q.Where(m =>
-                    m.Participants.Any(p => p.Name != null && p.Name.Contains(filter.ParticipantName)) ||
-                    m.Participants.Any(p => p.IsUnknown && resolvedUnknownParticipantIds.Contains(p.Id)))
-                : q.Where(m =>
-                    m.Participants.Any(p => p.Name != null && p.Name.Contains(filter.ParticipantName)));
+                // ParticipantId НВ що належать підтвердженим особам
+                HashSet<Guid> resolvedUnknownParticipantIds = [];
+
+                if (resolvedParticipantIds.Count > 0)
+                {
+                    resolvedUnknownParticipantIds = await db.ParticipantCandidateGroups
+                        .Where(g => g.Status == CandidateGroupStatus.Confirmed
+                                 && g.ResolvedParticipantId != null
+                                 && resolvedParticipantIds.Contains(g.ResolvedParticipantId!.Value))
+                        .SelectMany(g => g.ParticipantRefs.Select(r => r.ParticipantId))
+                        .ToHashSetAsync(ct);
+                }
+
+                q = resolvedUnknownParticipantIds.Count > 0
+                    ? q.Where(m =>
+                        m.Participants.Any(p => p.Name != null && p.Name.Contains(participantNameFilter!)) ||
+                        m.Participants.Any(p => p.IsUnknown && resolvedUnknownParticipantIds.Contains(p.Id)))
+                    : q.Where(m =>
+                        m.Participants.Any(p => p.Name != null && p.Name.Contains(participantNameFilter!)));
+            }
         }
+
+        if (hasImpossibleParticipantFilter)
+            q = q.Where(_ => false);
+
         if (!string.IsNullOrWhiteSpace(filter.LabelName))
             q = q.Where(m => m.Labels.Any(l => l.NameLabel == filter.LabelName));
 
@@ -101,9 +116,9 @@ public sealed class InterceptionQueryService(IDbContextFactory<AppDbContext> dbF
         {
             Id = m.Id,
             ObservedDate = m.ObservedDate,
-            Frequency = m.Frequency,
+            Frequency = FrequencyCode.Create(m.Frequency)?.Value,
             VectorSignal = m.VectorSignal,
-            Division = m.Division,
+            Division = DivisionName.Create(m.Division)?.Value,
             ActionName = m.ActionName,
             Participants = [.. m.Participants.Select(p =>
             {

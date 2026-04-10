@@ -5,9 +5,9 @@
 using Bunit;
 using FluentAssertions;
 using Interception.UI.Application.Registry.Abstractions;
+using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Application.Toasts;
 using Interception.UI.Components.Pages.Registry.InterceptionActions.Drawers;
-using Interception.UI.Domain;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -33,7 +33,7 @@ public sealed class ActionFormDrawerTests : BunitContext
     }
 
     private IRenderedComponent<ActionFormDrawer> RenderDrawer(
-        InterceptionAction? editingAction = null,
+        InterceptionActionListItemDto? editingAction = null,
         bool isOpen = true,
         EventCallback? onSaved = null,
         EventCallback<bool>? isOpenChanged = null)
@@ -89,7 +89,7 @@ public sealed class ActionFormDrawerTests : BunitContext
     public void EditMode_PreFillsName()
     {
         SetupService();
-        var action = InterceptionAction.Create("координація дій", "опис дії");
+        var action = new InterceptionActionListItemDto { Id = Guid.NewGuid(), Name = "координація дій", Description = "опис дії" };
 
         var cut = RenderDrawer(editingAction: action);
 
@@ -101,7 +101,7 @@ public sealed class ActionFormDrawerTests : BunitContext
     public void EditMode_PreFillsDescription()
     {
         SetupService();
-        var action = InterceptionAction.Create("координація дій", "опис дії");
+        var action = new InterceptionActionListItemDto { Id = Guid.NewGuid(), Name = "координація дій", Description = "опис дії" };
 
         var cut = RenderDrawer(editingAction: action);
 
@@ -181,7 +181,7 @@ public sealed class ActionFormDrawerTests : BunitContext
     {
         var svc = SetupService();
         svc.CreateAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-           .Returns(InterceptionAction.Create("координація дій", ""));
+           .Returns(new InterceptionActionListItemDto { Id = Guid.NewGuid(), Name = "координація дій", Description = "" });
 
         var cut = RenderDrawer();
 
@@ -200,7 +200,7 @@ public sealed class ActionFormDrawerTests : BunitContext
     {
         var svc = SetupService();
         svc.CreateAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-           .Returns(InterceptionAction.Create("нова дія", ""));
+           .Returns(new InterceptionActionListItemDto { Id = Guid.NewGuid(), Name = "нова дія", Description = "" });
 
         var onSavedCalled = false;
         var onSaved = EventCallback.Factory.Create(this, () => onSavedCalled = true);
@@ -222,7 +222,7 @@ public sealed class ActionFormDrawerTests : BunitContext
     public async Task Save_EditMode_CallsUpdateAsync()
     {
         var svc = SetupService();
-        var action = InterceptionAction.Create("стара назва", "старий опис");
+        var action = new InterceptionActionListItemDto { Id = Guid.NewGuid(), Name = "стара назва", Description = "старий опис" };
 
         svc.UpdateAsync(action.Id, Arg.Any<string>(), Arg.Any<string>(),
                         Arg.Any<CancellationToken>())
@@ -315,7 +315,7 @@ public sealed class ActionFormDrawerTests : BunitContext
     public void ClosedDrawer_FieldsNotPreFilled()
     {
         SetupService();
-        var action = InterceptionAction.Create("назва", "опис");
+        var action = new InterceptionActionListItemDto { Id = Guid.NewGuid(), Name = "назва", Description = "опис" };
 
         var cut = RenderDrawer(editingAction: action, isOpen: false);
 

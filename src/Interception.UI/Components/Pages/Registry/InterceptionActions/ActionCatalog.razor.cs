@@ -3,8 +3,8 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Registry.Abstractions;
+using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Application.Toasts;
-using Interception.UI.Domain;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.UI.Components.Pages.Registry.InterceptionActions;
@@ -14,12 +14,12 @@ public partial class ActionCatalog : ComponentBase
     [Inject] private IInterceptionActionService ActionService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
-    private IReadOnlyList<InterceptionAction>? _actions;
+    private IReadOnlyList<InterceptionActionListItemDto>? _actions;
     private bool _loading;
 
     // Дравер
     private bool _drawerOpen;
-    private InterceptionAction? _editingAction; // null = створення
+    private InterceptionActionListItemDto? _editingAction; // null = створення
 
     // -------------------------------------------------------------------------
     // Lifecycle
@@ -60,7 +60,7 @@ public partial class ActionCatalog : ComponentBase
         _drawerOpen = true;
     }
 
-    private void OpenEdit(InterceptionAction action)
+    private void OpenEdit(InterceptionActionListItemDto action)
     {
         _editingAction = action;
         _drawerOpen = true;

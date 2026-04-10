@@ -5,7 +5,7 @@
 using FluentAssertions;
 using Interception.UI.Application.Analytics.Services;
 using Interception.UI.Domain;
-using Interception.UI.Domain.Enums;
+using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Domain.Records;
 
 namespace Interception.Tests.Application.Analytics;
@@ -21,7 +21,7 @@ public sealed class ParticipantCandidateGroupQueryServiceTests
         var ct = TestContext.Current.CancellationToken;
         var service = CreateService();
 
-        var result = await service.GetGroupsByStatusAsync(CandidateGroupStatus.Open, 1, 20, ct);
+        var result = await service.GetGroupsByStatusAsync(CandidateGroupStatusDto.Open, 1, 20, ct);
 
         result.Items.Should().BeEmpty();
         result.TotalCount.Should().Be(0);
@@ -77,7 +77,7 @@ public sealed class ParticipantCandidateGroupQueryServiceTests
         db.ParticipantCandidateGroups.AddRange(high, medium, lowDismissed);
         await db.SaveChangesAsync(ct);
 
-        var result = await service.GetGroupsByStatusAsync(CandidateGroupStatus.Open, page: 1, pageSize: 1, ct);
+        var result = await service.GetGroupsByStatusAsync(CandidateGroupStatusDto.Open, page: 1, pageSize: 1, ct);
 
         result.TotalCount.Should().Be(2);
         result.Page.Should().Be(1);
@@ -88,7 +88,7 @@ public sealed class ParticipantCandidateGroupQueryServiceTests
         result.Items.Should().HaveCount(1);
         result.Items[0].Id.Should().Be(high.Id);
         result.Items[0].ConfidenceScore.Should().Be(0.92);
-        result.Items[0].Status.Should().Be(CandidateGroupStatus.Open);
+        result.Items[0].Status.Should().Be(CandidateGroupStatusDto.Open);
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public sealed class ParticipantCandidateGroupQueryServiceTests
 
         dto.Should().NotBeNull();
         dto!.Id.Should().Be(group.Id);
-        dto.Status.Should().Be(CandidateGroupStatus.Confirmed);
+        dto.Status.Should().Be(CandidateGroupStatusDto.Confirmed);
         dto.ConfidenceScore.Should().Be(0.87);
         dto.SuggestedName.Should().Be("ГРОМ");
         dto.SuggestedRole.Should().Be("оператор");

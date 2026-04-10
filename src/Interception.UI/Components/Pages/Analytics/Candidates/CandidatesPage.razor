@@ -1,7 +1,7 @@
 @page "/analytics/candidates"
 @using Interception.UI.Components.Pages.Analytics.Candidates.Drawers
 @using Interception.UI.Components.Pages.Analytics.Toolbar
-@using Interception.UI.Domain.Enums
+@using Interception.UI.Application.Analytics.Dtos
 @using Interception.UI.Extensions
 
 <PageTitle>Групи на розгляд</PageTitle>
@@ -18,7 +18,7 @@
         <ActionsContent>
             <button class="btn btn-success btn-sm"
                     @onclick="RunAnalysisAsync"
-                    disabled="@(_running || _activeTab != CandidateGroupStatus.Open)">
+                    disabled="@(_running || _activeTab != CandidateGroupStatusDto.Open)">
                 @if (_running)
                 {
                     <span class="spinner-border spinner-border-sm me-1"></span>
@@ -35,8 +35,8 @@
     <div class="flex-shrink-0 px-1 px-md-2">
         <ul class="nav nav-tabs">
             <li class="nav-item">
-                <button class="nav-link @(_activeTab == CandidateGroupStatus.Open ? "active" : "")"
-                        @onclick="() => SwitchTabAsync(CandidateGroupStatus.Open)">
+                <button class="nav-link @(_activeTab == CandidateGroupStatusDto.Open ? "active" : "")"
+                        @onclick="() => SwitchTabAsync(CandidateGroupStatusDto.Open)">
                     Очікують
                     @if (_openCount > 0)
                     {
@@ -45,14 +45,14 @@
                 </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link @(_activeTab == CandidateGroupStatus.Confirmed ? "active" : "")"
-                        @onclick="() => SwitchTabAsync(CandidateGroupStatus.Confirmed)">
+                <button class="nav-link @(_activeTab == CandidateGroupStatusDto.Confirmed ? "active" : "")"
+                        @onclick="() => SwitchTabAsync(CandidateGroupStatusDto.Confirmed)">
                     Підтверджені
                 </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link @(_activeTab == CandidateGroupStatus.Dismissed ? "active" : "")"
-                        @onclick="() => SwitchTabAsync(CandidateGroupStatus.Dismissed)">
+                <button class="nav-link @(_activeTab == CandidateGroupStatusDto.Dismissed ? "active" : "")"
+                        @onclick="() => SwitchTabAsync(CandidateGroupStatusDto.Dismissed)">
                     Відхилені
                 </button>
             </li>
@@ -73,7 +73,7 @@
             <div class="panel-scroll d-flex align-items-center justify-content-center page-empty">
                 <div class="text-center py-5">
                     <i class="bi bi-person-question-mark fs-1 d-block mb-2 opacity-25"></i>
-                    @if (_activeTab == CandidateGroupStatus.Open)
+                    @if (_activeTab == CandidateGroupStatusDto.Open)
                     {
                         <div>Груп для розгляду немає</div>
                         <div class="small mt-1">Натисніть «Запустити аналіз», щоб знайти спільні ознаки серед НВ</div>
@@ -95,7 +95,7 @@
                             <th>Пропозиція</th>
                             <th>Ознаки</th>
                             <th>Спост.</th>
-                            @if (_activeTab != CandidateGroupStatus.Open)
+                            @if (_activeTab != CandidateGroupStatusDto.Open)
                             {
                                 <th>Оператор</th>
                             }
@@ -140,7 +140,7 @@
                                     </div>
                                 </td>
                                 <td class="small text-muted">@group.Refs.Count</td>
-                                @if (_activeTab != CandidateGroupStatus.Open)
+                                @if (_activeTab != CandidateGroupStatusDto.Open)
                                 {
                                     <td class="small text-muted text-nowrap">@group.ResolvedBy · @(group.ResolvedAt is null ? "—" : ConverterDateTimeExtensions.ToDisplay(group.ResolvedAt.Value).ToString("dd.MM.yy"))</td>
                                 }

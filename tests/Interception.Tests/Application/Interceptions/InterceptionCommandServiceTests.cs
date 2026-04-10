@@ -74,6 +74,30 @@ public sealed class InterceptionCommandServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_NormalizesFrequencyDivisionAndParticipantName()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var svc = CreateService(factory);
+        var action = await SeedActionAsync(factory, ct: ct);
+
+        var form = MakeForm(
+            action.Id,
+            frequency: " 157.0250 ",
+            division: " 1 мсб 656 мсп ",
+            participants:
+            [
+                new ParticipantFormDto { Ordinal = 1, Name = "  ШАПКА  ", IsUnknown = false, Role = "центр" }
+            ]);
+
+        var message = await svc.CreateAsync(form, "operator", ct);
+
+        message.Frequency.Should().Be("157.0250");
+        message.Division.Should().Be("1 мсб 656 мсп");
+        message.Participants.Should().ContainSingle(p => p.Name == "ШАПКА");
+    }
+
+    [Fact]
     public async Task CreateAsync_UnknownAction_Throws()
     {
         var ct = TestContext.Current.CancellationToken;

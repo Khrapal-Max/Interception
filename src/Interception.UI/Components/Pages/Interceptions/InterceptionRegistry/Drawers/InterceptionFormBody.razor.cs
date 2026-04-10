@@ -4,7 +4,7 @@
 
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Interceptions.Dtos;
-using Interception.UI.Domain;
+using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -16,7 +16,7 @@ public partial class InterceptionFormBody : ComponentBase
     [Parameter, EditorRequired]
     public InterceptionFormDto Form { get; set; } = default!;
 
-    [Parameter] public IReadOnlyList<InterceptionAction> Actions { get; set; } = [];
+    [Parameter] public IReadOnlyList<InterceptionActionListItemDto> Actions { get; set; } = [];
     [Parameter] public IReadOnlyList<FrequencySuggestionDto> FrequencySuggestions { get; set; } = [];
     [Parameter] public IReadOnlyList<string> VectorSuggestions { get; set; } = [];
     [Parameter] public IReadOnlyList<string> RoleSuggestions { get; set; } = [];

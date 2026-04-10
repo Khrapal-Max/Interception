@@ -5,8 +5,8 @@
 using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Registry.Abstractions;
+using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Application.Toasts;
-using Interception.UI.Domain;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 
@@ -53,7 +53,7 @@ public partial class InterceptionRegistry : ComponentBase
     private DateTime? _directiveObservedDate;
     private IReadOnlyList<Application.Analytics.Dtos.ParticipantBriefDto> _directiveParticipants = [];
 
-    private IReadOnlyList<InterceptionAction> _actions = [];
+    private IReadOnlyList<InterceptionActionListItemDto> _actions = [];
 
     // -------------------------------------------------------------------------
     // Lifecycle

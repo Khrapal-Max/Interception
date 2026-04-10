@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Registry.Abstractions;
+using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Domain;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -14,16 +15,17 @@ namespace Interception.UI.Application.Registry.Services;
 /// </summary>
 public sealed class ParticipantRoleService(IDbContextFactory<AppDbContext> dbFactory) : IParticipantRoleService
 {
-    public async Task<IReadOnlyList<ParticipantRole>> GetAllAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<ParticipantRoleListItemDto>> GetAllAsync(CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
         return await db.ParticipantRoles
             .AsNoTracking()
             .OrderBy(x => x.Name)
+            .Select(x => MapToDto(x))
             .ToListAsync(ct);
     }
 
-    public async Task<ParticipantRole> CreateAsync(string name, string description, CancellationToken ct = default)
+    public async Task<ParticipantRoleListItemDto> CreateAsync(string name, string description, CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
@@ -37,10 +39,10 @@ public sealed class ParticipantRoleService(IDbContextFactory<AppDbContext> dbFac
         var role = ParticipantRole.Create(normalized, description);
         db.ParticipantRoles.Add(role);
         await db.SaveChangesAsync(ct);
-        return role;
+        return MapToDto(role);
     }
 
-    public async Task<ParticipantRole> UpdateAsync(Guid id, string name, string description, CancellationToken ct = default)
+    public async Task<ParticipantRoleListItemDto> UpdateAsync(Guid id, string name, string description, CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
@@ -56,7 +58,7 @@ public sealed class ParticipantRoleService(IDbContextFactory<AppDbContext> dbFac
 
         role.Update(normalized, description);
         await db.SaveChangesAsync(ct);
-        return role;
+        return MapToDto(role);
     }
 
     public async Task<int> SeedFromListAsync(IEnumerable<string> names, CancellationToken ct = default)
@@ -82,4 +84,12 @@ public sealed class ParticipantRoleService(IDbContextFactory<AppDbContext> dbFac
         await db.SaveChangesAsync(ct);
         return toAdd.Count;
     }
+
+    private static ParticipantRoleListItemDto MapToDto(ParticipantRole role)
+        => new()
+        {
+            Id = role.Id,
+            Name = role.Name,
+            Description = role.Description
+        };
 }

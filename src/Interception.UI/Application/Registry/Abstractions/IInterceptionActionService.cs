@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Domain;
+using Interception.UI.Application.Registry.Dtos;
 
 namespace Interception.UI.Application.Registry.Abstractions;
 
@@ -15,14 +15,14 @@ namespace Interception.UI.Application.Registry.Abstractions;
 public interface IInterceptionActionService
 {
     /// <summary>Повертає всі дії відсортовані за назвою.</summary>
-    Task<IReadOnlyList<InterceptionAction>> GetAllAsync(
+    Task<IReadOnlyList<InterceptionActionListItemDto>> GetAllAsync(
         CancellationToken ct = default);
 
     /// <summary>
     /// Створює нову дію.
     /// Кидає <see cref="InvalidOperationException"/> якщо назва вже існує.
     /// </summary>
-    Task<InterceptionAction> CreateAsync(
+    Task<InterceptionActionListItemDto> CreateAsync(
         string name,
         string description,
         CancellationToken ct = default);
@@ -32,7 +32,7 @@ public interface IInterceptionActionService
     /// Кидає <see cref="InvalidOperationException"/> якщо запис не знайдено
     /// або нова назва вже зайнята іншою дією.
     /// </summary>
-    Task<InterceptionAction> UpdateAsync(
+    Task<InterceptionActionListItemDto> UpdateAsync(
         Guid id,
         string name,
         string description,
