@@ -6,6 +6,7 @@ using Interception.UI.Application.Import.Abstractions;
 using Interception.UI.Application.Import.Dtos;
 using Interception.UI.Application.Registry.Services;
 using Interception.UI.Domain;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -22,13 +23,18 @@ public sealed class InterceptionImportService(
     {
         ArgumentNullException.ThrowIfNull(excelStream);
 
-        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        await using var bufferedStream = new MemoryStream();
+        await excelStream.CopyToAsync(bufferedStream, ct);
+        bufferedStream.Position = 0;
 
         var parser = new ExcelImportParser();
-        var parsed = parser.Parse(excelStream);
+        var parsed = parser.Parse(bufferedStream);
+
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
 
         var actions = await db.InterceptionActions
             .ToListAsync(ct);
+
         var roleMap = await ParticipantRoleCatalogSupport.LoadRoleMapAsync(db, ct);
 
         var cache = new ImportContextCache(actions, roleMap);
@@ -57,7 +63,10 @@ public sealed class InterceptionImportService(
         }
 
         if (imported > 0)
+        {
+            await MarkCompletedTopologySnapshotsAsStaleAsync(db, ct);
             await db.SaveChangesAsync(ct);
+        }
 
         return new ImportResultDto
         {
@@ -97,11 +106,27 @@ public sealed class InterceptionImportService(
         }
 
         foreach (var participant in row.Participants.OrderBy(x => x.Ordinal))
-            message.AddParticipant(participant.Name, participant.IsUnknown, cache.ResolveRole(participant.Role), participant.Ordinal);
+            message.AddParticipant(
+                participant.Name,
+                participant.IsUnknown,
+                cache.ResolveRole(participant.Role),
+                participant.Ordinal);
 
         foreach (var label in row.Labels)
             message.AddLabel(label);
 
         return (message, null);
+    }
+
+    private static async Task MarkCompletedTopologySnapshotsAsStaleAsync(
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var completedRuns = await db.TopologySnapshotRuns
+            .Where(x => x.Status == TopologySnapshotRunStatus.Completed && !x.IsStale)
+            .ToListAsync(ct);
+
+        foreach (var run in completedRuns)
+            run.MarkStale();
     }
 }

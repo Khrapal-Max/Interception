@@ -36,5 +36,6 @@ public static class MigrationExtensions
         }
 
         await DatabaseSeedDefaults.EnsureActionSeedAsync(db, logger, ct);
+        await DatabaseSeedDefaults.EnsureRoleSeedAsync(db, logger, ct);
     }
 }
