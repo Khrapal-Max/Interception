@@ -65,7 +65,7 @@ public partial class ExportLauncher : ComponentBase
     private bool _busy;
     private bool _hasAction;
     private ExportKind? _resolvedKind;
-    private string _resolvedTitle = "Експорт";
+    private string _resolvedTitle = ".xlsx";
 
     /// <inheritdoc />
     protected override Task OnParametersSetAsync()
@@ -109,17 +109,8 @@ public partial class ExportLauncher : ComponentBase
         return null;
     }
 
-    private static string BuildDefaultTitle(ExportKind? kind) => kind switch
-    {
-        ExportKind.Interceptions => "",
-        ExportKind.FrequencyDivisionRegistry => "",
-        ExportKind.PersonsRegistry => "",
-        ExportKind.DivisionReport => "",
-        ExportKind.DayPicture => "",
-        ExportKind.LinkMap => "",
-        ExportKind.FrequencyWeights => "",
-        _ => "",
-    };
+    private static string BuildDefaultTitle(ExportKind? kind)
+        => ".xlsx";
 
     private async Task ExportAsync()
     {

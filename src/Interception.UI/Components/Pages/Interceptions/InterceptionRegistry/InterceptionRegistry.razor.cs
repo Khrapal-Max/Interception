@@ -49,6 +49,7 @@ public partial class InterceptionRegistry : ComponentBase
     private bool _importOpen;
     private bool _textBlockOpen;
     private bool _directiveDrawerOpen;
+    private const bool ShowLegacyDirectiveDrawerButton = false;
     private Guid? _directiveObservationId;
     private DateTime? _directiveObservedDate;
     private IReadOnlyList<Application.Analytics.Dtos.ParticipantBriefDto> _directiveParticipants = [];

@@ -1,11 +1,12 @@
-@page "/observations/directive-relations"
-@using Interception.UI.Components.Pages.Interceptions.Toolbar
+@page "/registries/directive-relations"
 @using Interception.UI.Application.Interceptions.Dtos
+@using Interception.UI.Components.Pages.Registry.Toolbar
+@using Interception.UI.Extensions
 
-<PageTitle>Спостереження — Контур керування</PageTitle>
+<PageTitle>Регістри — Контур керування</PageTitle>
 
 <div class="page-shell">
-    <InterceptionsToolbar ActiveSection="directive-relations">
+    <RegistriesToolbar ActiveSection="directive-relations">
         <MetaContent>
             <span>Зв'язків: <strong>@_rows.Count</strong></span>
             <span>Варіантів осіб: <strong>@_options.Count</strong></span>
@@ -17,7 +18,7 @@
                 ⟳
             </button>
         </ActionsContent>
-    </InterceptionsToolbar>
+    </RegistriesToolbar>
 
     <div class="page-panel h-100 directive-page-panel">
         @if (_loading)
@@ -107,7 +108,7 @@
                                 {
                                     <span class="me-1">💾</span>
                                 }
-                                Зберегти зв'язок
+                                Зберегти
                             </button>
                         </div>
                     </div>
@@ -140,7 +141,7 @@
                                             <th style="width: 26%">Ким керує</th>
                                             <th style="width: 14%">Тип</th>
                                             <th style="width: 12%">Впевненість</th>
-                                            <th style="width: 14%">Коментар</th>
+                                            <th style="width: 12%">Деталі</th>
                                             <th style="width: 8%"></th>
                                         </tr>
                                     </thead>
@@ -152,12 +153,19 @@
                                                 <td class="fw-medium">@row.ToDisplayName</td>
                                                 <td>@BuildRelationTypeLabel(row.RelationType)</td>
                                                 <td>@BuildConfidenceLabel(row.Confidence)</td>
-                                                <td class="small text-muted">@(string.IsNullOrWhiteSpace(row.Comment) ? "—" : row.Comment)</td>
+                                                <td class="text-end">
+                                                    <button class="btn btn-outline-secondary btn-sm rounded-0 me-1"
+                                                            title="Деталі"
+                                                            aria-label="Деталі"
+                                                            @onclick="() => OpenDetails(row)">
+                                                        ℹ
+                                                    </button>
+                                                </td>
                                                 <td class="text-end">
                                                     <button class="btn btn-outline-danger btn-sm rounded-0"
                                                             title="Видалити зв'язок"
                                                             aria-label="Видалити зв'язок"
-                                                            @onclick="() => DeleteAsync(row.Id)">
+                                                            @onclick="() => AskDelete(row.Id)">
                                                         ✕
                                                     </button>
                                                 </td>
@@ -173,3 +181,72 @@
         }
     </div>
 </div>
+
+@if (_detailsOpen && _detailsRow is not null)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="directiveDetailsTitle">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-0">
+                <div class="modal-header">
+                    <h5 id="directiveDetailsTitle" class="modal-title">Деталі зв'язку</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseDetails"></button>
+                </div>
+                <div class="modal-body">
+                    <div><strong>Хто керує:</strong> @_detailsRow.FromDisplayName</div>
+                    <div><strong>Ким керує:</strong> @_detailsRow.ToDisplayName</div>
+                    <div><strong>Оновлено:</strong> @ConverterDateTimeExtensions.ToDisplay(_detailsRow.UpdatedAtUtc).ToString("dd.MM.yyyy HH:mm")</div>
+                    <div><strong>SourceObservationId:</strong> @(_detailsRow.SourceObservationId?.ToString() ?? "—")</div>
+                    <div><strong>Коментар:</strong> @(string.IsNullOrWhiteSpace(_detailsRow.Comment) ? "—" : _detailsRow.Comment)</div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm rounded-0" @onclick="CloseDetails">Закрити</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_deleteConfirmOpen && _pendingDeleteId.HasValue)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="directiveDeleteTitle">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-0">
+                <div class="modal-header">
+                    <h5 id="directiveDeleteTitle" class="modal-title">Підтвердження видалення</h5>
+                    <button type="button"
+                            class="btn-close"
+                            aria-label="Close"
+                            disabled="@_deleteInProgress"
+                            @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2">Видалити зв'язок керування?</div>
+                    <label class="form-label">Причина видалення (коротко)</label>
+                    <textarea class="form-control rounded-0"
+                              rows="3"
+                              @bind="_deleteReason"
+                              disabled="@_deleteInProgress"
+                              placeholder="Напр. дублікат, помилкова ідентифікація, неактуально"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-light btn-sm rounded-0"
+                            disabled="@_deleteInProgress"
+                            @onclick="CancelDelete">
+                        Скасувати
+                    </button>
+                    <button class="btn btn-danger btn-sm rounded-0"
+                            disabled="@(_deleteInProgress || string.IsNullOrWhiteSpace(_deleteReason))"
+                            @onclick="ConfirmDeleteAsync">
+                        @if (_deleteInProgress)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Видалити
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}

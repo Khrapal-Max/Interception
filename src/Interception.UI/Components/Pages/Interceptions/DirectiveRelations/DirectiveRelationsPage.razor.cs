@@ -24,6 +24,12 @@ public partial class DirectiveRelationsPage : ComponentBase
     protected bool _saving;
     protected string? _fromSelection;
     protected string? _toSelection;
+    protected PersonDirectiveRelationListItemDto? _detailsRow;
+    protected bool _detailsOpen;
+    protected bool _deleteConfirmOpen;
+    protected Guid? _pendingDeleteId;
+    protected bool _deleteInProgress;
+    protected string? _deleteReason;
 
     protected override async Task OnInitializedAsync()
         => await LoadAsync();
@@ -82,17 +88,63 @@ public partial class DirectiveRelationsPage : ComponentBase
         }
     }
 
-    protected async Task DeleteAsync(Guid id)
+    protected void OpenDetails(PersonDirectiveRelationListItemDto row)
     {
+        _detailsRow = row;
+        _detailsOpen = true;
+    }
+
+    protected void CloseDetails()
+    {
+        _detailsOpen = false;
+        _detailsRow = null;
+    }
+
+    protected void AskDelete(Guid id)
+    {
+        _pendingDeleteId = id;
+        _deleteReason = null;
+        _deleteConfirmOpen = true;
+    }
+
+    protected void CancelDelete()
+    {
+        if (_deleteInProgress)
+            return;
+
+        _deleteConfirmOpen = false;
+        _pendingDeleteId = null;
+        _deleteReason = null;
+    }
+
+    protected async Task ConfirmDeleteAsync()
+    {
+        if (_pendingDeleteId is null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_deleteReason))
+        {
+            Toasts.Warning("Потрібна причина", "Вкажіть коротку причину видалення.");
+            return;
+        }
+
+        _deleteInProgress = true;
         try
         {
-            await PersonDirectiveRelationService.DeleteAsync(id);
-            Toasts.Success("Зв'язок видалено", "Запис контуру керування прибрано.");
+            await PersonDirectiveRelationService.DeleteAsync(_pendingDeleteId.Value);
+            Toasts.Success("Зв'язок видалено", $"Запис прибрано. Причина: {_deleteReason.Trim()}.");
+            _deleteConfirmOpen = false;
+            _pendingDeleteId = null;
+            _deleteReason = null;
             await LoadAsync();
         }
         catch (Exception ex)
         {
             Toasts.Error("Помилка видалення", ex.Message);
+        }
+        finally
+        {
+            _deleteInProgress = false;
         }
     }
 

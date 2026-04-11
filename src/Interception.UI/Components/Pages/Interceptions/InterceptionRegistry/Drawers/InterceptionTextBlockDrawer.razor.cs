@@ -21,6 +21,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
     [Inject] private IInterceptionSuggestionService InterceptionSuggestionService { get; set; } = default!;
     [Inject] private IParticipantRoleService ParticipantRoleService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
+    [Inject] private IPersonDirectiveRelationService PersonDirectiveRelationService { get; set; } = default!;
 
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
@@ -37,6 +38,12 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
     private readonly Dictionary<int, IReadOnlyList<ParticipantSuggestionDto>> _participantSuggestions = [];
     private IReadOnlyList<string> _roleSuggestions = [];
     private bool _rolesLoaded;
+    private bool _directiveEnabled;
+    private bool _directiveLoading;
+    private IReadOnlyList<PersonDirectiveRelationOptionDto> _directiveOptions = [];
+    private PersonDirectiveRelationSaveDto _directiveForm = CreateDefaultDirectiveForm();
+    private string? _directiveFromSelection;
+    private string? _directiveToSelection;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -81,6 +88,7 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         _participantSuggestions.Clear();
 
         await PopulateParticipantRolesAsync(_form);
+        await LoadDirectiveOptionsAsync();
     }
 
     private static InterceptionFormDto BuildForm(TextBlockParseResult r)
@@ -398,11 +406,18 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
             return;
         }
 
+        if (_directiveEnabled && !HasDirectiveSelection())
+        {
+            Toasts.Warning("Неповний зв'язок", "Оберіть обидві особи для блоку «Зв'язок керування» або вимкніть цей блок.");
+            return;
+        }
+
         _saving = true;
         try
         {
-            await InterceptionCommandService.CreateAsync(_form, "operator");
+            var observationId = await InterceptionCommandService.CreateAsync(_form, "operator");
             Toasts.Success("Збережено", $"Запис від {ConverterDateTimeExtensions.ToDisplay(_form.ObservedDate):dd.MM HH:mm} створено.");
+            await SaveDirectiveRelationAsync(observationId);
 
             await CloseAsync();
             await OnSaved.InvokeAsync();
@@ -430,6 +445,12 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         _saving = false;
         _participantOpen.Clear();
         _participantSuggestions.Clear();
+        _directiveEnabled = false;
+        _directiveLoading = false;
+        _directiveOptions = [];
+        _directiveForm = CreateDefaultDirectiveForm();
+        _directiveFromSelection = null;
+        _directiveToSelection = null;
 
         if (!keepRoleCatalog)
         {
@@ -437,4 +458,152 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
             _rolesLoaded = false;
         }
     }
+
+    private async Task OnDirectiveEnabledChanged(ChangeEventArgs args)
+    {
+        _directiveEnabled = args.Value is bool value && value;
+        if (_directiveEnabled)
+            await LoadDirectiveOptionsAsync();
+    }
+
+    private async Task LoadDirectiveOptionsAsync()
+    {
+        if (_form is null)
+        {
+            _directiveOptions = [];
+            return;
+        }
+
+        _directiveLoading = true;
+        try
+        {
+            var names = _form.Participants
+                .Where(x => !string.IsNullOrWhiteSpace(x.Name))
+                .Select(x => x.Name!.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            _directiveOptions = await PersonDirectiveRelationService.GetIdentityOptionsAsync(names);
+        }
+        catch (Exception ex)
+        {
+            _directiveOptions = [];
+            Toasts.Warning("Контур керування", $"Не вдалося завантажити варіанти осіб: {ex.Message}");
+        }
+        finally
+        {
+            _directiveLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task SaveDirectiveRelationAsync(Guid observationId)
+    {
+        if (!_directiveEnabled)
+            return;
+
+        try
+        {
+            _directiveForm.SourceObservationId = observationId;
+            _directiveForm.IsManual = true;
+            await PersonDirectiveRelationService.SaveAsync(_directiveForm);
+            Toasts.Success("Контур керування", "Зв'язок керування зафіксовано.");
+        }
+        catch (Exception ex)
+        {
+            Toasts.Warning("Контур керування", $"Observation збережено, але зв'язок не зафіксовано: {ex.Message}");
+        }
+    }
+
+    private bool HasDirectiveSelection()
+    {
+        var hasFrom = _directiveForm.FromCanonicalPersonId.HasValue || _directiveForm.FromResolvedParticipantId.HasValue;
+        var hasTo = _directiveForm.ToCanonicalPersonId.HasValue || _directiveForm.ToResolvedParticipantId.HasValue;
+        return hasFrom && hasTo;
+    }
+
+    private void OnDirectiveFromSelectionChanged(ChangeEventArgs args)
+    {
+        _directiveFromSelection = args.Value?.ToString();
+        ApplyDirectiveSelection(_directiveFromSelection, isFrom: true);
+    }
+
+    private void OnDirectiveToSelectionChanged(ChangeEventArgs args)
+    {
+        _directiveToSelection = args.Value?.ToString();
+        ApplyDirectiveSelection(_directiveToSelection, isFrom: false);
+    }
+
+    private void ApplyDirectiveSelection(string? value, bool isFrom)
+    {
+        if (isFrom)
+        {
+            _directiveForm.FromCanonicalPersonId = null;
+            _directiveForm.FromResolvedParticipantId = null;
+        }
+        else
+        {
+            _directiveForm.ToCanonicalPersonId = null;
+            _directiveForm.ToResolvedParticipantId = null;
+        }
+
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+
+        var parts = value.Split(':', 2, StringSplitOptions.TrimEntries);
+        if (parts.Length != 2 || !Guid.TryParse(parts[1], out var id))
+            return;
+
+        var isCanonical = string.Equals(parts[0], "canonical", StringComparison.OrdinalIgnoreCase);
+
+        if (isFrom)
+        {
+            if (isCanonical)
+                _directiveForm.FromCanonicalPersonId = id;
+            else
+                _directiveForm.FromResolvedParticipantId = id;
+        }
+        else
+        {
+            if (isCanonical)
+                _directiveForm.ToCanonicalPersonId = id;
+            else
+                _directiveForm.ToResolvedParticipantId = id;
+        }
+    }
+
+    private static string BuildDirectiveOptionValue(PersonDirectiveRelationOptionDto option)
+        => $"{(option.IsCanonicalPerson ? "canonical" : "resolved")}:{option.IdentityId}";
+
+    private static string BuildDirectiveOptionLabel(PersonDirectiveRelationOptionDto option)
+        => $"{option.DisplayName} [{option.KindLabel}]";
+
+    private static string BuildDirectiveRelationTypeLabel(DirectiveRelationTypeDto relationType)
+        => relationType switch
+        {
+            DirectiveRelationTypeDto.Command => "Наказ / завдання",
+            DirectiveRelationTypeDto.ReportUp => "Доповідь вгору",
+            DirectiveRelationTypeDto.Control => "Контроль",
+            DirectiveRelationTypeDto.Correction => "Коригування",
+            DirectiveRelationTypeDto.Coordination => "Координація",
+            DirectiveRelationTypeDto.Other => "Інше",
+            _ => relationType.ToString()
+        };
+
+    private static string BuildDirectiveConfidenceLabel(DirectiveRelationConfidenceDto confidence)
+        => confidence switch
+        {
+            DirectiveRelationConfidenceDto.Low => "Низька",
+            DirectiveRelationConfidenceDto.Medium => "Середня",
+            DirectiveRelationConfidenceDto.High => "Висока",
+            _ => confidence.ToString()
+        };
+
+    private static PersonDirectiveRelationSaveDto CreateDefaultDirectiveForm()
+        => new()
+        {
+            RelationType = DirectiveRelationTypeDto.Command,
+            Confidence = DirectiveRelationConfidenceDto.High,
+            IsManual = true
+        };
 }
