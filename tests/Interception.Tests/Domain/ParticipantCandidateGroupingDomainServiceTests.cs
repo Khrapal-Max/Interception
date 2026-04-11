@@ -4,7 +4,9 @@
 
 using FluentAssertions;
 using Interception.UI.Domain.Entities;
-using Interception.UI.Domain.Records;
+using Interception.UI.Domain.Options;
+using Interception.UI.Domain.Projections;
+using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Domain.Services;
 
 namespace Interception.Tests.Domain;

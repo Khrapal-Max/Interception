@@ -750,7 +750,7 @@ namespace Interception.UI.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.OwnsMany("Interception.UI.Domain.Records.MessageGroupEntry", "Entries", b1 =>
+                    b.OwnsMany("Interception.UI.Domain.ValueObjects.MessageGroupEntry", "Entries", b1 =>
                         {
                             b1.Property<Guid>("MessageGroupId")
                                 .HasColumnType("TEXT")
@@ -784,7 +784,7 @@ namespace Interception.UI.Migrations
                         .HasForeignKey("ResolvedParticipantId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.OwnsMany("Interception.UI.Domain.Records.ParticipantRef", "ParticipantRefs", b1 =>
+                    b.OwnsMany("Interception.UI.Domain.ValueObjects.ParticipantRef", "ParticipantRefs", b1 =>
                         {
                             b1.Property<int>("id")
                                 .ValueGeneratedOnAdd()
@@ -877,7 +877,7 @@ namespace Interception.UI.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.OwnsMany("Interception.UI.Domain.Records.MatrixCell", "Cells", b1 =>
+                    b.OwnsMany("Interception.UI.Domain.ValueObjects.MatrixCell", "Cells", b1 =>
                         {
                             b1.Property<Guid>("MatrixId")
                                 .HasColumnType("TEXT")

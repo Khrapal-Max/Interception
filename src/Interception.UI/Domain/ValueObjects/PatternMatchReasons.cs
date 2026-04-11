@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Domain.Entities;
+namespace Interception.UI.Domain.ValueObjects;
 
 /// <summary>
 /// Перелік ознак за якими PatternRecognitionService визначив схожість між учасниками.

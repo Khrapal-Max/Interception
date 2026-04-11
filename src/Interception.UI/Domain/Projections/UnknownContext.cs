@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Domain.Records;
+namespace Interception.UI.Domain.Projections;
 
 /// <summary>
 /// Плоский контекст невідомого учасника без EF-навігацій.
