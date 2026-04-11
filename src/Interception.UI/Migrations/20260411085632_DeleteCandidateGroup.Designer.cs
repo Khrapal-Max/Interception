@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Interception.UI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260410113830_AddRolesInterceprions")]
-    partial class AddRolesInterceprions
+    [Migration("20260411085632_DeleteCandidateGroup")]
+    partial class DeleteCandidateGroup
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

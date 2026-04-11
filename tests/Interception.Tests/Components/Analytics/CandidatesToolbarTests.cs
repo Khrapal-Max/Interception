@@ -18,26 +18,9 @@ public sealed class CandidatesToolbarTests : BunitContext
         var cut = Render<CandidatesToolbar>();
 
         var links = cut.FindAll("a.registry-nav-link");
-        links.Should().HaveCount(5);
-        links.Select(l => l.GetAttribute("href")).Should().Contain(["/analytics/candidates", "/analytics/link-map", "/analytics/frequency-weights"]);
-    }
-
-    [Fact]
-    public void ActiveSection_Groups_UsesExactMatchingForGroupsLink()
-    {
-        Services.GetRequiredService<NavigationManager>()
-            .NavigateTo("http://localhost/analytics/candidates/archive");
-
-        var active = Render<CandidatesToolbar>(p => p
-            .Add(x => x.ActiveSection, "groups"))
-            .Find("a[href='/analytics/candidates']");
-
-        var nonActive = Render<CandidatesToolbar>()
-            .Find("a[href='/analytics/candidates']");
-
-        active.ClassList.Should().NotContain("active");
-        nonActive.ClassList.Should().Contain("active");
-    }
+        links.Should().HaveCount(4);
+        links.Select(l => l.GetAttribute("href")).Should().Contain(["/analytics/link-map", "/analytics/frequency-weights"]);
+    }    
 
     [Fact]
     public void Render_WithMetaAndActions_RendersBothFragments()
