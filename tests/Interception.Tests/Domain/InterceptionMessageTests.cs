@@ -3,8 +3,8 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
+using Interception.UI.Domain.Entities;
 using Interception.UI.Domain.Exceptions;
-using Interception.UI.Domain.Interceptions;
 
 namespace Interception.Tests.Domain;
 

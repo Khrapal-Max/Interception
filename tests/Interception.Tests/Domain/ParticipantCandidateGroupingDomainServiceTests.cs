@@ -3,9 +3,9 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Domain.Analytics;
-using Interception.UI.Domain.Analytics.Records;
-using Interception.UI.Domain.Analytics.Services;
+using Interception.UI.Domain.Entities;
+using Interception.UI.Domain.Records;
+using Interception.UI.Domain.Services;
 
 namespace Interception.Tests.Domain;
 

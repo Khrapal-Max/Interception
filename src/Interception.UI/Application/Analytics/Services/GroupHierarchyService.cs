@@ -4,9 +4,9 @@
 
 using Interception.UI.Application.Analytics.Abstractions;
 using Interception.UI.Application.Analytics.Dtos;
-using Interception.UI.Domain.Interceptions;
-using Interception.UI.Domain.Interceptions.Enums;
-using Interception.UI.Domain.Interceptions.Policies;
+using Interception.UI.Domain.Entities;
+using Interception.UI.Domain.Enums;
+using Interception.UI.Domain.Policies;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;

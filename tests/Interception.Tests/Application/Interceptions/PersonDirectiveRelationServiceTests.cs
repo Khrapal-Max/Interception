@@ -5,9 +5,8 @@
 using FluentAssertions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Interceptions.Services;
-using Interception.UI.Domain.Analytics;
-using Interception.UI.Domain.Interceptions;
-using Interception.UI.Domain.Interceptions.Enums;
+using Interception.UI.Domain.Entities;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 

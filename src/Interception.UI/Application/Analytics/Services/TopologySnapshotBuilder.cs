@@ -5,9 +5,8 @@
 using Interception.UI.Application.Analytics.Abstractions;
 using Interception.UI.Application.Analytics.Builders.LinkMap;
 using Interception.UI.Application.Analytics.Dtos;
-using Interception.UI.Domain.Analytics.Enums;
-using Interception.UI.Domain.Analytics.Topologies;
-using Interception.UI.Domain.Interceptions;
+using Interception.UI.Domain.Entities;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;

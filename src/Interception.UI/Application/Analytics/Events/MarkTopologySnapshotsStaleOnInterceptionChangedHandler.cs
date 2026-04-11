@@ -4,7 +4,7 @@
 
 using Interception.UI.Application.Common.Events;
 using Interception.UI.Application.Interceptions.Events;
-using Interception.UI.Domain.Analytics.Enums;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 

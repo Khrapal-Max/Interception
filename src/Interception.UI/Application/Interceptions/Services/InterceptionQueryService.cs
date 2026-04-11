@@ -6,7 +6,7 @@ using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Interceptions.Abstractions;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Registry.Builders;
-using Interception.UI.Domain.Analytics.Enums;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;

@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Domain.Interceptions;
+using Interception.UI.Domain.Entities;
 
 namespace Interception.UI.Application.Reports.Builders;
 

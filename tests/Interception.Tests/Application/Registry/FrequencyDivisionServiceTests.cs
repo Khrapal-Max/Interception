@@ -4,7 +4,7 @@
 
 using FluentAssertions;
 using Interception.UI.Application.Registry.Services;
-using Interception.UI.Domain.Interceptions;
+using Interception.UI.Domain.Entities;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 

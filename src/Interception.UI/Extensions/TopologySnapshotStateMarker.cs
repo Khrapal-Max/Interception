@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Domain.Analytics.Enums;
+using Interception.UI.Domain.Enums;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 

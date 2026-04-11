@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Import.Dtos;
-using Interception.UI.Domain.Interceptions;
+using Interception.UI.Domain.Entities;
 using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Extensions;
 
