@@ -232,7 +232,7 @@ public sealed class InterceptionFormDrawerTests : BunitContext
 
         var cut = RenderDrawer(isOpen: false);
 
-        // _form = null → InterceptionFormBody не рендериться
+        // _form = null → тіло форми не рендериться
         // select з діями не відображається (немає форми)
         cut.FindAll("select").Should().BeEmpty();
     }
