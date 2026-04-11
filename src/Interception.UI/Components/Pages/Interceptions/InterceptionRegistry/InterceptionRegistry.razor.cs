@@ -7,6 +7,7 @@ using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Registry.Abstractions;
 using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Application.Toasts;
+using Interception.UI.Domain.Exceptions;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 
@@ -52,6 +53,10 @@ public partial class InterceptionRegistry : ComponentBase
     private Guid? _directiveObservationId;
     private DateTime? _directiveObservedDate;
     private IReadOnlyList<Application.Analytics.Dtos.ParticipantBriefDto> _directiveParticipants = [];
+    private bool _deleteConfirmOpen;
+    private Guid? _pendingDeleteId;
+    private DateTime? _pendingDeleteObservedDate;
+    private bool _deleteInProgress;
 
     private IReadOnlyList<InterceptionActionListItemDto> _actions = [];
 
@@ -80,7 +85,8 @@ public partial class InterceptionRegistry : ComponentBase
         }
         catch (Exception ex)
         {
-            Toasts.Error("Помилка завантаження", ex.Message);
+            var error = MapDomainError(ex, "load");
+            Toasts.Error(error.Title, error.Hint);
         }
         finally
         {
@@ -188,18 +194,80 @@ public partial class InterceptionRegistry : ComponentBase
     // Видалення
     // -------------------------------------------------------------------------
 
-    private async Task DeleteAsync(Guid id, DateTime observedDate)
+    private void AskDeleteConfirmation(Guid id, DateTime observedDate)
     {
-        // TODO: замінити на модальний діалог підтвердження
+        _pendingDeleteId = id;
+        _pendingDeleteObservedDate = observedDate;
+        _deleteConfirmOpen = true;
+    }
+
+    private void CancelDeleteConfirmation()
+    {
+        if (_deleteInProgress)
+            return;
+
+        _deleteConfirmOpen = false;
+        _pendingDeleteId = null;
+        _pendingDeleteObservedDate = null;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (_pendingDeleteId is null || _pendingDeleteObservedDate is null)
+            return;
+
+        _deleteInProgress = true;
+
         try
         {
-            await InterceptionCommandService.DeleteAsync(id);
-            Toasts.Success("Видалено", $"Запис від {ConverterDateTimeExtensions.ToDisplay(observedDate):dd.MM HH:mm} видалено.");
+            await InterceptionCommandService.DeleteAsync(_pendingDeleteId.Value);
+            Toasts.Success("Видалено", $"Запис від {ConverterDateTimeExtensions.ToDisplay(_pendingDeleteObservedDate.Value):dd.MM HH:mm} видалено.");
             await LoadPageAsync();
+            _deleteConfirmOpen = false;
+            _pendingDeleteId = null;
+            _pendingDeleteObservedDate = null;
         }
         catch (Exception ex)
         {
-            Toasts.Error("Помилка видалення", ex.Message);
+            var error = MapDomainError(ex, "delete");
+            Toasts.Error(error.Title, error.Hint);
+        }
+        finally
+        {
+            _deleteInProgress = false;
         }
     }
+
+    private static (string Title, string Hint) MapDomainError(Exception ex, string operation)
+    {
+        if (Contains(ex.Message, "не знайдено"))
+        {
+            return operation == "delete"
+                ? ("Запис вже недоступний", "Схоже, observation вже видалено або змінено в іншій сесії. Оновіть список і спробуйте ще раз.")
+                : ("Дані оновились", "Частину записів вже змінено. Оновіть сторінку для актуального стану.");
+        }
+
+        return ex switch
+        {
+            EntityNotFoundDomainException => operation == "delete"
+                ? ("Запис вже недоступний", "Observation не знайдено. Оновіть список та перевірте фільтри.")
+                : ("Дані не знайдено", "Частину довідкових даних не знайдено. Оновіть сторінку."),
+
+            AggregateStateViolationException => ("Дія недоступна", "Запис зараз у стані, який не дозволяє цю операцію. Перевірте пов'язані зміни та повторіть пізніше."),
+
+            DomainException => ("Порушено бізнес-правило", "Операцію зупинено правилами домену. Перевірте пов'язані поля або стан запису."),
+
+            ArgumentException => ("Некоректні вхідні дані", "Перевірте фільтри/параметри, оновіть сторінку та повторіть дію."),
+
+            InvalidOperationException => ("Операцію не виконано", "Стан даних змінився. Оновіть список і повторіть дію."),
+
+            _ => operation == "delete"
+                ? ("Помилка видалення", "Не вдалося видалити observation. Спробуйте ще раз або зверніться до адміністратора.")
+                : ("Помилка завантаження", "Не вдалося завантажити дані. Перевірте з'єднання та повторіть спробу.")
+        };
+    }
+
+    private static bool Contains(string? value, string pattern) =>
+        !string.IsNullOrWhiteSpace(value) &&
+        value.Contains(pattern, StringComparison.OrdinalIgnoreCase);
 }

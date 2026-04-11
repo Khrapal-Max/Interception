@@ -21,22 +21,26 @@
             }
         </MetaContent>
         <ActionsContent>
-            <ExportLauncher Kind="ExportKind.Interceptions"
-                            Title="Експорт спостережень"
-                            ButtonClass="btn btn-outline-secondary btn-sm rounded-0"/>
+            <div class="toolbar-action-cluster toolbar-action-cluster-primary" role="group" aria-label="Пріоритетні дії">
+                <button type="button" class="btn btn-primary btn-sm" @onclick="OpenCreate">
+                    <i class="bi bi-plus-lg me-1"></i>Додати
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenTextBlock">
+                    <i class="bi bi-text-paragraph me-1"></i>З тексту
+                </button>
+            </div>
 
-            <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenTextBlock">
-                <i class="bi bi-text-paragraph me-1"></i>З тексту
-            </button>
-            <button type="button" class="btn btn-primary btn-sm" @onclick="OpenCreate">
-                <i class="bi bi-plus-lg me-1"></i>Додати
-            </button>
-            <button type="button" class="btn btn-light btn-sm" @onclick="OpenFilter">
-                <i class="bi bi-funnel me-1"></i>Фільтр
-            </button>
-            <button type="button" class="btn btn-light btn-sm" @onclick="OpenImport">
-                <i class="bi bi-upload me-1"></i>Імпорт
-            </button>
+            <div class="toolbar-action-cluster" role="group" aria-label="Дії з даними">
+                <button type="button" class="btn btn-light btn-sm" @onclick="OpenFilter">
+                    <i class="bi bi-funnel me-1"></i>Фільтр
+                </button>
+                <button type="button" class="btn btn-light btn-sm" @onclick="OpenImport">
+                    <i class="bi bi-upload me-1"></i>Імпорт
+                </button>
+                <ExportLauncher Kind="ExportKind.Interceptions"
+                                Title="Експорт спостережень"
+                                ButtonClass="btn btn-outline-secondary btn-sm rounded-0"/>
+            </div>
         </ActionsContent>
     </InterceptionsToolbar>
 
@@ -103,21 +107,27 @@
                                 </td>
                                 <td>@(item.ActionName ?? "—")</td>
                                 <td class="text-end p-2 text-nowrap">
-                                    <button class="btn btn-secondary btn-sm me-1"
-                                            title="Редагувати"
-                                            @onclick="() => OpenEdit(item.Id)">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-warning btn-sm me-1"
-                                            title="Зафіксувати команду"
-                                            @onclick="() => OpenDirectiveDrawer(item)">
-                                        <i class="bi bi-diagram-2"></i>
-                                    </button>
-                                    <button class="btn btn-danger btn-sm"
-                                            title="Видалити"
-                                            @onclick="() => DeleteAsync(item.Id, item.ObservedDate)">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                    <div class="row-action-groups">
+                                        <div class="btn-group btn-group-sm" role="group" aria-label="Оперативні дії">
+                                            <button class="btn btn-secondary"
+                                                    title="Редагувати"
+                                                    @onclick="() => OpenEdit(item.Id)">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-warning"
+                                                    title="Зафіксувати команду"
+                                                    @onclick="() => OpenDirectiveDrawer(item)">
+                                                <i class="bi bi-diagram-2"></i>
+                                            </button>
+                                        </div>
+                                        <div class="btn-group btn-group-sm" role="group" aria-label="Критична дія">
+                                            <button class="btn btn-danger"
+                                                    title="Видалити"
+                                                    @onclick="() => AskDeleteConfirmation(item.Id, item.ObservedDate)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -182,3 +192,44 @@
                                       ObservedDate="_directiveObservedDate"
                                       Participants="_directiveParticipants"
                                       OnSaved="LoadPageAsync" />
+
+@if (_deleteConfirmOpen && _pendingDeleteObservedDate is not null)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="deleteObservationTitle">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 id="deleteObservationTitle" class="modal-title">Підтвердження видалення</h5>
+                    <button type="button"
+                            class="btn-close"
+                            aria-label="Close"
+                            disabled="@_deleteInProgress"
+                            @onclick="CancelDeleteConfirmation"></button>
+                </div>
+                <div class="modal-body">
+                    Ви дійсно хочете видалити запис від
+                    <strong>@ConverterDateTimeExtensions.ToDisplay(_pendingDeleteObservedDate.Value).ToString("dd.MM.yy HH:mm")</strong>?
+                </div>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-light"
+                            disabled="@_deleteInProgress"
+                            @onclick="CancelDeleteConfirmation">
+                        Скасувати
+                    </button>
+                    <button type="button"
+                            class="btn btn-danger"
+                            disabled="@_deleteInProgress"
+                            @onclick="ConfirmDeleteAsync">
+                        @if (_deleteInProgress)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Видалити
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
