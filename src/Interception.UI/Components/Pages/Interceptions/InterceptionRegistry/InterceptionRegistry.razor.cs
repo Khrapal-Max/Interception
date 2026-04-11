@@ -7,7 +7,6 @@ using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Registry.Abstractions;
 using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Application.Toasts;
-using Interception.UI.Domain.Exceptions;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 
@@ -247,16 +246,21 @@ public partial class InterceptionRegistry : ComponentBase
                 : ("Дані оновились", "Частину записів вже змінено. Оновіть сторінку для актуального стану.");
         }
 
+        if (IsExceptionType(ex, "EntityNotFoundDomainException"))
+        {
+            return operation == "delete"
+                ? ("Запис вже недоступний", "Observation не знайдено. Оновіть список та перевірте фільтри.")
+                : ("Дані не знайдено", "Частину довідкових даних не знайдено. Оновіть сторінку.");
+        }
+
+        if (IsExceptionType(ex, "AggregateStateViolationException"))
+            return ("Дія недоступна", "Запис зараз у стані, який не дозволяє цю операцію. Перевірте пов'язані зміни та повторіть пізніше.");
+
+        if (IsExceptionType(ex, "DomainException"))
+            return ("Порушено бізнес-правило", "Операцію зупинено правилами домену. Перевірте пов'язані поля або стан запису.");
+
         return ex switch
         {
-            EntityNotFoundDomainException => operation == "delete"
-                ? ("Запис вже недоступний", "Observation не знайдено. Оновіть список та перевірте фільтри.")
-                : ("Дані не знайдено", "Частину довідкових даних не знайдено. Оновіть сторінку."),
-
-            AggregateStateViolationException => ("Дія недоступна", "Запис зараз у стані, який не дозволяє цю операцію. Перевірте пов'язані зміни та повторіть пізніше."),
-
-            DomainException => ("Порушено бізнес-правило", "Операцію зупинено правилами домену. Перевірте пов'язані поля або стан запису."),
-
             ArgumentException => ("Некоректні вхідні дані", "Перевірте фільтри/параметри, оновіть сторінку та повторіть дію."),
 
             InvalidOperationException => ("Операцію не виконано", "Стан даних змінився. Оновіть список і повторіть дію."),
@@ -265,6 +269,17 @@ public partial class InterceptionRegistry : ComponentBase
                 ? ("Помилка видалення", "Не вдалося видалити observation. Спробуйте ще раз або зверніться до адміністратора.")
                 : ("Помилка завантаження", "Не вдалося завантажити дані. Перевірте з'єднання та повторіть спробу.")
         };
+    }
+
+    private static bool IsExceptionType(Exception ex, string typeName)
+    {
+        for (Exception? current = ex; current is not null; current = current.InnerException)
+        {
+            if (string.Equals(current.GetType().Name, typeName, StringComparison.Ordinal))
+                return true;
+        }
+
+        return false;
     }
 
     private static bool Contains(string? value, string pattern) =>
