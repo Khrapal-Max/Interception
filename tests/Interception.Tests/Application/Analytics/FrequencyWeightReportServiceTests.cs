@@ -195,7 +195,10 @@ public sealed class FrequencyWeightReportServiceTests
             var message3 = CreateMessage(action, "170.0000", "АЛЬФА", new DateTime(2026, 4, 2, 9, 30, 0, DateTimeKind.Utc));
             var aliasParticipantFollowUp = message3.AddParticipant("ШАПКА-2", isUnknown: false);
 
-            db.InterceptionMessages.AddRange(message1, message2, message3);
+            var message4 = CreateMessage(action, "170.0000", "АЛЬФА", new DateTime(2026, 4, 2, 10, 0, 0, DateTimeKind.Utc));
+            var confirmedParticipantFollowUp = message4.AddParticipant("ШАПКА-1", isUnknown: false);
+
+            db.InterceptionMessages.AddRange(message1, message2, message3, message4);
 
             var resolvedA = ResolvedParticipant.Create("ШАПКА-1", "test", division: "Підрозділ А");
             var resolvedB = ResolvedParticipant.Create("ШАПКА-2", "test", division: "Підрозділ А");
@@ -206,7 +209,7 @@ public sealed class FrequencyWeightReportServiceTests
             canonical.AddMember(resolvedB.Id);
             db.CanonicalPersons.Add(canonical);
 
-            db.ParticipantCandidateGroups.Add(CreateConfirmedGroup(resolvedA.Id, confirmedParticipant));
+            db.ParticipantCandidateGroups.Add(CreateConfirmedGroup(resolvedA.Id, confirmedParticipant, confirmedParticipantFollowUp));
 
             var openGroup = ParticipantCandidateGroup.Create(
                 [
