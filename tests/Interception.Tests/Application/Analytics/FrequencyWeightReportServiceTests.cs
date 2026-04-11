@@ -192,7 +192,10 @@ public sealed class FrequencyWeightReportServiceTests
             var message2 = CreateMessage(action, "170.0000", "АЛЬФА", new DateTime(2026, 4, 2, 9, 0, 0, DateTimeKind.Utc));
             var confirmedParticipant = message2.AddParticipant("ШАПКА-1", isUnknown: false);
 
-            db.InterceptionMessages.AddRange(message1, message2);
+            var message3 = CreateMessage(action, "170.0000", "АЛЬФА", new DateTime(2026, 4, 2, 9, 30, 0, DateTimeKind.Utc));
+            var aliasParticipantFollowUp = message3.AddParticipant("ШАПКА-2", isUnknown: false);
+
+            db.InterceptionMessages.AddRange(message1, message2, message3);
 
             var resolvedA = ResolvedParticipant.Create("ШАПКА-1", "test", division: "Підрозділ А");
             var resolvedB = ResolvedParticipant.Create("ШАПКА-2", "test", division: "Підрозділ А");
@@ -206,7 +209,10 @@ public sealed class FrequencyWeightReportServiceTests
             db.ParticipantCandidateGroups.Add(CreateConfirmedGroup(resolvedA.Id, confirmedParticipant));
 
             var openGroup = ParticipantCandidateGroup.Create(
-                [new ParticipantRef(aliasParticipant.InterceptionMessageId, aliasParticipant.Id, aliasParticipant.Ordinal)],
+                [
+                    new ParticipantRef(aliasParticipant.InterceptionMessageId, aliasParticipant.Id, aliasParticipant.Ordinal),
+                    new ParticipantRef(aliasParticipantFollowUp.InterceptionMessageId, aliasParticipantFollowUp.Id, aliasParticipantFollowUp.Ordinal)
+                ],
                 confidenceScore: 0.70,
                 reasons: new PatternMatchReasons { SameFrequency = true },
                 suggestedName: aliasParticipant.Name);
