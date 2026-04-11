@@ -3,12 +3,15 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
+using Interception.UI.Application.Analytics.Events;
+using Interception.UI.Application.Common.Events;
 using Interception.UI.Application.Analytics.Services;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
 using Interception.UI.Domain.Records;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using NSubstitute;
 
 namespace Interception.Tests.Application.Analytics;
 
@@ -146,5 +149,59 @@ public sealed class ParticipantCandidateGroupCommandServiceTests
         persistedGroup.ResolvedBy.Should().Be("analyst");
         persistedGroup.ResolvedAt.Should().NotBeNull();
         persistedGroup.ResolvedParticipantId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ConfirmAsync_PublishesConfirmedIntegrationEvent()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var publisher = Substitute.For<IIntegrationEventPublisher>();
+        var service = new ParticipantCandidateGroupCommandService(factory, publisher);
+
+        var group = ParticipantCandidateGroup.Create(
+            [new ParticipantRef(Guid.NewGuid(), Guid.NewGuid(), 1), new ParticipantRef(Guid.NewGuid(), Guid.NewGuid(), 2)],
+            0.79,
+            new PatternMatchReasons { SameFrequency = true });
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            db.ParticipantCandidateGroups.Add(group);
+            await db.SaveChangesAsync(ct);
+        }
+
+        await service.ConfirmAsync(group.Id, "ШАПКА", "analyst", "оператор", "1 мсб", ct);
+
+        await publisher.Received(1).PublishAsync(
+            Arg.Is<ParticipantCandidateGroupChangedIntegrationEvent>(e =>
+                e.GroupId == group.Id && e.ChangeType == ParticipantCandidateGroupChangeType.Confirmed),
+            ct);
+    }
+
+    [Fact]
+    public async Task DismissAsync_PublishesDismissedIntegrationEvent()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var publisher = Substitute.For<IIntegrationEventPublisher>();
+        var service = new ParticipantCandidateGroupCommandService(factory, publisher);
+
+        var group = ParticipantCandidateGroup.Create(
+            [new ParticipantRef(Guid.NewGuid(), Guid.NewGuid(), 1), new ParticipantRef(Guid.NewGuid(), Guid.NewGuid(), 2)],
+            0.55,
+            new PatternMatchReasons { CloseInTime = true });
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            db.ParticipantCandidateGroups.Add(group);
+            await db.SaveChangesAsync(ct);
+        }
+
+        await service.DismissAsync(group.Id, "analyst", ct);
+
+        await publisher.Received(1).PublishAsync(
+            Arg.Is<ParticipantCandidateGroupChangedIntegrationEvent>(e =>
+                e.GroupId == group.Id && e.ChangeType == ParticipantCandidateGroupChangeType.Dismissed),
+            ct);
     }
 }
