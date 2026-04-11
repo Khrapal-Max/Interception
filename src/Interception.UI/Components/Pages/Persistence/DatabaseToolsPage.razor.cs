@@ -9,7 +9,7 @@ using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 
-namespace Interception.UI.Components.Pages.Persistense;
+namespace Interception.UI.Components.Pages.Persistence;
 
 /// <summary>
 /// Сторінка файлових операцій над portable SQLite-базою.
