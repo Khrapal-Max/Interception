@@ -6,6 +6,7 @@ using Interception.UI.Domain;
 using Interception.UI.Domain.Records;
 using Interception.UI.Domain.Policies;
 using Interception.UI.Extensions;
+using Interception.UI.Application.Analytics.Builders;
 
 namespace Interception.UI.Application.Analytics.Services;
 
