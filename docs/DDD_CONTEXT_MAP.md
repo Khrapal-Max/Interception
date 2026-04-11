@@ -109,3 +109,20 @@ _Дата повторного аналізу: 10 квітня 2026_
 1. **Логічне розділення persistence-меж** — відкладено: після рев’ю зміни з окремими read/write фабриками відкочено; повернуто єдиний `IDbContextFactory<AppDbContext>` до підготовки наступної ітерації з чіткішою міграційною стратегією.
 2. **Посилення VO у write use-cases** — виконано частково: додано `RoleName` VO і застосовано разом з `PersonName`/`DivisionName` у write-path сервісах перехоплень та candidate group confirm flow.
 3. **Typed-domain-exceptions** — виконано частково: введено базовий `DomainException` і спеціалізовані винятки (`DuplicateParticipantException`, `DuplicateLabelException`, `EntityNotFoundDomainException`, `AggregateStateViolationException`) з підключенням у ключові aggregate методи.
+
+## 11) Фізичне групування коду за BC (станом на 11.04.2026)
+
+Для вирівнювання структури з Context Map проведено повну реорганізацію `Domain` за контекстами:
+
+- `Domain/Contexts/Interceptions` — моделі перехоплень, директивних зв'язків і пов'язані enum/policy.
+- `Domain/Contexts/Registry` — довідникові моделі (`ParticipantRole`).
+- `Domain/Contexts/Analytics` — canonical/grouping/topology моделі + доменні policy/service/records/enums аналітики.
+- `Domain/Contexts/Reports` — доменні read-side моделі звітів + records/enums для звітності.
+- `Domain/Exceptions` і `Domain/ValueObjects` залишені як Shared Kernel.
+
+Додатково виправлено namespace/folder-узгодженість у UI-сторінці інструментів БД:
+
+- `Components/Pages/Persistense` -> `Components/Pages/Persistence`
+- namespace `Interception.UI.Components.Pages.Persistence`.
+
+Примітка: цей етап фокусується на узгодженні рівнів і фізичних меж bounded contexts без зміни поведінки домену.
