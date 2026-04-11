@@ -48,11 +48,6 @@ public partial class InterceptionRegistry : ComponentBase
     private bool _filterOpen;
     private bool _importOpen;
     private bool _textBlockOpen;
-    private bool _directiveDrawerOpen;
-    private const bool ShowLegacyDirectiveDrawerButton = false;
-    private Guid? _directiveObservationId;
-    private DateTime? _directiveObservedDate;
-    private IReadOnlyList<Application.Analytics.Dtos.ParticipantBriefDto> _directiveParticipants = [];
     private bool _deleteConfirmOpen;
     private Guid? _pendingDeleteId;
     private DateTime? _pendingDeleteObservedDate;
@@ -156,14 +151,6 @@ public partial class InterceptionRegistry : ComponentBase
     private void OpenFilter() => _filterOpen = true;
     private void OpenImport() => _importOpen = true;
     private void OpenTextBlock() => _textBlockOpen = true;
-
-    private void OpenDirectiveDrawer(InterceptionListItemDto item)
-    {
-        _directiveObservationId = item.Id;
-        _directiveObservedDate = item.ObservedDate;
-        _directiveParticipants = item.Participants;
-        _directiveDrawerOpen = true;
-    }
 
     // -------------------------------------------------------------------------
     // Callbacks від драверів

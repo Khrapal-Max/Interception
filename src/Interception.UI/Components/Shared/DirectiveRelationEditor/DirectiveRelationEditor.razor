@@ -1,0 +1,94 @@
+@using Interception.UI.Application.Interceptions.Dtos
+
+<div class="border rounded p-3">
+    <div class="form-check form-switch mb-2">
+        <input class="form-check-input"
+               id="@($"directive-enable-{IdPrefix}")"
+               type="checkbox"
+               checked="@Enabled"
+               @onchange="OnEnabledChanged"
+               disabled="@Saving" />
+        <label class="form-check-label fw-semibold" for="@($"directive-enable-{IdPrefix}")">
+            Зв'язок керування
+        </label>
+    </div>
+
+    @if (Enabled)
+    {
+        @if (!string.IsNullOrWhiteSpace(HintText))
+        {
+            <div class="small text-muted mb-2">@HintText</div>
+        }
+
+        <div class="mb-2">
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @onclick="RefreshOptions"
+                    disabled="@(Loading || Saving)">
+                @if (Loading)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                Оновити варіанти осіб
+            </button>
+        </div>
+
+        <div class="row g-2">
+            <div class="col-12">
+                <label class="form-label">Хто керує</label>
+                <select class="form-select"
+                        value="@FromSelection"
+                        @onchange="OnFromSelectionChanged"
+                        disabled="@(Loading || Saving)">
+                    <option value="">— оберіть особу —</option>
+                    @foreach (var option in Options)
+                    {
+                        <option value="@BuildOptionValue(option)">@BuildOptionLabel(option)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Ким керує</label>
+                <select class="form-select"
+                        value="@ToSelection"
+                        @onchange="OnToSelectionChanged"
+                        disabled="@(Loading || Saving)">
+                    <option value="">— оберіть особу —</option>
+                    @foreach (var option in Options)
+                    {
+                        <option value="@BuildOptionValue(option)">@BuildOptionLabel(option)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-6">
+                <label class="form-label">Тип зв'язку</label>
+                <select class="form-select" @bind="Form.RelationType" disabled="@Saving">
+                    @foreach (var relationType in Enum.GetValues<DirectiveRelationTypeDto>())
+                    {
+                        <option value="@relationType">@BuildRelationTypeLabel(relationType)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-6">
+                <label class="form-label">Впевненість</label>
+                <select class="form-select" @bind="Form.Confidence" disabled="@Saving">
+                    @foreach (var confidence in Enum.GetValues<DirectiveRelationConfidenceDto>())
+                    {
+                        <option value="@confidence">@BuildConfidenceLabel(confidence)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Коментар</label>
+                <textarea class="form-control"
+                          rows="3"
+                          @bind="Form.Comment"
+                          disabled="@Saving"></textarea>
+            </div>
+        </div>
+    }
+</div>

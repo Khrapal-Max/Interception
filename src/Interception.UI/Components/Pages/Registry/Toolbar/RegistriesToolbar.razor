@@ -1,112 +1,14 @@
 <div class="registry-toolbar flex-shrink-0">
     <div class="toolbar-start d-flex align-items-center gap-2">
-        @if (ActiveSection == "divisions")
+        @foreach (var item in NavItems)
         {
             <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
-                     href="/registries/divisions"
-                     Match="NavLinkMatch.All"
-                     title="Підрозділи"
-                     aria-label="Підрозділи">
-                <i class="bi bi-broadcast"></i>
-                <span class="visually-hidden">Підрозділи</span>
-            </NavLink>
-        }
-        else
-        {
-            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
-                     href="/registries/divisions"
-                     title="Підрозділи"
-                     aria-label="Підрозділи">
-                <i class="bi bi-broadcast"></i>
-                <span class="visually-hidden">Підрозділи</span>
-            </NavLink>
-        }
-
-        @if (ActiveSection == "persons")
-        {
-            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
-                     href="/registries/persons"
-                     Match="NavLinkMatch.All"
-                     title="Особи"
-                     aria-label="Особи">
-                <i class="bi bi-people"></i>
-                <span class="visually-hidden">Особи</span>
-            </NavLink>
-        }
-        else
-        {
-            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
-                     href="/registries/persons"
-                     title="Особи"
-                     aria-label="Особи">
-                <i class="bi bi-people"></i>
-                <span class="visually-hidden">Особи</span>
-            </NavLink>
-        }
-
-
-        @if (ActiveSection == "roles")
-        {
-            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
-                     href="/registries/roles"
-                     Match="NavLinkMatch.All"
-                     title="Ролі"
-                     aria-label="Ролі">
-                <i class="bi bi-person-badge"></i>
-                <span class="visually-hidden">Ролі</span>
-            </NavLink>
-        }
-        else
-        {
-            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
-                     href="/registries/roles"
-                     title="Ролі"
-                     aria-label="Ролі">
-                <i class="bi bi-person-badge"></i>
-                <span class="visually-hidden">Ролі</span>
-            </NavLink>
-        }
-        @if (ActiveSection == "actions")
-        {
-            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
-                     href="/registries/actions"
-                     Match="NavLinkMatch.All"
-                     title="Дії"
-                     aria-label="Дії">
-                <i class="bi bi-lightning"></i>
-                <span class="visually-hidden">Дії</span>
-            </NavLink>
-        }
-        else
-        {
-            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
-                     href="/registries/actions"
-                     title="Дії"
-                     aria-label="Дії">
-                <i class="bi bi-lightning"></i>
-                <span class="visually-hidden">Дії</span>
-            </NavLink>
-        }
-
-        @if (ActiveSection == "directive-relations")
-        {
-            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
-                     href="/registries/directive-relations"
-                     Match="NavLinkMatch.All"
-                     title="Контур керування"
-                     aria-label="Контур керування">
-                <i class="bi bi-diagram-2"></i>
-                <span class="visually-hidden">Контур керування</span>
-            </NavLink>
-        }
-        else
-        {
-            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
-                     href="/registries/directive-relations"
-                     title="Контур керування"
-                     aria-label="Контур керування">
-                <i class="bi bi-diagram-2"></i>
-                <span class="visually-hidden">Контур керування</span>
+                     href="@item.Href"
+                     Match="@(IsActiveSection(item.Section) ? NavLinkMatch.All : NavLinkMatch.Prefix)"
+                     title="@item.Title"
+                     aria-label="@item.Title">
+                <i class="@item.IconClass"></i>
+                <span class="visually-hidden">@item.Title</span>
             </NavLink>
         }
     </div>
@@ -125,3 +27,19 @@
         }
     </div>
 </div>
+
+@code {
+    private static readonly IReadOnlyList<RegistryNavItem> NavItems =
+    [
+        new("divisions", "/registries/divisions", "Підрозділи", "bi bi-broadcast"),
+        new("persons", "/registries/persons", "Особи", "bi bi-people"),
+        new("roles", "/registries/roles", "Ролі", "bi bi-person-badge"),
+        new("actions", "/registries/actions", "Дії", "bi bi-lightning"),
+        new("directive-relations", "/registries/directive-relations", "Контур керування", "bi bi-diagram-2")
+    ];
+
+    private bool IsActiveSection(string section)
+        => string.Equals(ActiveSection, section, StringComparison.OrdinalIgnoreCase);
+
+    private sealed record RegistryNavItem(string Section, string Href, string Title, string IconClass);
+}
