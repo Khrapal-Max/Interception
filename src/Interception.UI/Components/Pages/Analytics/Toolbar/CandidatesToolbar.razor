@@ -1,27 +1,5 @@
 <div class="registry-toolbar flex-shrink-0">
     <div class="toolbar-start d-flex align-items-center gap-2">
-        @if (ActiveSection == "groups")
-        {
-            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
-                     href="/analytics/candidates"
-                     Match="NavLinkMatch.All"
-                     title="Групи на розгляд"
-                     aria-label="Групи на розгляд">
-                <i class="bi bi-collection"></i>
-                <span class="visually-hidden">Групи на розгляд</span>
-            </NavLink>
-        }
-        else
-        {
-            <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"
-                     href="/analytics/candidates"
-                     title="Групи на розгляд"
-                     aria-label="Групи на розгляд">
-                <i class="bi bi-collection"></i>
-                <span class="visually-hidden">Групи на розгляд</span>
-            </NavLink>
-        }
-
         @if (ActiveSection == "link-map")
         {
             <NavLink class="registry-nav-link d-inline-flex align-items-center justify-content-center"

@@ -77,12 +77,7 @@ builder.Services.AddScoped<IPersonDirectiveRelationService, PersonDirectiveRelat
 builder.Services.AddScoped<ICanonicalPersonAnalysisService, CanonicalPersonAnalysisService>();
 builder.Services.AddScoped<ILinkMapService, LinkMapService>();
 builder.Services.AddScoped<IGroupHierarchyService, GroupHierarchyService>();
-builder.Services.AddScoped<IContextSuggestionService, ContextSuggestionService>();
 builder.Services.AddScoped<IFrequencyWeightReportService, FrequencyWeightReportService>();
-builder.Services.AddScoped<IKnownParticipantSuggestionService, KnownParticipantSuggestionService>();
-builder.Services.AddScoped<IParticipantCandidateAnalysisService, ParticipantCandidateAnalysisService>();
-builder.Services.AddScoped<IParticipantCandidateGroupQueryService, ParticipantCandidateGroupQueryService>();
-builder.Services.AddScoped<IParticipantCandidateGroupCommandService, ParticipantCandidateGroupCommandService>();
 
 // Нові reports-сервіси 
 builder.Services.AddScoped<IDayPictureService, DayPictureService>();
