@@ -1,6 +1,7 @@
 @using Interception.UI.Application.Interceptions.Dtos
 @using Interception.UI.Application.Registry.Dtos
 @using Interception.UI.Components.Shared.Drawer
+@using Interception.UI.Components.Shared.DirectiveRelationEditor
 @using Interception.UI.Extensions
 
 <Drawer IsOpen="@IsOpen"
@@ -264,97 +265,19 @@
                     </div>
                 </div>
 
-                <div class="border rounded p-3">
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input"
-                               id="directive-enable-form"
-                               type="checkbox"
-                               checked="@_directiveEnabled"
-                               @onchange="OnDirectiveEnabledChanged"
-                               disabled="@_saving" />
-                        <label class="form-check-label fw-semibold" for="directive-enable-form">
-                            Зв'язок керування
-                        </label>
-                    </div>
-
-                    @if (_directiveEnabled)
-                    {
-                        <div class="small text-muted mb-2">
-                            Тимчасовий inline-блок (Stage 1): фіксація керування в основному дравері observation.
-                        </div>
-
-                        <div class="mb-2">
-                            <button type="button"
-                                    class="btn btn-outline-secondary btn-sm"
-                                    @onclick="LoadDirectiveOptionsAsync"
-                                    disabled="@(_directiveLoading || _saving)">
-                                @if (_directiveLoading)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                }
-                                Оновити варіанти осіб
-                            </button>
-                        </div>
-
-                        <div class="row g-2">
-                            <div class="col-12">
-                                <label class="form-label">Хто керує</label>
-                                <select class="form-select"
-                                        value="@_directiveFromSelection"
-                                        @onchange="OnDirectiveFromSelectionChanged"
-                                        disabled="@(_directiveLoading || _saving)">
-                                    <option value="">— оберіть особу —</option>
-                                    @foreach (var option in _directiveOptions)
-                                    {
-                                        <option value="@BuildDirectiveOptionValue(option)">@BuildDirectiveOptionLabel(option)</option>
-                                    }
-                                </select>
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">Ким керує</label>
-                                <select class="form-select"
-                                        value="@_directiveToSelection"
-                                        @onchange="OnDirectiveToSelectionChanged"
-                                        disabled="@(_directiveLoading || _saving)">
-                                    <option value="">— оберіть особу —</option>
-                                    @foreach (var option in _directiveOptions)
-                                    {
-                                        <option value="@BuildDirectiveOptionValue(option)">@BuildDirectiveOptionLabel(option)</option>
-                                    }
-                                </select>
-                            </div>
-
-                            <div class="col-6">
-                                <label class="form-label">Тип зв'язку</label>
-                                <select class="form-select" @bind="_directiveForm.RelationType" disabled="@_saving">
-                                    @foreach (var relationType in Enum.GetValues<DirectiveRelationTypeDto>())
-                                    {
-                                        <option value="@relationType">@BuildDirectiveRelationTypeLabel(relationType)</option>
-                                    }
-                                </select>
-                            </div>
-
-                            <div class="col-6">
-                                <label class="form-label">Впевненість</label>
-                                <select class="form-select" @bind="_directiveForm.Confidence" disabled="@_saving">
-                                    @foreach (var confidence in Enum.GetValues<DirectiveRelationConfidenceDto>())
-                                    {
-                                        <option value="@confidence">@BuildDirectiveConfidenceLabel(confidence)</option>
-                                    }
-                                </select>
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">Коментар</label>
-                                <textarea class="form-control"
-                                          rows="3"
-                                          @bind="_directiveForm.Comment"
-                                          disabled="@_saving"></textarea>
-                            </div>
-                        </div>
-                    }
-                </div>
+                <DirectiveRelationEditor IdPrefix="form"
+                                         HintText="Тимчасовий inline-блок (Stage 1): фіксація керування в основному дравері observation."
+                                         Enabled="_directiveEnabled"
+                                         EnabledChanged="OnDirectiveEnabledChanged"
+                                         Loading="_directiveLoading"
+                                         Saving="_saving"
+                                         Options="_directiveOptions"
+                                         Form="_directiveForm"
+                                         FromSelection="_directiveFromSelection"
+                                         FromSelectionChanged="OnDirectiveFromSelectionChanged"
+                                         ToSelection="_directiveToSelection"
+                                         ToSelectionChanged="OnDirectiveToSelectionChanged"
+                                         OnRefreshOptions="LoadDirectiveOptionsAsync" />
             </div>
         }
     </ChildContent>

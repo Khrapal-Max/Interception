@@ -459,9 +459,9 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         }
     }
 
-    private async Task OnDirectiveEnabledChanged(ChangeEventArgs args)
+    private async Task OnDirectiveEnabledChanged(bool value)
     {
-        _directiveEnabled = args.Value is bool value && value;
+        _directiveEnabled = value;
         if (_directiveEnabled)
             await LoadDirectiveOptionsAsync();
     }
@@ -522,15 +522,15 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
         return hasFrom && hasTo;
     }
 
-    private void OnDirectiveFromSelectionChanged(ChangeEventArgs args)
+    private void OnDirectiveFromSelectionChanged(string? value)
     {
-        _directiveFromSelection = args.Value?.ToString();
+        _directiveFromSelection = value;
         ApplyDirectiveSelection(_directiveFromSelection, isFrom: true);
     }
 
-    private void OnDirectiveToSelectionChanged(ChangeEventArgs args)
+    private void OnDirectiveToSelectionChanged(string? value)
     {
-        _directiveToSelection = args.Value?.ToString();
+        _directiveToSelection = value;
         ApplyDirectiveSelection(_directiveToSelection, isFrom: false);
     }
 
@@ -571,33 +571,6 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
                 _directiveForm.ToResolvedParticipantId = id;
         }
     }
-
-    private static string BuildDirectiveOptionValue(PersonDirectiveRelationOptionDto option)
-        => $"{(option.IsCanonicalPerson ? "canonical" : "resolved")}:{option.IdentityId}";
-
-    private static string BuildDirectiveOptionLabel(PersonDirectiveRelationOptionDto option)
-        => $"{option.DisplayName} [{option.KindLabel}]";
-
-    private static string BuildDirectiveRelationTypeLabel(DirectiveRelationTypeDto relationType)
-        => relationType switch
-        {
-            DirectiveRelationTypeDto.Command => "Наказ / завдання",
-            DirectiveRelationTypeDto.ReportUp => "Доповідь вгору",
-            DirectiveRelationTypeDto.Control => "Контроль",
-            DirectiveRelationTypeDto.Correction => "Коригування",
-            DirectiveRelationTypeDto.Coordination => "Координація",
-            DirectiveRelationTypeDto.Other => "Інше",
-            _ => relationType.ToString()
-        };
-
-    private static string BuildDirectiveConfidenceLabel(DirectiveRelationConfidenceDto confidence)
-        => confidence switch
-        {
-            DirectiveRelationConfidenceDto.Low => "Низька",
-            DirectiveRelationConfidenceDto.Medium => "Середня",
-            DirectiveRelationConfidenceDto.High => "Висока",
-            _ => confidence.ToString()
-        };
 
     private static PersonDirectiveRelationSaveDto CreateDefaultDirectiveForm()
         => new()

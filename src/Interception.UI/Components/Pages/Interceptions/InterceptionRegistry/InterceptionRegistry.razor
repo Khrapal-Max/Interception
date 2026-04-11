@@ -1,6 +1,5 @@
 @page "/observations"
 @using Interception.UI.Application.Exports.Models
-@using Interception.UI.Components.Pages.Interceptions.DirectiveRelations.Drawers
 @using Interception.UI.Components.Pages.Interceptions.InterceptionRegistry.Drawers
 @using Interception.UI.Components.Pages.Interceptions.Toolbar
 @using Interception.UI.Extensions
@@ -114,14 +113,6 @@
                                                     @onclick="() => OpenEdit(item.Id)">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
-                                            @if (ShowLegacyDirectiveDrawerButton)
-                                            {
-                                                <button class="btn btn-warning"
-                                                        title="LEGACY: Зберегти команду (тимчасово)"
-                                                        @onclick="() => OpenDirectiveDrawer(item)">
-                                                    <i class="bi bi-diagram-2"></i>
-                                                </button>
-                                            }
                                         </div>
                                         <div class="btn-group btn-group-sm" role="group" aria-label="Критична дія">
                                             <button class="btn btn-danger"
@@ -188,13 +179,6 @@
 <InterceptionTextBlockDrawer @bind-IsOpen="_textBlockOpen"
                              Actions="_actions"
                              OnSaved="LoadPageAsync" />
-
-
-<DirectiveRelationFromObservationDrawer @bind-IsOpen="_directiveDrawerOpen"
-                                      ObservationId="_directiveObservationId"
-                                      ObservedDate="_directiveObservedDate"
-                                      Participants="_directiveParticipants"
-                                      OnSaved="LoadPageAsync" />
 
 @if (_deleteConfirmOpen && _pendingDeleteObservedDate is not null)
 {
