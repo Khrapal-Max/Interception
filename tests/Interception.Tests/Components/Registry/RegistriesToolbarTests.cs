@@ -13,12 +13,12 @@ namespace Interception.Tests.Components.Registry;
 public sealed class RegistriesToolbarTests : BunitContext
 {
     [Fact]
-    public void Render_Default_RendersThreeNavigationLinks()
+    public void Render_Default_RendersFiveNavigationLinks()
     {
         var cut = Render<RegistriesToolbar>();
 
         var links = cut.FindAll("a.registry-nav-link");
-        links.Should().HaveCount(4);
+        links.Should().HaveCount(5);
     }
 
     [Fact]

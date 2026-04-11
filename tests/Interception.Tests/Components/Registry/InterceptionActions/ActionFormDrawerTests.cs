@@ -121,7 +121,7 @@ public sealed class ActionFormDrawerTests : BunitContext
         var cut = RenderDrawer();
 
         await cut.InvokeAsync(() =>
-            cut.FindAll("button").First(b => b.TextContent.Contains("Створити")).Click());
+            cut.FindAll("button").First(b => b.TextContent.Contains("Зберегти")).Click());
 
         cut.Find("input[type=text]")
            .ClassList.Should().Contain("is-invalid");
@@ -135,7 +135,7 @@ public sealed class ActionFormDrawerTests : BunitContext
         var cut = RenderDrawer();
 
         await cut.InvokeAsync(() =>
-            cut.FindAll("button").First(b => b.TextContent.Contains("Створити")).Click());
+            cut.FindAll("button").First(b => b.TextContent.Contains("Зберегти")).Click());
 
         cut.Find(".invalid-feedback")
            .TextContent.Should().Contain("обов'язкова");
@@ -149,7 +149,7 @@ public sealed class ActionFormDrawerTests : BunitContext
         var cut = RenderDrawer();
 
         await cut.InvokeAsync(() =>
-            cut.FindAll("button").First(b => b.TextContent.Contains("Створити")).Click());
+            cut.FindAll("button").First(b => b.TextContent.Contains("Зберегти")).Click());
 
         await svc.DidNotReceive()
                  .CreateAsync(Arg.Any<string>(), Arg.Any<string>(),
@@ -164,7 +164,7 @@ public sealed class ActionFormDrawerTests : BunitContext
         var cut = RenderDrawer();
 
         await cut.InvokeAsync(() =>
-            cut.FindAll("button").First(b => b.TextContent.Contains("Створити")).Click());
+            cut.FindAll("button").First(b => b.TextContent.Contains("Зберегти")).Click());
 
         cut.Find("input[type=text]").Input("нова назва");
 
@@ -189,7 +189,7 @@ public sealed class ActionFormDrawerTests : BunitContext
         cut.Find("textarea").Input("опис");
 
         await cut.InvokeAsync(() =>
-            cut.FindAll("button").First(b => b.TextContent.Contains("Створити")).Click());
+            cut.FindAll("button").First(b => b.TextContent.Contains("Зберегти")).Click());
 
         await svc.Received(1)
                  .CreateAsync("координація дій", "опис", Arg.Any<CancellationToken>());
@@ -209,7 +209,7 @@ public sealed class ActionFormDrawerTests : BunitContext
         cut.Find("input[type=text]").Input("нова дія");
 
         await cut.InvokeAsync(() =>
-            cut.FindAll("button").First(b => b.TextContent.Contains("Створити")).Click());
+            cut.FindAll("button").First(b => b.TextContent.Contains("Зберегти")).Click());
 
         onSavedCalled.Should().BeTrue();
     }
@@ -255,7 +255,7 @@ public sealed class ActionFormDrawerTests : BunitContext
         cut.Find("input[type=text]").Input("координація дій");
 
         await cut.InvokeAsync(() =>
-            cut.FindAll("button").First(b => b.TextContent.Contains("Створити")).Click());
+            cut.FindAll("button").First(b => b.TextContent.Contains("Зберегти")).Click());
 
         cut.Find(".alert-danger")
            .TextContent.Should().Contain("вже існує в довіднику");
@@ -276,7 +276,7 @@ public sealed class ActionFormDrawerTests : BunitContext
         cut.Find("input[type=text]").Input("координація дій");
 
         await cut.InvokeAsync(() =>
-            cut.FindAll("button").First(b => b.TextContent.Contains("Створити")).Click());
+            cut.FindAll("button").First(b => b.TextContent.Contains("Зберегти")).Click());
 
         isOpenChangedValue.Should().BeTrue();
     }
