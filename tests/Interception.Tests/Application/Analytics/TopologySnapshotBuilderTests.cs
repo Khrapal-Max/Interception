@@ -252,6 +252,54 @@ public sealed class TopologySnapshotBuilderTests
         result.Groups.Single().KeyPersonName.Should().Be("ЦЕНТР");
     }
 
+    [Fact]
+    public async Task RebuildAsync_StoresCanonicalDisplayName_ForMergedProfiles()
+    {
+        var factory = TestDbFactory.CreateFactory();
+        var builder = CreateBuilder(factory);
+        var ct = TestContext.Current.CancellationToken;
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var action = InterceptionAction.Create("доповідь", string.Empty);
+            db.InterceptionActions.Add(action);
+
+            var resolvedA = ResolvedParticipant.Create("ШАПКА-1", "seed", role: "координатор", division: "336 мсп");
+            var resolvedB = ResolvedParticipant.Create("ШАПКА-2", "seed", role: "координатор", division: "336 мсп");
+            db.ResolvedParticipants.AddRange(resolvedA, resolvedB);
+
+            var canonical = CanonicalPerson.Create("ШАПКА");
+            canonical.AddMember(resolvedA.Id);
+            canonical.AddMember(resolvedB.Id);
+            db.CanonicalPersons.Add(canonical);
+
+            var m1 = CreateMessage(action, new DateTime(2026, 03, 29, 10, 0, 0, DateTimeKind.Utc), "336 мсп", "402.0000");
+            m1.AddParticipant("ШАПКА-1", false, "координатор", 1);
+            m1.AddParticipant("А", false, "оператор", 2);
+
+            var m2 = CreateMessage(action, new DateTime(2026, 03, 29, 10, 5, 0, DateTimeKind.Utc), "336 мсп", "402.0000");
+            m2.AddParticipant("ШАПКА-2", false, "координатор", 1);
+            m2.AddParticipant("Б", false, "оператор", 2);
+
+            db.InterceptionMessages.AddRange(m1, m2);
+            await db.SaveChangesAsync(ct);
+        }
+
+        var rebuild = await builder.RebuildAsync(ct: CancellationToken.None);
+
+        await using var assertDb = await factory.CreateDbContextAsync(ct);
+        var run = await assertDb.TopologySnapshotRuns
+            .Include(x => x.Groups)
+            .ThenInclude(x => x.Members)
+            .FirstAsync(x => x.Id == rebuild.RunId, ct);
+
+        var group = run.Groups.Should().ContainSingle().Subject;
+        group.KeyPersonName.Should().Be("ШАПКА");
+        group.Members.Should().Contain(x => x.Name == "ШАПКА");
+        group.Members.Should().NotContain(x => x.Name == "ШАПКА-1");
+        group.Members.Should().NotContain(x => x.Name == "ШАПКА-2");
+    }
+
     private static void SeedTwoIndependentGroupsWithBridge(AppDbContext db, InterceptionAction action)
     {
         var a1 = CreateMessage(action, new DateTime(2026, 03, 28, 12, 0, 0, DateTimeKind.Utc), null, "402.0000");

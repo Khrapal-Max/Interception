@@ -366,11 +366,6 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
                 return $"resolved:{directResolvedId}";
         }
 
-        if (participantToGroupMap.TryGetValue(participant.Id, out var groupId))
-        {
-            return $"group:{groupId}";
-        }
-
         var normalizedName = StringTextNormExtensions.NormalizeOption(participant.Name);
         if (!string.IsNullOrWhiteSpace(normalizedName)
             && resolvedByNameMap.TryGetValue(normalizedName, out var resolvedIdByName))
@@ -386,6 +381,11 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
             && canonicalByNameMap.TryGetValue(normalizedName, out var canonicalIdByName))
         {
             return $"cp:{canonicalIdByName}";
+        }
+
+        if (participantToGroupMap.TryGetValue(participant.Id, out var groupId))
+        {
+            return $"group:{groupId}";
         }
 
         if (!string.IsNullOrWhiteSpace(normalizedName))
@@ -426,17 +426,6 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
             }
         }
 
-        if (participantToGroupMap.TryGetValue(participant.Id, out var groupId))
-        {
-            if (groupDivisionMap.TryGetValue(groupId, out var groupDivision)
-                && !string.IsNullOrWhiteSpace(groupDivision))
-            {
-                return groupDivision;
-            }
-
-            return UnknownGroup;
-        }
-
         var normalizedName = StringTextNormExtensions.NormalizeOption(participant.Name);
         if (!string.IsNullOrWhiteSpace(normalizedName)
             && resolvedByNameMap.TryGetValue(normalizedName, out var resolvedIdByName))
@@ -462,6 +451,17 @@ public sealed partial class FrequencyWeightReportService(IDbContextFactory<AppDb
             && !string.IsNullOrWhiteSpace(canonicalDivisionByName))
         {
             return canonicalDivisionByName;
+        }
+
+        if (participantToGroupMap.TryGetValue(participant.Id, out var groupId))
+        {
+            if (groupDivisionMap.TryGetValue(groupId, out var groupDivision)
+                && !string.IsNullOrWhiteSpace(groupDivision))
+            {
+                return groupDivision;
+            }
+
+            return UnknownGroup;
         }
 
         var observationDivision = NormalizeKnownDivision(participant.MessageDivision);

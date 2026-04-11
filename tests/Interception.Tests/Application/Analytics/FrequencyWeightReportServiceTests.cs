@@ -175,6 +175,54 @@ public sealed class FrequencyWeightReportServiceTests
         AssertGroup(frequency, "АЛЬФА", expectedPersonsCount: 1, expectedWeightPercent: 50m);
     }
 
+    [Fact]
+    public async Task BuildAsync_PrefersCanonicalIdentityOverOpenGroupIdentity_ForKnownAlias()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+
+        using (var db = factory.CreateDbContext())
+        {
+            var action = InterceptionAction.Create("Доповідь", string.Empty);
+            db.InterceptionActions.Add(action);
+
+            var message1 = CreateMessage(action, "170.0000", "АЛЬФА", new DateTime(2026, 4, 2, 8, 0, 0, DateTimeKind.Utc));
+            var aliasParticipant = message1.AddParticipant("ШАПКА-2", isUnknown: false);
+
+            var message2 = CreateMessage(action, "170.0000", "АЛЬФА", new DateTime(2026, 4, 2, 9, 0, 0, DateTimeKind.Utc));
+            var confirmedParticipant = message2.AddParticipant("ШАПКА-1", isUnknown: false);
+
+            db.InterceptionMessages.AddRange(message1, message2);
+
+            var resolvedA = ResolvedParticipant.Create("ШАПКА-1", "test", division: "Підрозділ А");
+            var resolvedB = ResolvedParticipant.Create("ШАПКА-2", "test", division: "Підрозділ А");
+            db.ResolvedParticipants.AddRange(resolvedA, resolvedB);
+
+            var canonical = CanonicalPerson.Create("ШАПКА");
+            canonical.AddMember(resolvedA.Id);
+            canonical.AddMember(resolvedB.Id);
+            db.CanonicalPersons.Add(canonical);
+
+            db.ParticipantCandidateGroups.Add(CreateConfirmedGroup(resolvedA.Id, confirmedParticipant));
+
+            var openGroup = ParticipantCandidateGroup.Create(
+                [new ParticipantRef(aliasParticipant.InterceptionMessageId, aliasParticipant.Id, aliasParticipant.Ordinal)],
+                confidenceScore: 0.70,
+                reasons: new PatternMatchReasons { SameFrequency = true },
+                suggestedName: aliasParticipant.Name);
+            db.ParticipantCandidateGroups.Add(openGroup);
+
+            db.SaveChanges();
+        }
+
+        var service = new FrequencyWeightReportService(factory);
+        var report = await service.BuildAsync(ct);
+        var frequency = Assert.Single(report.Frequencies);
+
+        Assert.Equal(1, frequency.PersonsCount);
+        AssertGroup(frequency, "Підрозділ А", expectedPersonsCount: 1, expectedWeightPercent: 100m);
+    }
+
     private static InterceptionMessage CreateMessage(
         InterceptionAction action,
         string frequency,

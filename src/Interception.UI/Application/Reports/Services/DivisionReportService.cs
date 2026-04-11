@@ -75,6 +75,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
 
         var canonicalByResolvedMap = await LoadCanonicalByResolvedMapAsync(db, ct);
         var canonicalByNameMap = await LoadCanonicalByNameMapAsync(db, ct);
+        var canonicalDisplayMap = await LoadCanonicalDisplayMapAsync(db, ct);
 
         var confirmedPeople = await LoadConfirmedPeopleAsync(
             db,
@@ -82,9 +83,10 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
             messageDates,
             messageEffectiveDivisions,
             canonicalByResolvedMap,
+            canonicalDisplayMap,
             ct);
 
-        var observedPeople = BuildObservedPeople(messageRows, canonicalByNameMap);
+        var observedPeople = BuildObservedPeople(messageRows, canonicalByNameMap, canonicalDisplayMap);
 
         var divisions = messageRows
             .Select(x => x.EffectiveDivision!)
@@ -211,7 +213,8 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
 
     private static List<PersonFact> BuildObservedPeople(
         List<(InterceptionMessage Message, string? EffectiveDivision)> messageRows,
-        IReadOnlyDictionary<string, Guid> canonicalByNameMap)
+        IReadOnlyDictionary<string, Guid> canonicalByNameMap,
+        IReadOnlyDictionary<Guid, string> canonicalDisplayMap)
     {
         return [.. messageRows
             .SelectMany(messageRow => messageRow.Message.Participants
@@ -225,11 +228,13 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
                     var identityKey = BuildObservedIdentityKey(
                         normalizedName,
                         canonicalByNameMap);
+                    var canonicalDisplayName = TryResolveCanonicalDisplayName(identityKey, canonicalDisplayMap);
+                    var displayName = canonicalDisplayName ?? participant.Name!;
 
                     return new PersonFact(
                         messageRow.EffectiveDivision!,
                         identityKey,
-                        participant.Name!,
+                        displayName,
                         participant.Role,
                         messageRow.Message.ObservedDate);
                 }))];
@@ -260,6 +265,7 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
         IReadOnlyDictionary<Guid, DateTime> messageDates,
         IReadOnlyDictionary<Guid, string> messageEffectiveDivisions,
         IReadOnlyDictionary<Guid, Guid> canonicalByResolvedMap,
+        IReadOnlyDictionary<Guid, string> canonicalDisplayMap,
         CancellationToken ct)
     {
         var confirmedGroups = await db.ParticipantCandidateGroups
@@ -307,11 +313,16 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
             var identityKey = canonicalByResolvedMap.TryGetValue(resolvedParticipant.Id, out var canonicalId)
                 ? $"cp:{canonicalId}"
                 : $"resolved:{resolvedParticipant.Id}";
+            var displayName = canonicalByResolvedMap.TryGetValue(resolvedParticipant.Id, out var canonicalDisplayId)
+                && canonicalDisplayMap.TryGetValue(canonicalDisplayId, out var canonicalDisplayName)
+                && !string.IsNullOrWhiteSpace(canonicalDisplayName)
+                ? canonicalDisplayName
+                : resolvedParticipant.Name;
 
             people.Add(new PersonFact(
                 division,
                 identityKey,
-                resolvedParticipant.Name,
+                displayName,
                 resolvedParticipant.Role ?? group.SuggestedRole,
                 lastSeenAt));
         }
@@ -367,6 +378,16 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
             .ToDictionary(x => x.Key, x => x.First().CanonicalPersonId, StringComparer.OrdinalIgnoreCase);
     }
 
+    private static async Task<Dictionary<Guid, string>> LoadCanonicalDisplayMapAsync(
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        return await db.CanonicalPersons
+            .AsNoTracking()
+            .Where(x => !string.IsNullOrWhiteSpace(x.DisplayName))
+            .ToDictionaryAsync(x => x.Id, x => x.DisplayName.Trim(), ct);
+    }
+
     private static string BuildObservedIdentityKey(
         string? normalizedName,
         IReadOnlyDictionary<string, Guid> canonicalByNameMap)
@@ -381,6 +402,22 @@ public sealed class DivisionReportService(IDbContextFactory<AppDbContext> dbFact
             return $"observed:{normalizedName}";
 
         return "observed:unknown";
+    }
+
+    private static string? TryResolveCanonicalDisplayName(
+        string identityKey,
+        IReadOnlyDictionary<Guid, string> canonicalDisplayMap)
+    {
+        if (!identityKey.StartsWith("cp:", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var canonicalIdValue = identityKey[3..];
+        if (!Guid.TryParse(canonicalIdValue, out var canonicalId))
+            return null;
+
+        return canonicalDisplayMap.TryGetValue(canonicalId, out var displayName)
+            ? displayName
+            : null;
     }
 
     private static string? ResolveConfirmedDivision(
