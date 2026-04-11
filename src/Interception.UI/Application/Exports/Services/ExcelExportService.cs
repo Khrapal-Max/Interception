@@ -9,8 +9,8 @@ using Interception.UI.Application.Exports.Dtos;
 using Interception.UI.Application.Exports.Models;
 using Interception.UI.Application.Registry.Abstractions;
 using Interception.UI.Application.Reports.Abstractions;
-using Interception.UI.Domain;
-using Interception.UI.Domain.Enums;
+using Interception.UI.Domain.Analytics;
+using Interception.UI.Domain.Interceptions;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -581,7 +581,7 @@ public sealed class ExcelExportService(
         return null;
     }
     private static string BuildParticipantsText(InterceptionMessage message)
-    
+
     {
         return string.Join(", ", message.Participants
             .OrderBy(x => x.Ordinal)

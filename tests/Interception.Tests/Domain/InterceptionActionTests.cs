@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Interception.UI.Domain;
+using Interception.UI.Domain.Interceptions;
 
 namespace Interception.Tests.Domain;
 
@@ -23,7 +23,7 @@ public sealed class InterceptionActionTests
         var act = () => InterceptionAction.Create(name, "desc");
 
         act.Should().Throw<ArgumentException>()
-            .WithParameterName("name");
+            .WithParameterName(nameof(name));
     }
 
     [Fact]
@@ -64,6 +64,6 @@ public sealed class InterceptionActionTests
         var act = () => action.Update(name, "next");
 
         act.Should().Throw<ArgumentException>()
-            .WithParameterName("name");
+            .WithParameterName(nameof(name));
     }
 }

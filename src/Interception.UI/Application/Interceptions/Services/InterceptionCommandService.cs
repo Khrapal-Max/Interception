@@ -3,11 +3,11 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Common.Events;
-using Interception.UI.Application.Interceptions.Events;
 using Interception.UI.Application.Interceptions.Abstractions;
-using Interception.UI.Application.Registry.Support;
 using Interception.UI.Application.Interceptions.Dtos;
-using Interception.UI.Domain;
+using Interception.UI.Application.Interceptions.Events;
+using Interception.UI.Application.Registry.Support;
+using Interception.UI.Domain.Interceptions;
 using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;

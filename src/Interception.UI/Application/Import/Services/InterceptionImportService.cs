@@ -5,8 +5,8 @@
 using Interception.UI.Application.Import.Abstractions;
 using Interception.UI.Application.Import.Dtos;
 using Interception.UI.Application.Registry.Support;
-using Interception.UI.Domain;
-using Interception.UI.Domain.Enums;
+using Interception.UI.Domain.Analytics.Enums;
+using Interception.UI.Domain.Interceptions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 

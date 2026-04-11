@@ -3,7 +3,6 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Domain;
 
 namespace Interception.Tests.Domain;
 

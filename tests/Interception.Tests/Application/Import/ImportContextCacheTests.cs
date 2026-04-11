@@ -4,7 +4,7 @@
 
 using FluentAssertions;
 using Interception.UI.Application.Import.Services;
-using Interception.UI.Domain;
+using Interception.UI.Domain.Interceptions;
 
 namespace Interception.Tests.Application.Import;
 

@@ -2,8 +2,6 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Microsoft.Extensions.DependencyInjection;
-
 namespace Interception.UI.Application.Common.Events;
 
 /// <summary>

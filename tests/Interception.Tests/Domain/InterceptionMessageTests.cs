@@ -4,7 +4,7 @@
 
 using FluentAssertions;
 using Interception.UI.Domain.Exceptions;
-using Interception.UI.Domain;
+using Interception.UI.Domain.Interceptions;
 
 namespace Interception.Tests.Domain;
 

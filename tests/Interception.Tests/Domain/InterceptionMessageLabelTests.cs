@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Interception.UI.Domain;
+using Interception.UI.Domain.Interceptions;
 
 namespace Interception.Tests.Domain;
 
@@ -22,6 +22,6 @@ public sealed class InterceptionMessageLabelTests
         var act = () => InterceptionMessageLabel.Create(name);
 
         act.Should().Throw<ArgumentException>()
-            .WithParameterName("name");
+            .WithParameterName(nameof(name));
     }
 }

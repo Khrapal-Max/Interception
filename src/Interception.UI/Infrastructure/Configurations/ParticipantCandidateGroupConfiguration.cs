@@ -2,8 +2,9 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Domain;
-using Interception.UI.Domain.Records;
+using Interception.UI.Domain.Analytics;
+using Interception.UI.Domain.Analytics.Records;
+using Interception.UI.Domain.Interceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

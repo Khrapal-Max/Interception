@@ -4,8 +4,9 @@
 
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Analytics.Services;
-using Interception.UI.Domain;
-using Interception.UI.Domain.Records;
+using Interception.UI.Domain.Analytics;
+using Interception.UI.Domain.Analytics.Records;
+using Interception.UI.Domain.Interceptions;
 
 namespace Interception.Tests.Application.Analytics;
 

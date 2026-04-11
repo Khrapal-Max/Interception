@@ -2,11 +2,11 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using System.Text.Json;
+using FluentAssertions;
 using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Reports.Dtos;
-using FluentAssertions;
+using System.Text.Json;
 
 namespace Interception.Tests.Contracts;
 

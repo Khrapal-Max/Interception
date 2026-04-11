@@ -2,7 +2,8 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Domain;
+using Interception.UI.Domain.Interceptions;
+using Interception.UI.Domain.Registry;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -57,7 +58,7 @@ public static class DatabaseSeedDefaults
      ];
 
     public static readonly IReadOnlyList<(string Name, string Description)> RoleSeed =
-    [       
+    [
         ("ЗАГАЛЬНЕ ПОВІДОМЛЕННЯ НЕБЕЗПЕКИ",  ""),
         ("командир взвода",                  ""),
         ("водитель",                         ""),

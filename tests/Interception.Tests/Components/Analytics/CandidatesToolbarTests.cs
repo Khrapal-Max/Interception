@@ -5,7 +5,6 @@
 using Bunit;
 using FluentAssertions;
 using Interception.UI.Components.Pages.Analytics.Toolbar;
-using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Interception.Tests.Components.Analytics;
@@ -20,7 +19,7 @@ public sealed class CandidatesToolbarTests : BunitContext
         var links = cut.FindAll("a.registry-nav-link");
         links.Should().HaveCount(4);
         links.Select(l => l.GetAttribute("href")).Should().Contain(["/analytics/link-map", "/analytics/frequency-weights"]);
-    }    
+    }
 
     [Fact]
     public void Render_WithMetaAndActions_RendersBothFragments()

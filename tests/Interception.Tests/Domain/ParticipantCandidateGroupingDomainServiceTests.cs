@@ -3,9 +3,9 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Domain;
-using Interception.UI.Domain.Records;
-using Interception.UI.Domain.Services;
+using Interception.UI.Domain.Analytics;
+using Interception.UI.Domain.Analytics.Records;
+using Interception.UI.Domain.Analytics.Services;
 
 namespace Interception.Tests.Domain;
 
@@ -17,10 +17,9 @@ public sealed class ParticipantCandidateGroupingDomainServiceTests
         var options = new PatternRecognitionOptions();
         var member = CreateContext(messageId: Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), participantId: Guid.NewGuid(), ordinal: 1);
         var candidate = CreateContext(messageId: member.MessageId, participantId: Guid.NewGuid(), ordinal: 2);
+        var (Score, _) = ParticipantCandidateGroupingDomainService.ComputeGroupFit(candidate, [member], options);
 
-        var fit = ParticipantCandidateGroupingDomainService.ComputeGroupFit(candidate, [member], options);
-
-        fit.Score.Should().Be(0.0);
+        Score.Should().Be(0.0);
     }
 
     [Fact]
@@ -30,9 +29,9 @@ public sealed class ParticipantCandidateGroupingDomainServiceTests
         var m1 = CreateContext(Guid.NewGuid(), Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), 1);
         var m2 = CreateContext(Guid.NewGuid(), Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"), 1);
 
-        var result = ParticipantCandidateGroupingDomainService.RecalculateGroupScore([m1, m2], options);
+        var (Score, _) = ParticipantCandidateGroupingDomainService.RecalculateGroupScore([m1, m2], options);
 
-        result.Score.Should().BeGreaterThan(0.0);
+        Score.Should().BeGreaterThan(0.0);
     }
 
     private static UnknownContext CreateContext(Guid messageId, Guid participantId, int ordinal)

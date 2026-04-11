@@ -4,7 +4,7 @@
 
 using Interception.UI.Application.Registry.Abstractions;
 using Interception.UI.Application.Registry.Dtos;
-using Interception.UI.Domain;
+using Interception.UI.Domain.Registry;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
