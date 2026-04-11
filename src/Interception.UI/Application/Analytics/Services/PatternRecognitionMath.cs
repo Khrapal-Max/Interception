@@ -4,6 +4,8 @@
 
 using Interception.UI.Application.Analytics.Builders;
 using Interception.UI.Domain.Entities;
+using Interception.UI.Domain.Options;
+using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Domain.Policies;
 using Interception.UI.Domain.Records;
 using Interception.UI.Extensions;
