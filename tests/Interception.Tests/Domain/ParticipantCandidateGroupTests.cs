@@ -7,7 +7,6 @@ using Interception.UI.Domain.Entities;
 using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Domain.Enums;
 using Interception.UI.Domain.Exceptions;
-using Interception.UI.Domain.Records;
 
 namespace Interception.Tests.Domain;
 

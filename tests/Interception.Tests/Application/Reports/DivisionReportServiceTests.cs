@@ -6,7 +6,6 @@ using FluentAssertions;
 using Interception.UI.Application.Reports.Services;
 using Interception.UI.Domain.Entities;
 using Interception.UI.Domain.ValueObjects;
-using Interception.UI.Domain.Records;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 

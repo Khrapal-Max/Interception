@@ -4,7 +4,6 @@
 
 using Interception.UI.Domain.Enums;
 using Interception.UI.Domain.Exceptions;
-using Interception.UI.Domain.Records;
 using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Extensions;
 

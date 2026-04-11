@@ -6,7 +6,6 @@ using Interception.UI.Application.Analytics.Dtos;
 using Interception.UI.Application.Analytics.Services;
 using Interception.UI.Domain.Entities;
 using Interception.UI.Domain.ValueObjects;
-using Interception.UI.Domain.Records;
 
 namespace Interception.Tests.Application.Analytics;
 
