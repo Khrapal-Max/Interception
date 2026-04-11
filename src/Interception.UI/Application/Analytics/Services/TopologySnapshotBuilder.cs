@@ -190,13 +190,14 @@ public sealed class TopologySnapshotBuilder(IDbContextFactory<AppDbContext> dbFa
         if (messages.Count == 0)
             return [];
 
+        var canonicalDisplayByNameMap = await LoadCanonicalDisplayByNameMapAsync(db, ct);
         var frequencyDivisionMap = BuildFrequencyDivisionMap(messages);
 
         var messageRows = messages
             .Select(message => new MessageRow(
                 message,
                 ResolveEffectiveDivision(message.Division, message.Frequency, frequencyDivisionMap),
-                GetKnownParticipants(message)))
+                GetKnownParticipants(message, canonicalDisplayByNameMap)))
             .Where(x => x.KnownParticipants.Count >= 2)
             .ToList();
 
@@ -266,12 +267,14 @@ public sealed class TopologySnapshotBuilder(IDbContextFactory<AppDbContext> dbFa
         return null;
     }
 
-    private static List<ParticipantSnapshot> GetKnownParticipants(InterceptionMessage message)
+    private static List<ParticipantSnapshot> GetKnownParticipants(
+        InterceptionMessage message,
+        IReadOnlyDictionary<string, string> canonicalDisplayByNameMap)
     {
         return [.. message.Participants
             .Where(x => !x.IsUnknown && !string.IsNullOrWhiteSpace(x.Name))
             .Select(x => new ParticipantSnapshot(
-                x.Name!.Trim(),
+                ResolveParticipantName(x.Name!, canonicalDisplayByNameMap),
                 NormalizeMeaningfulOrNull(x.Role),
                 message.ObservedDate,
                 NormalizeMeaningfulOrNull(message.Frequency)))
@@ -653,6 +656,62 @@ public sealed class TopologySnapshotBuilder(IDbContextFactory<AppDbContext> dbFa
         return string.Compare(leftGroupKey, rightGroupKey, StringComparison.OrdinalIgnoreCase) <= 0
             ? $"{leftGroupKey}::{rightGroupKey}"
             : $"{rightGroupKey}::{leftGroupKey}";
+    }
+
+    private static string ResolveParticipantName(
+        string observedName,
+        IReadOnlyDictionary<string, string> canonicalDisplayByNameMap)
+    {
+        var normalizedName = StringTextNormExtensions.NormalizeOption(observedName);
+        if (!string.IsNullOrWhiteSpace(normalizedName)
+            && canonicalDisplayByNameMap.TryGetValue(normalizedName, out var canonicalDisplayName)
+            && !string.IsNullOrWhiteSpace(canonicalDisplayName))
+        {
+            return canonicalDisplayName.Trim();
+        }
+
+        return observedName.Trim();
+    }
+
+    private static async Task<Dictionary<string, string>> LoadCanonicalDisplayByNameMapAsync(
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var rows = await db.CanonicalPersonMembers
+            .AsNoTracking()
+            .Join(
+                db.ResolvedParticipants.AsNoTracking(),
+                member => member.ResolvedParticipantId,
+                resolved => resolved.Id,
+                (member, resolved) => new
+                {
+                    member.CanonicalPersonId,
+                    resolved.Name
+                })
+            .Join(
+                db.CanonicalPersons.AsNoTracking(),
+                member => member.CanonicalPersonId,
+                canonical => canonical.Id,
+                (member, canonical) => new
+                {
+                    member.Name,
+                    canonical.DisplayName
+                })
+            .ToListAsync(ct);
+
+        return rows
+            .Select(x => new
+            {
+                NormalizedName = StringTextNormExtensions.NormalizeOption(x.Name),
+                CanonicalDisplayName = NormalizeMeaningfulOrNull(x.DisplayName)
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.NormalizedName) && !string.IsNullOrWhiteSpace(x.CanonicalDisplayName))
+            .GroupBy(x => x.NormalizedName!, StringComparer.OrdinalIgnoreCase)
+            .Where(x => x.Select(v => v.CanonicalDisplayName).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 1)
+            .ToDictionary(
+                x => x.Key,
+                x => x.First().CanonicalDisplayName!,
+                StringComparer.OrdinalIgnoreCase);
     }
 
     private static string? NormalizeMeaningfulOrNull(string? value)

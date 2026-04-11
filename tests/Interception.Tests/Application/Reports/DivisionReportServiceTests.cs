@@ -492,6 +492,47 @@ public sealed class DivisionReportServiceTests
             .People.Should().ContainSingle(x => x.Name == "ЯКУТ");
     }
 
+    [Fact]
+    public async Task BuildAsync_UsesCanonicalDisplayName_ForConfirmedAndObservedRows()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var action = InterceptionAction.Create("доповідь", string.Empty);
+            db.InterceptionActions.Add(action);
+
+            var message = CreateMessage(action, new DateTime(2026, 03, 26, 16, 0, 0, DateTimeKind.Utc), division: "336 мсп", frequency: "142.4500");
+            var unknownParticipant = message.AddParticipant("НВ 1", isUnknown: true, role: "невідома", ordinal: 1);
+            message.AddParticipant("ШАПКА-2", isUnknown: false, role: "координатор", ordinal: 2);
+            db.InterceptionMessages.Add(message);
+
+            var resolvedA = ResolvedParticipant.Create("ШАПКА-1", "analyst", role: "координатор", division: "336 мсп");
+            var resolvedB = ResolvedParticipant.Create("ШАПКА-2", "analyst", role: "координатор", division: "336 мсп");
+            db.ResolvedParticipants.AddRange(resolvedA, resolvedB);
+
+            var canonical = CanonicalPerson.Create("ШАПКА");
+            canonical.AddMember(resolvedA.Id);
+            canonical.AddMember(resolvedB.Id);
+            db.CanonicalPersons.Add(canonical);
+
+            var candidateGroup = CreateUnknownGroup([unknownParticipant], [message], suggestedDivision: "336 мсп");
+            candidateGroup.Confirm("ШАПКА-1", "analyst", resolvedA.Id);
+            db.ParticipantCandidateGroups.Add(candidateGroup);
+
+            await db.SaveChangesAsync(ct);
+        }
+
+        var report = await service.BuildAsync(ct: ct);
+
+        var people = report.Groups.Single(x => x.Division == "336 мсп").People;
+        people.Should().ContainSingle(x => x.Name == "ШАПКА");
+        people.Should().NotContain(x => x.Name == "ШАПКА-1");
+        people.Should().NotContain(x => x.Name == "ШАПКА-2");
+    }
+
     private static InterceptionMessage CreateMessage(
         InterceptionAction action,
         DateTime observedDate,

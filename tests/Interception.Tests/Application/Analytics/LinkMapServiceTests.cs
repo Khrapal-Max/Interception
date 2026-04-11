@@ -591,6 +591,48 @@ public sealed class LinkMapServiceTests
         bridgeFromB.TopActions.Should().ContainInOrder("координація", "доповідь");
     }
 
+    [Fact]
+    public async Task BuildAsync_UsesCanonicalDisplayName_ForMergedProfiles()
+    {
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+        var ct = TestContext.Current.CancellationToken;
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var action = InterceptionAction.Create("доповідь", string.Empty);
+            db.InterceptionActions.Add(action);
+
+            var resolvedA = ResolvedParticipant.Create("ШАПКА-1", "seed", role: "координатор", division: "336 мсп");
+            var resolvedB = ResolvedParticipant.Create("ШАПКА-2", "seed", role: "координатор", division: "336 мсп");
+            db.ResolvedParticipants.AddRange(resolvedA, resolvedB);
+
+            var canonical = CanonicalPerson.Create("ШАПКА");
+            canonical.AddMember(resolvedA.Id);
+            canonical.AddMember(resolvedB.Id);
+            db.CanonicalPersons.Add(canonical);
+
+            var m1 = CreateMessage(action, new DateTime(2026, 03, 29, 8, 0, 0, DateTimeKind.Utc), "336 мсп", "402.0000");
+            m1.AddParticipant("ШАПКА-1", false, "координатор", 1);
+            m1.AddParticipant("А", false, "оператор", 2);
+
+            var m2 = CreateMessage(action, new DateTime(2026, 03, 29, 8, 5, 0, DateTimeKind.Utc), "336 мсп", "402.0000");
+            m2.AddParticipant("ШАПКА-2", false, "координатор", 1);
+            m2.AddParticipant("Б", false, "оператор", 2);
+
+            db.InterceptionMessages.AddRange(m1, m2);
+            await db.SaveChangesAsync(ct);
+        }
+
+        var result = await service.BuildAsync(ct: CancellationToken.None);
+
+        var group = result.Groups.Should().ContainSingle().Subject;
+        group.KeyPersonName.Should().Be("ШАПКА");
+        group.Members.Should().Contain("ШАПКА");
+        group.Members.Should().NotContain("ШАПКА-1");
+        group.Members.Should().NotContain("ШАПКА-2");
+    }
+
     private static void SeedStableCoreOnFrequency(
         AppDbContext db,
         InterceptionAction action,
