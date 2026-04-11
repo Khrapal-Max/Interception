@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Extensions;
+using Interception.UI.Domain.Exceptions;
 
 namespace Interception.UI.Domain;
 
@@ -93,7 +94,7 @@ public class InterceptionMessage
     public void RemoveParticipant(Guid participantId)
     {
         var participant = Participants.FirstOrDefault(x => x.Id == participantId)
-            ?? throw new InvalidOperationException("Учасника не знайдено.");
+            ?? throw new EntityNotFoundDomainException("Учасника не знайдено.");
         Participants.Remove(participant);
     }
 
@@ -104,7 +105,7 @@ public class InterceptionMessage
 
         var norm = StringTextNormExtensions.NormalizeRequired(nameLabel);
         if (Labels.Any(x => x.NameLabel == norm))
-            throw new InvalidOperationException($"Мітка '{nameLabel}' вже існує.");
+            throw new DuplicateLabelException(nameLabel);
 
         var label = InterceptionMessageLabel.Create(nameLabel);
         Labels.Add(label);
@@ -114,7 +115,7 @@ public class InterceptionMessage
     public void RemoveLabel(Guid labelId)
     {
         var label = Labels.FirstOrDefault(x => x.Id == labelId)
-            ?? throw new InvalidOperationException("Мітку не знайдено.");
+            ?? throw new EntityNotFoundDomainException("Мітку не знайдено.");
         Labels.Remove(label);
     }
 
@@ -129,7 +130,7 @@ public class InterceptionMessage
             string.Equals(p.Name, norm, StringComparison.OrdinalIgnoreCase));
 
         if (duplicate)
-            throw new InvalidOperationException($"Учасник '{name}' вже існує в цьому перехопленні.");
+            throw new DuplicateParticipantException(name ?? "невідомий");
     }
 
     private static string? NormalizeOptional(string? value)

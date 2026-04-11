@@ -2,13 +2,13 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Analytics.Builders;
+namespace Interception.UI.Domain.Records;
 
 /// <summary>
 /// Плоский контекст невідомого учасника без EF-навігацій.
-/// Використовується як вхідна модель для аналізу груп кандидатів.
+/// Використовується в domain service/specification для групування кандидатів.
 /// </summary>
-internal sealed record UnknownContext(
+public sealed record UnknownContext(
     Guid ParticipantId,
     int Ordinal,
     Guid MessageId,

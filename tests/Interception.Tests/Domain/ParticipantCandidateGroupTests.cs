@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
+using Interception.UI.Domain.Exceptions;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
 using Interception.UI.Domain.Records;
@@ -146,7 +147,7 @@ public sealed class ParticipantCandidateGroupTests
 
         var act = () => group.Confirm("ГРОМ", "operator2", Guid.NewGuid());
 
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<AggregateStateViolationException>()
             .WithMessage("*Dismissed*");
     }
 
@@ -171,7 +172,7 @@ public sealed class ParticipantCandidateGroupTests
 
         var act = () => group.Dismiss("operator2");
 
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<AggregateStateViolationException>()
             .WithMessage("*Confirmed*");
     }
 
@@ -217,7 +218,7 @@ public sealed class ParticipantCandidateGroupTests
 
         var act = () => group.UpdateSuggestedRole("оператор");
 
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<AggregateStateViolationException>()
             .WithMessage("*Confirmed*");
     }
 
@@ -253,7 +254,7 @@ public sealed class ParticipantCandidateGroupTests
 
         var act = () => group.AddRef(new ParticipantRef(Guid.NewGuid(), Guid.NewGuid(), 3));
 
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<AggregateStateViolationException>()
             .WithMessage("*Dismissed*");
     }
 
@@ -290,7 +291,7 @@ public sealed class ParticipantCandidateGroupTests
 
         var act = () => group.UpdateScore(0.50, MakeReasons(freq: false));
 
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<AggregateStateViolationException>()
             .WithMessage("*Confirmed*");
     }
 }

@@ -97,3 +97,15 @@ _Дата повторного аналізу: 10 квітня 2026_
 
 1. **Lightweight integration events (in-process)** — виконано: введено `IIntegrationEventPublisher` + `IIntegrationEventHandler<T>`, подію `InterceptionChangedIntegrationEvent` і downstream-обробник в analytics-контексті для позначення snapshot runs як stale.
 2. **Architecture fitness tests** — виконано: додано тести, що блокують небажані залежності між `Application/*/Services` різних контекстів та перевіряють, що `Application/*/Abstractions` не експонують `Interception.UI.Domain` напряму.
+
+## 9) Продовження R3/P1 (станом на 11.04.2026)
+
+1. **Domain service/specification для grouping unknown participants** — виконано частково: введено доменний сервіс `ParticipantCandidateGroupingDomainService`, який інкапсулює scoring, group-fit, recalculate та доменні рішення join/create, і підключено його у `ParticipantCandidateAnalysisService`.
+2. **Доменні події для `ParticipantCandidateGroup`** — виконано частково: додано integration event `ParticipantCandidateGroupChangedIntegrationEvent` (`Created/Enriched/Confirmed/Dismissed`) з публікацією в `ParticipantCandidateAnalysisService` і `ParticipantCandidateGroupCommandService`.
+3. **Contract tests для ключових DTO** — виконано: додано `DtoContractSnapshotTests`, що фіксує JSON shape (camelCase) для `InterceptionListItemDto`, `CandidateGroupDto`, `DayPictureDto`.
+
+## 10) Продовження R3/P2 (станом на 11.04.2026)
+
+1. **Логічне розділення persistence-меж** — відкладено: після рев’ю зміни з окремими read/write фабриками відкочено; повернуто єдиний `IDbContextFactory<AppDbContext>` до підготовки наступної ітерації з чіткішою міграційною стратегією.
+2. **Посилення VO у write use-cases** — виконано частково: додано `RoleName` VO і застосовано разом з `PersonName`/`DivisionName` у write-path сервісах перехоплень та candidate group confirm flow.
+3. **Typed-domain-exceptions** — виконано частково: введено базовий `DomainException` і спеціалізовані винятки (`DuplicateParticipantException`, `DuplicateLabelException`, `EntityNotFoundDomainException`, `AggregateStateViolationException`) з підключенням у ключові aggregate методи.

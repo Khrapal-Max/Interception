@@ -46,7 +46,11 @@ public sealed class InterceptionCommandService(
             form.PointSignal);
 
         foreach (var p in form.Participants.OrderBy(p => p.Ordinal))
-            message.AddParticipant(PersonName.Create(p.Name)?.Value, p.IsUnknown, ParticipantRoleCatalogSupport.NormalizeRole(p.Role, roleMap), p.Ordinal);
+            message.AddParticipant(
+                PersonName.Create(p.Name)?.Value,
+                p.IsUnknown,
+                RoleName.Create(ParticipantRoleCatalogSupport.NormalizeRole(p.Role, roleMap))?.Value,
+                p.Ordinal);
 
         foreach (var label in form.Labels)
             message.AddLabel(label);
@@ -85,7 +89,11 @@ public sealed class InterceptionCommandService(
         foreach (var p in message.Participants.ToList())
             message.RemoveParticipant(p.Id);
         foreach (var p in form.Participants.OrderBy(p => p.Ordinal))
-            message.AddParticipant(PersonName.Create(p.Name)?.Value, p.IsUnknown, ParticipantRoleCatalogSupport.NormalizeRole(p.Role, roleMap), p.Ordinal);
+            message.AddParticipant(
+                PersonName.Create(p.Name)?.Value,
+                p.IsUnknown,
+                RoleName.Create(ParticipantRoleCatalogSupport.NormalizeRole(p.Role, roleMap))?.Value,
+                p.Ordinal);
 
         foreach (var l in message.Labels.ToList())
             message.RemoveLabel(l.Id);

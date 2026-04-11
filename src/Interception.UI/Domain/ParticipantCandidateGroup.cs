@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Domain.Enums;
+using Interception.UI.Domain.Exceptions;
 using Interception.UI.Domain.Records;
 using Interception.UI.Extensions;
 
@@ -152,7 +153,7 @@ public class ParticipantCandidateGroup
     private void EnsureOpen()
     {
         if (Status != CandidateGroupStatus.Open)
-            throw new InvalidOperationException($"Неможливо змінити групу зі статусом '{Status}'.");
+            throw new AggregateStateViolationException($"Неможливо змінити групу зі статусом '{Status}'.");
     }
 
     private static string? NormalizeOptional(string? value)

@@ -33,4 +33,13 @@ public sealed class ValueObjectsTests
         division.Should().NotBeNull();
         division!.Value.Value.Should().Be("1 мсб");
     }
+
+    [Fact]
+    public void RoleName_Create_NormalizesValue()
+    {
+        var role = RoleName.Create("  оператор  ");
+
+        role.Should().NotBeNull();
+        role!.Value.Value.Should().Be("оператор");
+    }
 }

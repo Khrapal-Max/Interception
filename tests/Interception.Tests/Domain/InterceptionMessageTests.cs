@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
+using Interception.UI.Domain.Exceptions;
 using Interception.UI.Domain;
 
 namespace Interception.Tests.Domain;
@@ -159,14 +160,14 @@ public sealed class InterceptionMessageTests
     }
 
     [Fact]
-    public void AddParticipant_DuplicateKnownName_ShouldThrowInvalidOperationException()
+    public void AddParticipant_DuplicateKnownName_ShouldThrowDuplicateParticipantException()
     {
         var message = MakeMessage();
         message.AddParticipant("Alpha", isUnknown: false);
 
         var act = () => message.AddParticipant("Alpha", isUnknown: false);
 
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<DuplicateParticipantException>()
             .WithMessage("*Alpha*");
     }
 
@@ -231,14 +232,14 @@ public sealed class InterceptionMessageTests
     }
 
     [Fact]
-    public void AddLabel_DuplicateName_ShouldThrowInvalidOperationException()
+    public void AddLabel_DuplicateName_ShouldThrowDuplicateLabelException()
     {
         var message = MakeMessage();
         message.AddLabel("urgent");
 
         var act = () => message.AddLabel("urgent");
 
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<DuplicateLabelException>()
             .WithMessage("*urgent*");
     }
 

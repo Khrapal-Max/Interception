@@ -3,8 +3,11 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Abstractions;
+using Interception.UI.Application.Analytics.Events;
+using Interception.UI.Application.Common.Events;
 using Interception.UI.Application.Registry.Support;
 using Interception.UI.Domain;
+using Interception.UI.Domain.ValueObjects;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -14,10 +17,10 @@ namespace Interception.UI.Application.Analytics.Services;
 /// <summary>
 /// Командний сервіс для підтвердження або відхилення груп кандидатів.
 /// </summary>
-public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<AppDbContext> dbFactory) : IParticipantCandidateGroupCommandService
+public sealed class ParticipantCandidateGroupCommandService(
+    IDbContextFactory<AppDbContext> dbFactory,
+    IIntegrationEventPublisher? eventPublisher = null) : IParticipantCandidateGroupCommandService
 {
-    private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
-
     /// <summary>
     /// Підтверджує групу, зв'язуючи її з <see cref="ResolvedParticipant"/>.
     /// Якщо існує точний контекстний збіг — використовує його.
@@ -32,13 +35,15 @@ public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<Ap
         string? division,
         CancellationToken ct = default)
     {
-        var normalizedName = StringTextNormExtensions.NormalizeOption(resolvedName);
+        var normalizedName = PersonName.Create(resolvedName)?.Value
+            ?? throw new ArgumentException("Ім'я для підтвердження обов'язкове.", nameof(resolvedName));
         var normalizedResolvedBy = StringTextNormExtensions.NormalizeRequired(resolvedBy);
-        var normalizedDivision = StringTextNormExtensions.NormalizeOption(division);
+        var normalizedDivision = DivisionName.Create(division)?.Value;
 
-        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
         var roleMap = await ParticipantRoleCatalogSupport.LoadRoleMapAsync(db, ct);
-        var normalizedRole = ParticipantRoleCatalogSupport.NormalizeRole(role, roleMap);
+        var normalizedRole = RoleName.Create(
+            ParticipantRoleCatalogSupport.NormalizeRole(role, roleMap))?.Value;
 
         var group = await db.ParticipantCandidateGroups
             .SingleOrDefaultAsync(x => x.Id == groupId, ct)
@@ -80,6 +85,13 @@ public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<Ap
         group.Confirm(normalizedName!, normalizedResolvedBy, resolved.Id);
 
         await db.SaveChangesAsync(ct);
+        if (eventPublisher is not null)
+        {
+            await eventPublisher.PublishAsync(new ParticipantCandidateGroupChangedIntegrationEvent(
+                group.Id,
+                ParticipantCandidateGroupChangeType.Confirmed,
+                DateTime.UtcNow), ct);
+        }
     }
 
     /// <summary>
@@ -92,7 +104,7 @@ public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<Ap
     {
         var normalizedResolvedBy = StringTextNormExtensions.NormalizeRequired(resolvedBy);
 
-        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
 
         var group = await db.ParticipantCandidateGroups
             .SingleOrDefaultAsync(x => x.Id == groupId, ct)
@@ -101,6 +113,13 @@ public sealed class ParticipantCandidateGroupCommandService(IDbContextFactory<Ap
         group.Dismiss(normalizedResolvedBy);
 
         await db.SaveChangesAsync(ct);
+        if (eventPublisher is not null)
+        {
+            await eventPublisher.PublishAsync(new ParticipantCandidateGroupChangedIntegrationEvent(
+                group.Id,
+                ParticipantCandidateGroupChangeType.Dismissed,
+                DateTime.UtcNow), ct);
+        }
     }
 
     private static ResolvedParticipant? FindReusableResolvedParticipant(

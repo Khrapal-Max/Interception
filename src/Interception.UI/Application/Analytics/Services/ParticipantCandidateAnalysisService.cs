@@ -3,11 +3,13 @@
 //-----------------------------------------------------------------------------
 
 using Interception.UI.Application.Analytics.Abstractions;
-using Interception.UI.Application.Analytics.Builders;
+using Interception.UI.Application.Analytics.Events;
+using Interception.UI.Application.Common.Events;
 using Interception.UI.Domain;
 using Interception.UI.Domain.Enums;
 using Interception.UI.Domain.Policies;
 using Interception.UI.Domain.Records;
+using Interception.UI.Domain.Services;
 using Interception.UI.Extensions;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +23,8 @@ namespace Interception.UI.Application.Analytics.Services;
 public sealed class ParticipantCandidateAnalysisService(
     IDbContextFactory<AppDbContext> dbFactory,
     IKnownParticipantSuggestionService knownParticipantSuggestionService,
-    IOptions<PatternRecognitionOptions> options) : IParticipantCandidateAnalysisService
+    IOptions<PatternRecognitionOptions> options,
+    IIntegrationEventPublisher? eventPublisher = null) : IParticipantCandidateAnalysisService
 {
     private readonly PatternRecognitionOptions _options = options.Value;
 
@@ -72,8 +75,8 @@ public sealed class ParticipantCandidateAnalysisService(
                     Division: SemanticValueExtensions.NormalizeMeaningfulOrNull(m.Division),
                     Role: SemanticValueExtensions.NormalizeMeaningfulOrNull(p.Role),
                     ObservedDate: m.ObservedDate,
-                    KnownPartnerNames: PatternRecognitionMath.ToNormalizedSet(m.KnownPartners),
-                    Labels: PatternRecognitionMath.ToNormalizedSet(m.Labels));
+                    KnownPartnerNames: ParticipantCandidateGroupingDomainService.ToNormalizedSet(m.KnownPartners),
+                    Labels: ParticipantCandidateGroupingDomainService.ToNormalizedSet(m.Labels));
             })
             .ToList();
 
@@ -112,14 +115,14 @@ public sealed class ParticipantCandidateAnalysisService(
                             ParticipantId: p.Id,
                             Ordinal: p.Ordinal,
                             MessageId: p.InterceptionMessageId,
-                            Frequency: Extensions.SemanticValueExtensions.NormalizeMeaningfulOrNull(m.Frequency),
-                            VectorSignal: Extensions.SemanticValueExtensions.NormalizeMeaningfulOrNull(m.VectorSignal),
-                            PointSignal: Extensions.SemanticValueExtensions.NormalizeMeaningfulOrNull(m.PointSignal),
-                            Division: Extensions.SemanticValueExtensions.NormalizeMeaningfulOrNull(m.Division),
-                            Role: Extensions.SemanticValueExtensions.NormalizeMeaningfulOrNull(p.Role),
+                    Frequency: SemanticValueExtensions.NormalizeMeaningfulOrNull(m.Frequency),
+                    VectorSignal: SemanticValueExtensions.NormalizeMeaningfulOrNull(m.VectorSignal),
+                    PointSignal: SemanticValueExtensions.NormalizeMeaningfulOrNull(m.PointSignal),
+                    Division: SemanticValueExtensions.NormalizeMeaningfulOrNull(m.Division),
+                    Role: SemanticValueExtensions.NormalizeMeaningfulOrNull(p.Role),
                             ObservedDate: m.ObservedDate,
-                            KnownPartnerNames: PatternRecognitionMath.ToNormalizedSet(m.KnownPartners),
-                            Labels: PatternRecognitionMath.ToNormalizedSet(m.Labels));
+                            KnownPartnerNames: ParticipantCandidateGroupingDomainService.ToNormalizedSet(m.KnownPartners),
+                            Labels: ParticipantCandidateGroupingDomainService.ToNormalizedSet(m.Labels));
                     });
 
             foreach (var openGroup in openGroups)
@@ -140,10 +143,10 @@ public sealed class ParticipantCandidateAnalysisService(
                     if (assigned.Contains(newCandidate.ParticipantId))
                         continue;
 
-                    if (PatternRecognitionMath.HasSameObservationMember(newCandidate, groupContexts))
+                    if (ParticipantCandidateGroupingDomainService.HasSameObservationMember(newCandidate, groupContexts))
                         continue;
 
-                    var (Score, Reasons) = PatternRecognitionMath.ComputeGroupFit(newCandidate, groupContexts, _options);
+                    var (Score, Reasons) = ParticipantCandidateGroupingDomainService.ComputeGroupFit(newCandidate, groupContexts, _options);
                     if (!ParticipantCandidateGroupingPolicy.IsConfident(Score, _options.MinConfidenceScore))
                         continue;
 
@@ -155,21 +158,30 @@ public sealed class ParticipantCandidateAnalysisService(
 
                 if (groupChanged)
                 {
-                    var (Score, Reasons) = PatternRecognitionMath.RecalculateGroupScore(groupContexts, _options);
+                    var (Score, Reasons) = ParticipantCandidateGroupingDomainService.RecalculateGroupScore(groupContexts, _options);
                     openGroupUpdates.Add(new OpenGroupUpdate(
                         openGroup.Id,
                         refsToAdd,
                         Score,
                         Reasons,
-                        PatternRecognitionMath.GetDominantValue(groupContexts.Select(x => x.Role)),
-                        PatternRecognitionMath.GetDominantValue(groupContexts.Select(x => x.Division))));
+                        ParticipantCandidateGroupingDomainService.GetDominantValue(groupContexts.Select(x => x.Role)),
+                        ParticipantCandidateGroupingDomainService.GetDominantValue(groupContexts.Select(x => x.Division))));
                 }
             }
 
             if (openGroupUpdates.Count > 0)
             {
                 foreach (var update in openGroupUpdates)
+                {
                     await ApplyOpenGroupUpdateAsync(update, ct);
+                    if (eventPublisher is not null)
+                    {
+                        await eventPublisher.PublishAsync(new ParticipantCandidateGroupChangedIntegrationEvent(
+                            update.GroupId,
+                            ParticipantCandidateGroupChangeType.Enriched,
+                            DateTime.UtcNow), ct);
+                    }
+                }
 
                 changed += openGroupUpdates.Count;
             }
@@ -194,10 +206,10 @@ public sealed class ParticipantCandidateAnalysisService(
                 if (newAssigned.Contains(remainingCandidates[j].ParticipantId))
                     continue;
 
-                if (PatternRecognitionMath.HasSameObservationMember(remainingCandidates[j], group))
+                if (ParticipantCandidateGroupingDomainService.HasSameObservationMember(remainingCandidates[j], group))
                     continue;
 
-                var fit = PatternRecognitionMath.ComputeGroupFit(remainingCandidates[j], group, _options);
+                var fit = ParticipantCandidateGroupingDomainService.ComputeGroupFit(remainingCandidates[j], group, _options);
                 if (!ParticipantCandidateGroupingPolicy.IsConfident(fit.Score, _options.MinConfidenceScore))
                     continue;
 
@@ -208,7 +220,7 @@ public sealed class ParticipantCandidateAnalysisService(
             if (!ParticipantCandidateGroupingPolicy.IsValidGroupSize(group.Count))
                 continue;
 
-            var (Score, Reasons) = PatternRecognitionMath.RecalculateGroupScore(group, _options);
+            var (Score, Reasons) = ParticipantCandidateGroupingDomainService.RecalculateGroupScore(group, _options);
             if (!ParticipantCandidateGroupingPolicy.IsConfident(Score, _options.MinConfidenceScore))
                 continue;
 
@@ -222,8 +234,8 @@ public sealed class ParticipantCandidateAnalysisService(
                 refs,
                 Score,
                 Reasons,
-                suggestedRole: PatternRecognitionMath.GetDominantValue(group.Select(p => p.Role)),
-                suggestedDivision: PatternRecognitionMath.GetDominantValue(group.Select(p => p.Division))));
+                suggestedRole: ParticipantCandidateGroupingDomainService.GetDominantValue(group.Select(p => p.Role)),
+                suggestedDivision: ParticipantCandidateGroupingDomainService.GetDominantValue(group.Select(p => p.Division))));
         }
 
         if (newGroups.Count > 0)
@@ -232,7 +244,16 @@ public sealed class ParticipantCandidateAnalysisService(
             await db.SaveChangesAsync(ct);
 
             foreach (var groupId in newGroups.Select(g => (Guid)g.Id))
+            {
                 await RefreshOpenGroupSuggestionAsync(groupId, ct);
+                if (eventPublisher is not null)
+                {
+                    await eventPublisher.PublishAsync(new ParticipantCandidateGroupChangedIntegrationEvent(
+                        groupId,
+                        ParticipantCandidateGroupChangeType.Created,
+                        DateTime.UtcNow), ct);
+                }
+            }
 
             changed += newGroups.Count;
         }
