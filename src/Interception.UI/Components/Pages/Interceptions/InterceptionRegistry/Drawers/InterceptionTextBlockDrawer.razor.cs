@@ -83,12 +83,32 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
 
         _parsed = result;
         _form = BuildForm(result);
+        await TryResolveDivisionByFrequencyAfterParseAsync(_form);
         _newLabel = null;
         _participantOpen.Clear();
         _participantSuggestions.Clear();
 
         await PopulateParticipantRolesAsync(_form);
         await LoadDirectiveOptionsAsync();
+    }
+
+    private async Task TryResolveDivisionByFrequencyAfterParseAsync(InterceptionFormDto form)
+    {
+        if (string.IsNullOrWhiteSpace(form.Frequency))
+            return;
+
+        if (SemanticValueExtensions.IsMeaningful(form.Division))
+            return;
+
+        var frequency = form.Frequency.Trim();
+        var suggestions = await InterceptionSuggestionService.GetFrequencyWithDivisionAsync(frequency);
+        var matched = suggestions.FirstOrDefault(x =>
+            string.Equals(x.Frequency, frequency, StringComparison.OrdinalIgnoreCase));
+
+        if (matched is null || !SemanticValueExtensions.IsMeaningful(matched.Division))
+            return;
+
+        form.Division = matched.Division;
     }
 
     private static InterceptionFormDto BuildForm(TextBlockParseResult r)

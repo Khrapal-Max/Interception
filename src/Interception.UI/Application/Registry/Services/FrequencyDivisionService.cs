@@ -16,7 +16,6 @@ namespace Interception.UI.Application.Registry.Services;
 public sealed class FrequencyDivisionService(IDbContextFactory<AppDbContext> dbFactory)
     : IFrequencyDivisionService
 {
-    private const string UnknownDivision = "НВ підрозділ";
     private readonly IDbContextFactory<AppDbContext> _dbFactory = dbFactory;
 
     /// <inheritdoc />
@@ -83,13 +82,7 @@ public sealed class FrequencyDivisionService(IDbContextFactory<AppDbContext> dbF
             .ToListAsync(ct);
 
         foreach (var message in messages)
-        {
-            if (string.IsNullOrWhiteSpace(message.Division) ||
-                message.Division == "НВ підрозділ")
-            {
-                message.Division = normalizedDivision;
-            }
-        }
+            message.Division = normalizedDivision;
 
         await db.SaveChangesAsync(ct);
     }

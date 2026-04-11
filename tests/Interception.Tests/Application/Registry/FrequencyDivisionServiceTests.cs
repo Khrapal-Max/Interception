@@ -43,7 +43,7 @@ public sealed class FrequencyDivisionServiceTests
     }
 
     [Fact]
-    public async Task CorrectDivisionAsync_UpdatesEmptyAndUnknownDivisionValuesForFrequency()
+    public async Task CorrectDivisionAsync_UpdatesAllDivisionValuesForFrequency()
     {
         var ct = TestContext.Current.CancellationToken;
         var factory = TestDbFactory.CreateFactory();
@@ -62,7 +62,7 @@ public sealed class FrequencyDivisionServiceTests
             await db.SaveChangesAsync(ct);
         }
 
-        await service.CorrectDivisionAsync("402.0000", "656 мсп", ct: ct);
+        await service.CorrectDivisionAsync("402.0000", "186 мсп", ct: ct);
 
         await using (var db = await factory.CreateDbContextAsync(ct))
         {
@@ -73,7 +73,7 @@ public sealed class FrequencyDivisionServiceTests
                 .Select(x => x.Division)
                 .ToListAsync(ct);
 
-            divisions.Should().Equal("656 мсп", "656 мсп", "656 мсп");
+            divisions.Should().Equal("186 мсп", "186 мсп", "186 мсп");
         }
     }
 

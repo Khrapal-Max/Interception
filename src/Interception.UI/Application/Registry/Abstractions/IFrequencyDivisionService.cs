@@ -33,7 +33,7 @@ public interface IFrequencyDivisionService
 
     /// <summary>
     /// Коригує підрозділ для вказаної частоти.
-    /// Оновлює порожні або службові значення підрозділу на вибране оператором значення.
+    /// Оновлює підрозділ для всіх записів на цій частоті.
     /// </summary>
     Task CorrectDivisionAsync(
         string frequency,
