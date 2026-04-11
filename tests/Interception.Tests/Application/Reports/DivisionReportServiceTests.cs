@@ -507,7 +507,10 @@ public sealed class DivisionReportServiceTests
             var message = CreateMessage(action, new DateTime(2026, 03, 26, 16, 0, 0, DateTimeKind.Utc), division: "336 мсп", frequency: "142.4500");
             var unknownParticipant = message.AddParticipant("НВ 1", isUnknown: true, role: "невідома", ordinal: 1);
             message.AddParticipant("ШАПКА-2", isUnknown: false, role: "координатор", ordinal: 2);
-            db.InterceptionMessages.Add(message);
+
+            var followUpMessage = CreateMessage(action, new DateTime(2026, 03, 26, 16, 5, 0, DateTimeKind.Utc), division: "336 мсп", frequency: "142.4500");
+            var followUpUnknownParticipant = followUpMessage.AddParticipant("НВ 2", isUnknown: true, role: "невідома", ordinal: 1);
+            db.InterceptionMessages.AddRange(message, followUpMessage);
 
             var resolvedA = ResolvedParticipant.Create("ШАПКА-1", "analyst", role: "координатор", division: "336 мсп");
             var resolvedB = ResolvedParticipant.Create("ШАПКА-2", "analyst", role: "координатор", division: "336 мсп");
@@ -518,7 +521,10 @@ public sealed class DivisionReportServiceTests
             canonical.AddMember(resolvedB.Id);
             db.CanonicalPersons.Add(canonical);
 
-            var candidateGroup = CreateUnknownGroup([unknownParticipant], [message], suggestedDivision: "336 мсп");
+            var candidateGroup = CreateUnknownGroup(
+                [unknownParticipant, followUpUnknownParticipant],
+                [message, followUpMessage],
+                suggestedDivision: "336 мсп");
             candidateGroup.Confirm("ШАПКА-1", "analyst", resolvedA.Id);
             db.ParticipantCandidateGroups.Add(candidateGroup);
 
