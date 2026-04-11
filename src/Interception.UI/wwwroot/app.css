@@ -290,6 +290,24 @@ h1:focus { outline: none; }
     text-overflow: ellipsis;
 }
 .registry-toolbar .btn { white-space: nowrap; }
+.toolbar-action-cluster {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #3a424c;
+    border-radius: .45rem;
+    overflow: hidden;
+}
+.toolbar-action-cluster .btn {
+    border-radius: 0;
+    border: 0;
+    border-right: 1px solid #3a424c;
+}
+.toolbar-action-cluster .btn:last-child {
+    border-right: 0;
+}
+.toolbar-action-cluster-primary {
+    box-shadow: 0 0 0 1px rgba(112, 163, 207, .12);
+}
 
 .registry-toolbar > :last-child {
     margin-left: auto;
@@ -352,6 +370,15 @@ h1:focus { outline: none; }
 .data-table thead th:last-child,
 .data-table tbody td:last-child {
     padding-right: 1rem;
+}
+.row-action-groups {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+}
+.row-action-groups .btn-group + .btn-group {
+    padding-left: .35rem;
+    border-left: 1px solid #46515d;
 }
 
 .pagination-strip {
