@@ -3,7 +3,6 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Domain.Entities;
 using Interception.UI.Domain.Options;
 using Interception.UI.Domain.ValueObjects;
 
