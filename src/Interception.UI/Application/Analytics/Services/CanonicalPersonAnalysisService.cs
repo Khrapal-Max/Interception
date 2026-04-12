@@ -70,6 +70,8 @@ public sealed class CanonicalPersonAnalysisService(
 
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
+        await EnsureResolvedRowsCoverObservedContextsAsync(db, candidateKey, ct);
+
         var resolvedRows = (await db.ResolvedParticipants
             .AsNoTracking()
             .Select(x => new ResolvedRow(
