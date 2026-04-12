@@ -7,16 +7,7 @@
 
 <div class="page-shell">
     <div class="registry-toolbar flex-shrink-0">
-        <div class="toolbar-start d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="OpenTextBlock">
-                <i class="bi bi-text-paragraph me-1"></i>З тексту
-            </button>
-            <button type="button" class="btn btn-success btn-sm" @onclick="OpenCreate">
-                <i class="bi bi-plus-lg me-1"></i>Додати
-            </button>
-        </div>
-
-        <div class="registry-toolbar-meta toolbar-meta">
+        <div class="registry-toolbar-meta text-start">
             @if (_pagedResult is not null)
             {
                 <span>Записів: <strong>@_pagedResult.TotalCount</strong></span>
@@ -27,16 +18,27 @@
             }
         </div>
 
-        <div class="toolbar-actions d-flex align-items-center gap-2 justify-content-end">
-            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="OpenFilter">
-                <i class="bi bi-funnel me-1"></i>Фільтр
-            </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="OpenImport">
-                <i class="bi bi-upload me-1"></i>Імпорт
-            </button>
-            <ExportLauncher Kind="ExportKind.Interceptions"
-                            Title=".xlsx"
-                            ButtonClass="btn btn-outline-secondary btn-sm" />
+        <div class="toolbar-actions d-flex align-items-center gap-2 justify-content-end ms-auto">
+            <div class="toolbar-action-cluster toolbar-action-cluster-primary" role="group" aria-label="Пріоритетні дії">
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenTextBlock">
+                    <i class="bi bi-text-paragraph me-1"></i>З тексту
+                </button>
+                <button type="button" class="btn btn-success btn-sm" @onclick="OpenCreate">
+                    <i class="bi bi-plus-lg me-1"></i>Додати
+                </button>
+            </div>
+
+            <div class="toolbar-action-cluster" role="group" aria-label="Дії з даними">
+                <button type="button" class="btn btn-light btn-sm" @onclick="OpenFilter">
+                    <i class="bi bi-funnel me-1"></i>Фільтр
+                </button>
+                <button type="button" class="btn btn-light btn-sm" @onclick="OpenImport">
+                    <i class="bi bi-upload me-1"></i>Імпорт
+                </button>
+                <ExportLauncher Kind="ExportKind.Interceptions"
+                                Title=".xlsx"
+                                ButtonClass="btn btn-outline-secondary btn-sm" />
+            </div>
         </div>
     </div>
 
