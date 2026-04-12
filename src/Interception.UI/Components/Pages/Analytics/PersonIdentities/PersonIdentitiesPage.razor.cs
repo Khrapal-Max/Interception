@@ -89,11 +89,18 @@ public partial class PersonIdentitiesPage : ComponentBase
         _saving = true;
         try
         {
-            var createdNew = !_selected.HasSingleProfile;
+            var selectedRows = _selected.Rows
+                .Where(x => _selectedRows.Contains(x.ResolvedParticipantId))
+                .ToList();
 
-            _selected = _selected.HasSingleProfile && _selected.CanonicalPersonId.HasValue
-                ? await CanonicalPersonAnalysisService.AttachToCanonicalAsync(_selected.CanonicalPersonId.Value, [.. _selectedRows], _note)
-                : await CanonicalPersonAnalysisService.CreateCanonicalAsync(_selected.CandidateKey, [.. _selectedRows], _displayName, _note);
+            var shouldCreateSeparateProfile = !_selected.HasSingleProfile
+                || selectedRows.All(x => !x.IsLinkedToCanonical);
+
+            var createdNew = shouldCreateSeparateProfile;
+
+            _selected = shouldCreateSeparateProfile
+                ? await CanonicalPersonAnalysisService.CreateCanonicalAsync(_selected.CandidateKey, [.. _selectedRows], _displayName, _note)
+                : await CanonicalPersonAnalysisService.AttachToCanonicalAsync(_selected.CanonicalPersonId!.Value, [.. _selectedRows], _note);
 
             _displayName = _selected.CanonicalDisplayName ?? _selected.DisplayName;
             _note = _selected.CanonicalNote;
