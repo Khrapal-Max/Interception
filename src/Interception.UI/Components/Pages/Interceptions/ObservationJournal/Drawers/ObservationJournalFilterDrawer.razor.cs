@@ -7,9 +7,9 @@ using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Pages.Interceptions.InterceptionRegistry.Drawers;
+namespace Interception.UI.Components.Pages.Interceptions.ObservationJournal.Drawers;
 
-public partial class InterceptionFilterDrawer : ComponentBase
+public partial class ObservationJournalFilterDrawer : ComponentBase
 {
     [Inject] private IInterceptionSuggestionService InterceptionSuggestionService { get; set; } = default!;
 

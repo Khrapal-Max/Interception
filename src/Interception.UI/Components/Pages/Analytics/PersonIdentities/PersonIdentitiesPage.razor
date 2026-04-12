@@ -112,8 +112,35 @@
                                     <div class="border rounded-0 p-3 h-100">
                                         <div class="fw-semibold mb-2">Контексти зі спостережень</div>
                                         <div class="small text-muted mb-2">Це підказка для аналітика, а не автоматичне злиття.</div>
-                                        <div class="small mb-1"><strong>Частоти:</strong> @(_selected.Frequencies.Count == 0 ? "—" : string.Join(", ", _selected.Frequencies))</div>
-                                        <div class="small"><strong>Підрозділи:</strong> @(_selected.Divisions.Count == 0 ? "—" : string.Join("; ", _selected.Divisions))</div>
+                                        <div class="small mb-2"><strong>Частоти:</strong></div>
+                                        @if (_selected.Frequencies.Count == 0)
+                                        {
+                                            <div class="small text-muted mb-2">—</div>
+                                        }
+                                        else
+                                        {
+                                            <ul class="list-unstyled small mb-2">
+                                                @foreach (var frequency in _selected.Frequencies)
+                                                {
+                                                    <li class="mb-1"><span class="badge text-bg-dark-subtle border">@frequency</span></li>
+                                                }
+                                            </ul>
+                                        }
+
+                                        <div class="small mb-2"><strong>Підрозділи:</strong></div>
+                                        @if (_selected.Divisions.Count == 0)
+                                        {
+                                            <div class="small text-muted">—</div>
+                                        }
+                                        else
+                                        {
+                                            <ul class="list-unstyled small mb-0">
+                                                @foreach (var division in _selected.Divisions)
+                                                {
+                                                    <li class="mb-1">@division</li>
+                                                }
+                                            </ul>
+                                        }
                                     </div>
                                 </div>
                                 <div class="col-12 col-lg-6">
