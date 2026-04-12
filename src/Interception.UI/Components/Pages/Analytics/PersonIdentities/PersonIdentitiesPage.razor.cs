@@ -89,12 +89,7 @@ public partial class PersonIdentitiesPage : ComponentBase
         _saving = true;
         try
         {
-            var selectedRows = _selected.Rows
-                .Where(x => _selectedRows.Contains(x.ResolvedParticipantId))
-                .ToList();
-
-            var shouldCreateSeparateProfile = !_selected.HasSingleProfile
-                || selectedRows.All(x => !x.IsLinkedToCanonical);
+            var shouldCreateSeparateProfile = ShouldCreateSeparateProfile();
 
             var createdNew = shouldCreateSeparateProfile;
 
@@ -121,6 +116,49 @@ public partial class PersonIdentitiesPage : ComponentBase
             _saving = false;
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    protected string GetProfileLabel(CanonicalPersonCandidateRowDto row)
+    {
+        if (_selected is null)
+            return "—";
+
+        var profileIndexMap = BuildProfileIndexMap();
+
+        if (row.IsLinkedToCanonical && row.CanonicalPersonId.HasValue && profileIndexMap.TryGetValue(row.CanonicalPersonId.Value, out var linkedIndex))
+            return $"Профіль {linkedIndex}";
+
+        if (_selected.HasSingleProfile && _selectedRows.Contains(row.ResolvedParticipantId) && ShouldCreateSeparateProfile())
+            return $"Профіль {profileIndexMap.Count + 1} (новий)";
+
+        return "Без профілю";
+    }
+
+    protected string GetProfileBadgeClass(CanonicalPersonCandidateRowDto row)
+    {
+        if (row.IsLinkedToCanonical)
+            return "text-bg-success";
+
+        if (_selected?.HasSingleProfile == true && _selectedRows.Contains(row.ResolvedParticipantId) && ShouldCreateSeparateProfile())
+            return "text-bg-warning";
+
+        return "text-bg-secondary";
+    }
+
+    protected string GetSaveActionLabel()
+    {
+        if (_selected is null)
+            return "Зберегти";
+
+        if (!ShouldCreateSeparateProfile())
+            return "Додати в профіль";
+
+        if (_selected.HasSingleProfile)
+            return "Створити окремий профіль";
+
+        return _selected.HasMultipleProfiles
+            ? "Звести в один профіль"
+            : "Об’єднати в один профіль";
     }
 
     protected async Task UpdateAsync()
@@ -219,5 +257,35 @@ public partial class PersonIdentitiesPage : ComponentBase
             : [.. _selected.Rows.Select(x => x.ResolvedParticipantId)];
 
         return Task.CompletedTask;
+    }
+
+    private bool ShouldCreateSeparateProfile()
+    {
+        if (_selected is null)
+            return false;
+
+        var selectedRows = _selected.Rows
+            .Where(x => _selectedRows.Contains(x.ResolvedParticipantId))
+            .ToList();
+
+        return !_selected.HasSingleProfile
+            || selectedRows.All(x => !x.IsLinkedToCanonical);
+    }
+
+    private Dictionary<Guid, int> BuildProfileIndexMap()
+    {
+        if (_selected is null)
+            return [];
+
+        var canonicalIds = _selected.Rows
+            .Where(x => x.IsLinkedToCanonical && x.CanonicalPersonId.HasValue)
+            .Select(x => x.CanonicalPersonId!.Value)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+
+        return canonicalIds
+            .Select((id, index) => new { id, index })
+            .ToDictionary(x => x.id, x => x.index + 1);
     }
 }
