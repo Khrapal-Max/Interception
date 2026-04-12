@@ -132,6 +132,53 @@ public sealed class GroupHierarchyServiceTests
         edge.DirectiveLabel.Should().Contain("середня впевненість");
     }
 
+    [Fact]
+    public async Task BuildAsync_WhenRelationTypeIsReportUp_TreatsReporterAsSubordinate()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var linkMapService = Substitute.For<ILinkMapService>();
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var reporter = ResolvedParticipant.Create("РАДІСТ", "operator", division: "Підрозділ Б");
+            var manager = ResolvedParticipant.Create("ОРІОН", "chief", division: "Підрозділ А");
+
+            db.ResolvedParticipants.AddRange(reporter, manager);
+
+            db.PersonDirectiveRelations.Add(PersonDirectiveRelation.Create(
+                fromCanonicalPersonId: null,
+                fromResolvedParticipantId: reporter.Id,
+                toCanonicalPersonId: null,
+                toResolvedParticipantId: manager.Id,
+                relationType: DirectiveRelationType.ReportUp,
+                confidence: DirectiveRelationConfidence.High,
+                sourceObservationId: null,
+                isManual: true,
+                comment: "РАДІСТ доповідає ОРІОНУ"));
+
+            await db.SaveChangesAsync(ct);
+        }
+
+        linkMapService.BuildAsync(Arg.Any<DateTime?>(), Arg.Any<DateTime?>(), Arg.Any<CancellationToken>())
+            .Returns(new LinkMapDto([
+                CreateGroup("GROUP-A", "Підрозділ А", "ОРІОН", []),
+                CreateGroup("GROUP-B", "Підрозділ Б", "РАДІСТ", [])
+            ]));
+
+        var service = new GroupHierarchyService(linkMapService, factory);
+
+        var map = await service.BuildAsync(ct: ct);
+
+        var cluster = map.Clusters.Should().ContainSingle().Subject;
+        var edge = cluster.Edges.Should().ContainSingle().Subject;
+
+        edge.ParentGroupKey.Should().Be("GROUP-A", "отримувач доповіді має вважатися керівником");
+        edge.ChildGroupKey.Should().Be("GROUP-B", "той, хто доповідає вгору, має бути підлеглим");
+        edge.ViaMemberName.Should().Be("ОРІОН");
+        edge.IsDirective.Should().BeTrue();
+    }
+
     private static readonly DateTime Now = new(2026, 04, 09, 12, 00, 00, DateTimeKind.Utc);
 
     private static LinkMapGroupDto CreateGroup(

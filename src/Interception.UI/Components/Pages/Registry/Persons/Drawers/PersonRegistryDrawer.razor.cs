@@ -15,6 +15,7 @@ namespace Interception.UI.Components.Pages.Registry.Persons.Drawers;
 public partial class PersonRegistryDrawer : ComponentBase
 {
     [Inject] private IPersonRegistryService PersonRegistryService { get; set; } = default!;
+    [Inject] private IParticipantRoleService ParticipantRoleService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
     [Parameter] public bool IsOpen { get; set; }
@@ -30,9 +31,10 @@ public partial class PersonRegistryDrawer : ComponentBase
     private string? _serverError;
     private bool _saving;
     private bool _initialized;
+    private IReadOnlyList<ParticipantRoleListItemDto> _roleOptions = [];
 
     /// <inheritdoc />
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         if (!IsOpen)
         {
@@ -50,6 +52,8 @@ public partial class PersonRegistryDrawer : ComponentBase
         _division = Participant?.Division ?? string.Empty;
         _nameError = false;
         _serverError = null;
+
+        _roleOptions = await ParticipantRoleService.GetAllAsync();
     }
 
     /// <summary>
