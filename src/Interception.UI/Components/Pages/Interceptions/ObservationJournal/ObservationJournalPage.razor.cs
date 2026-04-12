@@ -10,9 +10,9 @@ using Interception.UI.Application.Toasts;
 using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Pages.Interceptions.InterceptionRegistry;
+namespace Interception.UI.Components.Pages.Interceptions.ObservationJournal;
 
-public partial class InterceptionRegistry : ComponentBase
+public partial class ObservationJournalPage : ComponentBase
 {
     [Inject] private IInterceptionCommandService InterceptionCommandService { get; set; } = default!;
     [Inject] private IInterceptionQueryService InterceptionQueryService { get; set; } = default!;

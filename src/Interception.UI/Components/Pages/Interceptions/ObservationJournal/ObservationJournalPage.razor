@@ -1,6 +1,6 @@
 @page "/observations"
 @using Interception.UI.Application.Exports.Models
-@using Interception.UI.Components.Pages.Interceptions.InterceptionRegistry.Drawers
+@using Interception.UI.Components.Pages.Interceptions.ObservationJournal.Drawers
 @using Interception.UI.Extensions
 
 <PageTitle>Журнал спостережень</PageTitle>
@@ -163,19 +163,19 @@
 
 </div>
 
-<InterceptionFormDrawer @bind-IsOpen="_formOpen"
+<ObservationJournalFormDrawer @bind-IsOpen="_formOpen"
                         EditingId="_editingId"
                         OnSaved="LoadPageAsync" />
 
-<InterceptionFilterDrawer @bind-IsOpen="_filterOpen"
+<ObservationJournalFilterDrawer @bind-IsOpen="_filterOpen"
                           Filter="_filter"
                           OnApplied="OnFilterApplied"
                           OnReset="OnFilterReset" />
 
-<InterceptionImportDrawer @bind-IsOpen="_importOpen"
+<ObservationJournalImportDrawer @bind-IsOpen="_importOpen"
                           OnImported="LoadPageAsync" />
 
-<InterceptionTextBlockDrawer @bind-IsOpen="_textBlockOpen"
+<ObservationJournalTextBlockDrawer @bind-IsOpen="_textBlockOpen"
                              Actions="_actions"
                              OnSaved="LoadPageAsync" />
 

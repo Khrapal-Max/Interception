@@ -12,9 +12,9 @@ using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
-namespace Interception.UI.Components.Pages.Interceptions.InterceptionRegistry.Drawers;
+namespace Interception.UI.Components.Pages.Interceptions.ObservationJournal.Drawers;
 
-public partial class InterceptionFormDrawer : ComponentBase
+public partial class ObservationJournalFormDrawer : ComponentBase
 {
     [Inject] private IInterceptionSuggestionService InterceptionSuggestionService { get; set; } = default!;
     [Inject] private IInterceptionQueryService InterceptionQueryService { get; set; } = default!;

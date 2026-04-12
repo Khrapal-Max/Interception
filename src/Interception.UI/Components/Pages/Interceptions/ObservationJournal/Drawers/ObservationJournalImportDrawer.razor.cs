@@ -8,9 +8,9 @@ using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 
-namespace Interception.UI.Components.Pages.Interceptions.InterceptionRegistry.Drawers;
+namespace Interception.UI.Components.Pages.Interceptions.ObservationJournal.Drawers;
 
-public partial class InterceptionImportDrawer : ComponentBase
+public partial class ObservationJournalImportDrawer : ComponentBase
 {
     [Inject] private IInterceptionImportService ImportService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;

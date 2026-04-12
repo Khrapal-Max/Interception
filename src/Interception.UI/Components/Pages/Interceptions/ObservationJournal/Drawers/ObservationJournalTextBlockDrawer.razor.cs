@@ -13,9 +13,9 @@ using Interception.UI.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
-namespace Interception.UI.Components.Pages.Interceptions.InterceptionRegistry.Drawers;
+namespace Interception.UI.Components.Pages.Interceptions.ObservationJournal.Drawers;
 
-public partial class InterceptionTextBlockDrawer : ComponentBase
+public partial class ObservationJournalTextBlockDrawer : ComponentBase
 {
     [Inject] private IInterceptionCommandService InterceptionCommandService { get; set; } = default!;
     [Inject] private IInterceptionSuggestionService InterceptionSuggestionService { get; set; } = default!;
@@ -482,8 +482,17 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
     private async Task OnDirectiveEnabledChanged(bool value)
     {
         _directiveEnabled = value;
-        if (_directiveEnabled)
-            await LoadDirectiveOptionsAsync();
+        if (!_directiveEnabled)
+            return;
+
+        await LoadDirectiveOptionsAsync();
+
+        if (HasNamedParticipants() && _directiveOptions.Count == 0)
+        {
+            Toasts.Info(
+                "Контур керування",
+                "Для вибору в контурі потрібні особи, які вже оновлені/підтверджені у реєстрі осіб.");
+        }
     }
 
     private async Task LoadDirectiveOptionsAsync()
@@ -504,13 +513,6 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
                 .ToList();
 
             _directiveOptions = await CommandContourService.GetIdentityOptionsAsync(names);
-
-            if (names.Count > 0 && _directiveOptions.Count == 0)
-            {
-                Toasts.Info(
-                    "Контур керування",
-                    "Для вибору в контурі потрібні особи, які вже оновлені/підтверджені у реєстрі осіб.");
-            }
         }
         catch (Exception ex)
         {
@@ -523,6 +525,9 @@ public partial class InterceptionTextBlockDrawer : ComponentBase
             await InvokeAsync(StateHasChanged);
         }
     }
+
+    private bool HasNamedParticipants()
+        => _form?.Participants.Any(x => !string.IsNullOrWhiteSpace(x.Name)) == true;
 
     private async Task SaveDirectiveRelationAsync(Guid observationId)
     {
