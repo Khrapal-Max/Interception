@@ -117,6 +117,55 @@ public sealed class InterceptionCommandServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_AutoCreatesResolvedParticipants_WhenMissingInRegistry()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var svc = CreateService(factory);
+        var action = await SeedActionAsync(factory, ct: ct);
+
+        await svc.CreateAsync(MakeForm(action.Id), "operator", ct);
+
+        await using var db = await factory.CreateDbContextAsync(ct);
+        var resolved = await db.ResolvedParticipants
+            .AsNoTracking()
+            .Select(x => x.Name)
+            .ToListAsync(ct);
+
+        resolved.Should().Contain("ШАПКА");
+        resolved.Should().Contain("ВОЛГА");
+    }
+
+    [Fact]
+    public async Task CreateAsync_DoesNotDuplicateResolvedParticipant_WhenSameContextExists()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = TestDbFactory.CreateFactory();
+        var svc = CreateService(factory);
+        var action = await SeedActionAsync(factory, ct: ct);
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            db.ResolvedParticipants.Add(ResolvedParticipant.Create(
+                "ШАПКА",
+                confirmedBy: "seed",
+                role: "центр",
+                division: "1 мсб 656 мсп",
+                frequency: "157.0250"));
+            await db.SaveChangesAsync(ct);
+        }
+
+        await svc.CreateAsync(MakeForm(action.Id), "operator", ct);
+
+        await using var verifyDb = await factory.CreateDbContextAsync(ct);
+        var sameNameCount = await verifyDb.ResolvedParticipants
+            .AsNoTracking()
+            .CountAsync(x => x.Name == "ШАПКА", ct);
+
+        sameNameCount.Should().Be(1);
+    }
+
+    [Fact]
     public async Task UpdateAsync_ChangesFields()
     {
         var ct = TestContext.Current.CancellationToken;

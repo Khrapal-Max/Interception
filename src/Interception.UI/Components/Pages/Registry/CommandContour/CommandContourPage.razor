@@ -39,7 +39,7 @@
                         <div class="small text-muted">Тут можна вибрати як канонічну особу, так і окремий підтверджений рядок, якщо canonical ще не створена.</div>
                     </div>
 
-                    <div class="panel-scroll px-3 py-3 d-flex flex-column gap-3 directive-form-scroll">
+                    <div class="panel-scroll px-3 py-3 d-flex flex-column gap-3 command-contour-form-scroll">
                         <div>
                             <label class="form-label">Хто керує</label>
                             <select class="form-select rounded-0"
@@ -70,7 +70,7 @@
                             <div class="col-12 col-lg-6 col-xxl-12">
                                 <label class="form-label">Тип зв'язку</label>
                                 <select class="form-select rounded-0" @bind="_form.RelationType">
-                                    @foreach (var relationType in Enum.GetValues<DirectiveRelationTypeDto>())
+                                    @foreach (var relationType in Enum.GetValues<CommandContourRelationTypeDto>())
                                     {
                                         <option value="@relationType">@BuildRelationTypeLabel(relationType)</option>
                                     }
@@ -79,7 +79,7 @@
                             <div class="col-12 col-lg-6 col-xxl-12">
                                 <label class="form-label">Впевненість</label>
                                 <select class="form-select rounded-0" @bind="_form.Confidence">
-                                    @foreach (var confidence in Enum.GetValues<DirectiveRelationConfidenceDto>())
+                                    @foreach (var confidence in Enum.GetValues<CommandContourConfidenceDto>())
                                     {
                                         <option value="@confidence">@BuildConfidenceLabel(confidence)</option>
                                     }

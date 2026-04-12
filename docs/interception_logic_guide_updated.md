@@ -540,32 +540,31 @@ UI:
 # 9. Контур структурного керування
 
 ## 9.1. Поточний статус
-Цей контур більше не є “чисто аналітикою”.
+Цей контур належить до розділу **Регістри** (а не до аналітики).
 
 ### Поточне положення в системі
 Основний робочий маршрут:
-- `/observations/directive-relations`
+- `/registries/directive-relations`
 
 UI:
-- `Components/Pages/Interceptions/DirectiveRelations/*`
-- `Components/Pages/Interceptions/DirectiveRelations/Drawers/DirectiveRelationFromObservationDrawer.*`
+- `Components/Pages/Registry/CommandContour/*`
 
 Toolbar:
-- `Components/Pages/Interceptions/Toolbar/InterceptionsToolbar.*`
+- `Components/Pages/Registry/Toolbar/RegistriesToolbar.*`
 
-Також у коді ще лишаються legacy-файли в:
-- `Components/Pages/Analytics/DirectiveRelations/*`
+Legacy-сторінку в аналітичному каталозі видалено:
+- `Components/Pages/Analytics/DirectiveRelations/*` (removed)
 
-Але primary contour зараз — саме у блоці **Спостереження**.
-
-## 9.2. Сервіс
-- `PersonDirectiveRelationService`
+## 9.2. Сервіс (Application level)
+- `Application/Registry/Abstractions/ICommandContourService.cs`
+- `Application/Registry/Services/CommandContourService.cs`
+- `Application/Registry/Dtos/CommandContour*.cs`
 
 Що робить:
 - повертає весь список relations;
 - повертає identity options:
   - без фільтра — для глобальної сторінки;
-  - з `participantNames` — для drawer від конкретного observation;
+  - з `participantNames` — для контекстних форм зі спостережень;
 - зберігає relation;
 - оновлює existing relation, якщо endpoint-и однакові;
 - видаляє relation.
@@ -653,10 +652,10 @@ Drawer:
 Поточні головні секції:
 - **Спостереження**
   - Реєстр спостережень
-  - Контур керування
 - **Аналітика**
-  - Кандидати
   - Карта зв’язків
+  - Ієрархія
+  - Об'єднані профілі
   - Вага підрозділів
 - **Звіти**
   - Підрозділи
@@ -666,6 +665,7 @@ Drawer:
   - Особи
   - Дії
   - Ролі
+  - Контур керування
 - **Система**
   - База даних
 
@@ -674,7 +674,6 @@ Drawer:
 - `InterceptionsToolbar`
 - секції:
   - `/observations`
-  - `/observations/directive-relations`
 
 ### Аналітика
 - `CandidatesToolbar`
@@ -692,6 +691,7 @@ Drawer:
   - persons
   - roles
   - actions
+  - directive-relations
 
 ### Звіти
 - `ReportsToolbar`
@@ -757,9 +757,9 @@ Explicit merge потрібен окремо.
 ## 14.4. Імпорт = формат експорту
 Старий шаблон імпорту більше не використовується.
 
-## 14.5. Контур керування — факт observation-рівня
-Його primary home тепер у **Спостереженнях**.
-Аналітика використовує цей факт, але не є єдиним місцем його створення.
+## 14.5. Контур керування — реєстровий факт
+Його primary home тепер у **Реєстрах** (`/registries/directive-relations`).
+Аналітика використовує цей факт як вхідний signal, але не є місцем його редагування.
 
 ## 14.6. Карта зв’язків і ієрархія — це різні зрізи
 - карта зв’язків = горизонтальна структура
@@ -769,8 +769,8 @@ Explicit merge потрібен окремо.
 
 # 15. Що ще потрібно доробити
 
-## 15.1. Прибрати або остаточно deprecate legacy analytics-page для directive relations
-Primary contour уже перенесений у `Interceptions`, але старі файли в `Analytics/DirectiveRelations` ще лишаються в дереві.
+## 15.1. Закрито: legacy analytics-page для directive relations
+Сторінку `Analytics/DirectiveRelations` прибрано; редагування контуру керування виконується через `Registries/DirectiveRelations`.
 
 ## 15.2. Додати stale-marking після Excel import
 Зараз write-side observation позначає completed snapshots як stale, а import flow — ще ні.

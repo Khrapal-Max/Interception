@@ -1,9 +1,9 @@
 using Interception.UI.Application.Registry.Dtos;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Shared.DirectiveRelationEditor;
+namespace Interception.UI.Components.Shared.CommandContourEditor;
 
-public partial class DirectiveRelationEditor : ComponentBase
+public partial class CommandContourEditor : ComponentBase
 {
     [Parameter] public string IdPrefix { get; set; } = "common";
     [Parameter] public string? HintText { get; set; }
@@ -11,8 +11,8 @@ public partial class DirectiveRelationEditor : ComponentBase
     [Parameter] public EventCallback<bool> EnabledChanged { get; set; }
     [Parameter] public bool Loading { get; set; }
     [Parameter] public bool Saving { get; set; }
-    [Parameter] public IReadOnlyList<PersonDirectiveRelationOptionDto> Options { get; set; } = [];
-    [Parameter] public PersonDirectiveRelationSaveDto Form { get; set; } = new();
+    [Parameter] public IReadOnlyList<CommandContourOptionDto> Options { get; set; } = [];
+    [Parameter] public CommandContourSaveDto Form { get; set; } = new();
     [Parameter] public string? FromSelection { get; set; }
     [Parameter] public EventCallback<string?> FromSelectionChanged { get; set; }
     [Parameter] public string? ToSelection { get; set; }
@@ -33,30 +33,30 @@ public partial class DirectiveRelationEditor : ComponentBase
     private Task OnToSelectionChanged(ChangeEventArgs args)
         => ToSelectionChanged.InvokeAsync(args.Value?.ToString());
 
-    private static string BuildOptionValue(PersonDirectiveRelationOptionDto option)
+    private static string BuildOptionValue(CommandContourOptionDto option)
         => $"{(option.IsCanonicalPerson ? "canonical" : "resolved")}:{option.IdentityId}";
 
-    private static string BuildOptionLabel(PersonDirectiveRelationOptionDto option)
+    private static string BuildOptionLabel(CommandContourOptionDto option)
         => $"{option.DisplayName} [{option.KindLabel}]";
 
-    private static string BuildRelationTypeLabel(DirectiveRelationTypeDto relationType)
+    private static string BuildRelationTypeLabel(CommandContourRelationTypeDto relationType)
         => relationType switch
         {
-            DirectiveRelationTypeDto.Command => "Наказ / завдання",
-            DirectiveRelationTypeDto.ReportUp => "Доповідь вгору",
-            DirectiveRelationTypeDto.Control => "Контроль",
-            DirectiveRelationTypeDto.Correction => "Коригування",
-            DirectiveRelationTypeDto.Coordination => "Координація",
-            DirectiveRelationTypeDto.Other => "Інше",
+            CommandContourRelationTypeDto.Command => "Наказ / завдання",
+            CommandContourRelationTypeDto.ReportUp => "Доповідь вгору",
+            CommandContourRelationTypeDto.Control => "Контроль",
+            CommandContourRelationTypeDto.Correction => "Коригування",
+            CommandContourRelationTypeDto.Coordination => "Координація",
+            CommandContourRelationTypeDto.Other => "Інше",
             _ => relationType.ToString()
         };
 
-    private static string BuildConfidenceLabel(DirectiveRelationConfidenceDto confidence)
+    private static string BuildConfidenceLabel(CommandContourConfidenceDto confidence)
         => confidence switch
         {
-            DirectiveRelationConfidenceDto.Low => "Низька",
-            DirectiveRelationConfidenceDto.Medium => "Середня",
-            DirectiveRelationConfidenceDto.High => "Висока",
+            CommandContourConfidenceDto.Low => "Низька",
+            CommandContourConfidenceDto.Medium => "Середня",
+            CommandContourConfidenceDto.High => "Висока",
             _ => confidence.ToString()
         };
 }

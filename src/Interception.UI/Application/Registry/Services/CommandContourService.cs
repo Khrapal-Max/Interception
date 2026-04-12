@@ -16,10 +16,10 @@ namespace Interception.UI.Application.Registry.Services;
 /// <summary>
 /// Простий сервіс ручного ведення контуру структурного керування.
 /// </summary>
-public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContext> dbFactory)
-    : IPersonDirectiveRelationService
+public sealed class CommandContourService(IDbContextFactory<AppDbContext> dbFactory)
+    : ICommandContourService
 {
-    public async Task<IReadOnlyList<PersonDirectiveRelationListItemDto>> GetAllAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<CommandContourListItemDto>> GetAllAsync(CancellationToken ct = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
@@ -61,7 +61,7 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
                 x => BuildResolvedLabel(x.Name, x.Role, x.Division, x.Frequency),
                 ct);
 
-        return [.. rows.Select(x => new PersonDirectiveRelationListItemDto
+        return [.. rows.Select(x => new CommandContourListItemDto
         {
             Id = x.Id,
             FromCanonicalPersonId = x.FromCanonicalPersonId,
@@ -79,7 +79,7 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
         })];
     }
 
-    public async Task<IReadOnlyList<PersonDirectiveRelationOptionDto>> GetIdentityOptionsAsync(
+    public async Task<IReadOnlyList<CommandContourOptionDto>> GetIdentityOptionsAsync(
         IReadOnlyList<string>? participantNames = null,
         CancellationToken ct = default)
     {
@@ -106,7 +106,7 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
             .Select(group =>
             {
                 var first = group.First();
-                return new PersonDirectiveRelationOptionDto
+                return new CommandContourOptionDto
                 {
                     IdentityId = first.CanonicalPersonId,
                     IsCanonicalPerson = true,
@@ -132,7 +132,7 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
             .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(x => x.Division, StringComparer.OrdinalIgnoreCase)
             .ThenBy(x => x.Frequency, StringComparer.OrdinalIgnoreCase)
-            .Select(x => new PersonDirectiveRelationOptionDto
+            .Select(x => new CommandContourOptionDto
             {
                 IdentityId = x.Id,
                 IsCanonicalPerson = false,
@@ -147,7 +147,7 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
         return [.. canonicalRows, .. standaloneOptions];
     }
 
-    public async Task SaveAsync(PersonDirectiveRelationSaveDto dto, CancellationToken ct = default)
+    public async Task SaveAsync(CommandContourSaveDto dto, CancellationToken ct = default)
     {
         if (dto is null)
             throw new ArgumentNullException(nameof(dto));
@@ -205,14 +205,14 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
         await db.SaveChangesAsync(ct);
     }
 
-    private static async Task<IReadOnlyList<PersonDirectiveRelationOptionDto>> GetAllIdentityOptionsAsync(
+    private static async Task<IReadOnlyList<CommandContourOptionDto>> GetAllIdentityOptionsAsync(
         AppDbContext db,
         CancellationToken ct)
     {
         var canonicalRows = await db.CanonicalPersons
             .AsNoTracking()
             .OrderBy(x => x.DisplayName)
-            .Select(x => new PersonDirectiveRelationOptionDto
+            .Select(x => new CommandContourOptionDto
             {
                 IdentityId = x.Id,
                 IsCanonicalPerson = true,
@@ -233,7 +233,7 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
             .OrderBy(x => x.Name)
             .ThenBy(x => x.Division)
             .ThenBy(x => x.Frequency)
-            .Select(x => new PersonDirectiveRelationOptionDto
+            .Select(x => new CommandContourOptionDto
             {
                 IdentityId = x.Id,
                 IsCanonicalPerson = false,
@@ -278,7 +278,7 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
         throw new InvalidOperationException("Потрібно вибрати особу.");
     }
 
-    private static void ValidateDto(PersonDirectiveRelationSaveDto dto)
+    private static void ValidateDto(CommandContourSaveDto dto)
     {
         var fromCount = (Normalize(dto.FromCanonicalPersonId).HasValue ? 1 : 0) + (Normalize(dto.FromResolvedParticipantId).HasValue ? 1 : 0);
         var toCount = (Normalize(dto.ToCanonicalPersonId).HasValue ? 1 : 0) + (Normalize(dto.ToResolvedParticipantId).HasValue ? 1 : 0);
@@ -299,45 +299,45 @@ public sealed class PersonDirectiveRelationService(IDbContextFactory<AppDbContex
     }
 
 
-    private static DirectiveRelationType MapRelationTypeToDomain(DirectiveRelationTypeDto value)
+    private static DirectiveRelationType MapRelationTypeToDomain(CommandContourRelationTypeDto value)
         => value switch
         {
-            DirectiveRelationTypeDto.Command => DirectiveRelationType.Command,
-            DirectiveRelationTypeDto.ReportUp => DirectiveRelationType.ReportUp,
-            DirectiveRelationTypeDto.Control => DirectiveRelationType.Control,
-            DirectiveRelationTypeDto.Correction => DirectiveRelationType.Correction,
-            DirectiveRelationTypeDto.Coordination => DirectiveRelationType.Coordination,
-            DirectiveRelationTypeDto.Other => DirectiveRelationType.Other,
+            CommandContourRelationTypeDto.Command => DirectiveRelationType.Command,
+            CommandContourRelationTypeDto.ReportUp => DirectiveRelationType.ReportUp,
+            CommandContourRelationTypeDto.Control => DirectiveRelationType.Control,
+            CommandContourRelationTypeDto.Correction => DirectiveRelationType.Correction,
+            CommandContourRelationTypeDto.Coordination => DirectiveRelationType.Coordination,
+            CommandContourRelationTypeDto.Other => DirectiveRelationType.Other,
             _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
         };
 
-    private static DirectiveRelationConfidence MapConfidenceToDomain(DirectiveRelationConfidenceDto value)
+    private static DirectiveRelationConfidence MapConfidenceToDomain(CommandContourConfidenceDto value)
         => value switch
         {
-            DirectiveRelationConfidenceDto.Low => DirectiveRelationConfidence.Low,
-            DirectiveRelationConfidenceDto.Medium => DirectiveRelationConfidence.Medium,
-            DirectiveRelationConfidenceDto.High => DirectiveRelationConfidence.High,
+            CommandContourConfidenceDto.Low => DirectiveRelationConfidence.Low,
+            CommandContourConfidenceDto.Medium => DirectiveRelationConfidence.Medium,
+            CommandContourConfidenceDto.High => DirectiveRelationConfidence.High,
             _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
         };
 
-    private static DirectiveRelationTypeDto MapRelationTypeToDto(DirectiveRelationType value)
+    private static CommandContourRelationTypeDto MapRelationTypeToDto(DirectiveRelationType value)
         => value switch
         {
-            DirectiveRelationType.Command => DirectiveRelationTypeDto.Command,
-            DirectiveRelationType.ReportUp => DirectiveRelationTypeDto.ReportUp,
-            DirectiveRelationType.Control => DirectiveRelationTypeDto.Control,
-            DirectiveRelationType.Correction => DirectiveRelationTypeDto.Correction,
-            DirectiveRelationType.Coordination => DirectiveRelationTypeDto.Coordination,
-            DirectiveRelationType.Other => DirectiveRelationTypeDto.Other,
+            DirectiveRelationType.Command => CommandContourRelationTypeDto.Command,
+            DirectiveRelationType.ReportUp => CommandContourRelationTypeDto.ReportUp,
+            DirectiveRelationType.Control => CommandContourRelationTypeDto.Control,
+            DirectiveRelationType.Correction => CommandContourRelationTypeDto.Correction,
+            DirectiveRelationType.Coordination => CommandContourRelationTypeDto.Coordination,
+            DirectiveRelationType.Other => CommandContourRelationTypeDto.Other,
             _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
         };
 
-    private static DirectiveRelationConfidenceDto MapConfidenceToDto(DirectiveRelationConfidence value)
+    private static CommandContourConfidenceDto MapConfidenceToDto(DirectiveRelationConfidence value)
         => value switch
         {
-            DirectiveRelationConfidence.Low => DirectiveRelationConfidenceDto.Low,
-            DirectiveRelationConfidence.Medium => DirectiveRelationConfidenceDto.Medium,
-            DirectiveRelationConfidence.High => DirectiveRelationConfidenceDto.High,
+            DirectiveRelationConfidence.Low => CommandContourConfidenceDto.Low,
+            DirectiveRelationConfidence.Medium => CommandContourConfidenceDto.Medium,
+            DirectiveRelationConfidence.High => CommandContourConfidenceDto.High,
             _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
         };
 
