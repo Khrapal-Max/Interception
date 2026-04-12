@@ -359,14 +359,19 @@ public sealed class CanonicalPersonAnalysisService(
 
     private static async Task EnsureResolvedRowsCoverObservedContextsAsync(AppDbContext db, string candidateKey, CancellationToken ct)
     {
-        var hasLinkedCanonicalProfile = await db.CanonicalPersonMembers
+        var candidateResolvedIds = (await db.ResolvedParticipants
             .AsNoTracking()
-            .Join(
-                db.ResolvedParticipants.AsNoTracking(),
-                member => member.ResolvedParticipantId,
-                resolved => resolved.Id,
-                (member, resolved) => new { resolved.Name })
-            .AnyAsync(x => NormalizeCandidateKey(x.Name) == candidateKey, ct);
+            .Where(x => x.Name != null && x.Name != "")
+            .Select(x => new { x.Id, x.Name })
+            .ToListAsync(ct))
+            .Where(x => NormalizeCandidateKey(x.Name) == candidateKey)
+            .Select(x => x.Id)
+            .ToList();
+
+        var hasLinkedCanonicalProfile = candidateResolvedIds.Count > 0
+            && await db.CanonicalPersonMembers
+                .AsNoTracking()
+                .AnyAsync(x => candidateResolvedIds.Contains(x.ResolvedParticipantId), ct);
 
         if (hasLinkedCanonicalProfile)
             return;
