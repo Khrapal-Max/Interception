@@ -376,32 +376,34 @@ public sealed class CanonicalPersonAnalysisService(
         if (hasLinkedCanonicalProfile)
             return;
 
-        var observedRows = await db.InterceptionMessages
+        var observedRows = (await db.InterceptionMessageParticipants
             .AsNoTracking()
-            .SelectMany(
-                message => message.Participants,
-                (message, participant) => new ObservationResolvedContextRow(
-                    participant.Name,
-                    participant.Role,
-                    participant.IsUnknown,
-                    message.Frequency,
-                    message.Division))
-            .Where(x => !x.IsUnknown && !string.IsNullOrWhiteSpace(x.Name))
+            .Where(x => !x.IsUnknown && x.Name != null && x.Name != "")
+            .Select(x => new ObservationResolvedContextRow(
+                x.Name,
+                x.Role,
+                x.IsUnknown,
+                x.InterceptionMessage.Frequency,
+                x.InterceptionMessage.Division))
+            .ToListAsync(ct))
             .Where(x => NormalizeCandidateKey(x.Name) == candidateKey)
-            .ToListAsync(ct);
+            .ToList();
 
         if (observedRows.Count == 0)
             return;
 
-        var existingRows = await db.ResolvedParticipants
-            .Where(x => NormalizeCandidateKey(x.Name) == candidateKey)
+        var existingRows = (await db.ResolvedParticipants
+            .AsNoTracking()
+            .Where(x => x.Name != null && x.Name != "")
             .Select(x => new
             {
                 x.Name,
                 Frequency = EF.Property<string?>(x, "Frequency"),
                 x.Division
             })
-            .ToListAsync(ct);
+            .ToListAsync(ct))
+            .Where(x => NormalizeCandidateKey(x.Name) == candidateKey)
+            .ToList();
 
         var existingContextKeys = existingRows
             .Select(x => BuildResolvedContextKey(x.Frequency, x.Division))
