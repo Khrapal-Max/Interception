@@ -983,8 +983,8 @@ h1:focus { outline: none; }
     text-decoration: none;
     user-select: none;
     border-radius: .45rem;
-    border: 1px solid #3f4a55;
-    background: #20252b;
+    border: 0;
+    background: transparent;
     color: #cfd6dd;
 }
 
@@ -1009,7 +1009,6 @@ h1:focus { outline: none; }
 
 .nav-btn:hover {
     background: #2a3036;
-    border-color: #586573;
     color: #f2f5f8;
 }
 
@@ -1020,7 +1019,6 @@ h1:focus { outline: none; }
 
 .nav-btn.active {
     background: #313941;
-    border-color: #6a7785;
     color: #f2f5f8;
 }
 
