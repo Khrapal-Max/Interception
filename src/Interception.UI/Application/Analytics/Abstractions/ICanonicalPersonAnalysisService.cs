@@ -12,6 +12,7 @@ namespace Interception.UI.Application.Analytics.Abstractions;
 public interface ICanonicalPersonAnalysisService
 {
     Task<IReadOnlyList<CanonicalPersonCandidateDto>> GetCandidatesAsync(CancellationToken ct = default);
+    Task PrepareCandidateContextsAsync(string candidateKey, CancellationToken ct = default);
     Task<CanonicalPersonCandidateDetailsDto?> GetCandidateDetailsAsync(string candidateKey, CancellationToken ct = default);
 
     Task<CanonicalPersonCandidateDetailsDto> CreateCanonicalAsync(
