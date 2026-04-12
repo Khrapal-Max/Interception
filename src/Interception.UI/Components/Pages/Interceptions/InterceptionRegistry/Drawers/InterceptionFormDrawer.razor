@@ -1,7 +1,7 @@
 @using Interception.UI.Application.Interceptions.Dtos
 @using Interception.UI.Application.Registry.Dtos
 @using Interception.UI.Components.Shared.Drawer
-@using Interception.UI.Components.Shared.DirectiveRelationEditor
+@using Interception.UI.Components.Shared.CommandContourEditor
 @using Interception.UI.Extensions
 
 <Drawer IsOpen="@IsOpen"
@@ -265,8 +265,8 @@
                     </div>
                 </div>
 
-                <DirectiveRelationEditor IdPrefix="form"
-                                         HintText="Тимчасовий inline-блок (Stage 1): фіксація керування в основному дравері observation."
+                <CommandContourEditor IdPrefix="form"
+                                         HintText="Фіксація контуру в основному дравері спостереження. Доступні лише особи, що вже оновлені/підтверджені у реєстрі осіб."
                                          Enabled="_directiveEnabled"
                                          EnabledChanged="OnDirectiveEnabledChanged"
                                          Loading="_directiveLoading"

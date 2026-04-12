@@ -4,13 +4,13 @@
 <div class="border rounded p-3">
     <div class="form-check form-switch mb-2">
         <input class="form-check-input"
-               id="@($"directive-enable-{IdPrefix}")"
+               id="@($"contour-enable-{IdPrefix}")"
                type="checkbox"
                checked="@Enabled"
                @onchange="OnEnabledChanged"
                disabled="@Saving" />
-        <label class="form-check-label fw-semibold" for="@($"directive-enable-{IdPrefix}")">
-            Зв'язок керування
+        <label class="form-check-label fw-semibold" for="@($"contour-enable-{IdPrefix}")">
+            Контур керування
         </label>
     </div>
 
@@ -19,6 +19,15 @@
         @if (!string.IsNullOrWhiteSpace(HintText))
         {
             <div class="small text-muted mb-2">@HintText</div>
+        }
+
+
+        @if (!Loading && Options.Count == 0)
+        {
+            <div class="alert alert-warning py-2 px-2 small mb-2" role="alert">
+                Доступних осіб для контуру поки немає. Спочатку оновіть/підтвердьте учасників у реєстрі осіб,
+                після цього поверніться та натисніть «Оновити варіанти осіб».
+            </div>
         }
 
         <div class="mb-2">
@@ -66,7 +75,7 @@
             <div class="col-6">
                 <label class="form-label">Тип зв'язку</label>
                 <select class="form-select" @bind="Form.RelationType" disabled="@Saving">
-                    @foreach (var relationType in Enum.GetValues<DirectiveRelationTypeDto>())
+                    @foreach (var relationType in Enum.GetValues<CommandContourRelationTypeDto>())
                     {
                         <option value="@relationType">@BuildRelationTypeLabel(relationType)</option>
                     }
@@ -76,7 +85,7 @@
             <div class="col-6">
                 <label class="form-label">Впевненість</label>
                 <select class="form-select" @bind="Form.Confidence" disabled="@Saving">
-                    @foreach (var confidence in Enum.GetValues<DirectiveRelationConfidenceDto>())
+                    @foreach (var confidence in Enum.GetValues<CommandContourConfidenceDto>())
                     {
                         <option value="@confidence">@BuildConfidenceLabel(confidence)</option>
                     }

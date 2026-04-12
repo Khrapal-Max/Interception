@@ -22,7 +22,7 @@ public partial class InterceptionFormDrawer : ComponentBase
     [Inject] private IInterceptionActionService ActionService { get; set; } = default!;
     [Inject] private IParticipantRoleService ParticipantRoleService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
-    [Inject] private IPersonDirectiveRelationService PersonDirectiveRelationService { get; set; } = default!;
+    [Inject] private ICommandContourService CommandContourService { get; set; } = default!;
 
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
@@ -38,8 +38,8 @@ public partial class InterceptionFormDrawer : ComponentBase
     private bool _initialized;
     private bool _directiveEnabled;
     private bool _directiveLoading;
-    private IReadOnlyList<PersonDirectiveRelationOptionDto> _directiveOptions = [];
-    private PersonDirectiveRelationSaveDto _directiveForm = CreateDefaultDirectiveForm();
+    private IReadOnlyList<CommandContourOptionDto> _directiveOptions = [];
+    private CommandContourSaveDto _directiveForm = CreateDefaultDirectiveForm();
     private string? _directiveFromSelection;
     private string? _directiveToSelection;
     private bool _freqOpen;
@@ -474,7 +474,14 @@ public partial class InterceptionFormDrawer : ComponentBase
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            _directiveOptions = await PersonDirectiveRelationService.GetIdentityOptionsAsync(names);
+            _directiveOptions = await CommandContourService.GetIdentityOptionsAsync(names);
+
+            if (names.Count > 0 && _directiveOptions.Count == 0)
+            {
+                Toasts.Info(
+                    "Контур керування",
+                    "Для вибору в контурі потрібні особи, які вже оновлені/підтверджені у реєстрі осіб.");
+            }
         }
         catch (Exception ex)
         {
@@ -504,7 +511,7 @@ public partial class InterceptionFormDrawer : ComponentBase
         {
             _directiveForm.SourceObservationId = observationId;
             _directiveForm.IsManual = true;
-            await PersonDirectiveRelationService.SaveAsync(_directiveForm);
+            await CommandContourService.SaveAsync(_directiveForm);
             Toasts.Success("Контур керування", "Зв'язок керування зафіксовано.");
         }
         catch (Exception ex)
@@ -563,11 +570,11 @@ public partial class InterceptionFormDrawer : ComponentBase
         }
     }
 
-    private static PersonDirectiveRelationSaveDto CreateDefaultDirectiveForm()
+    private static CommandContourSaveDto CreateDefaultDirectiveForm()
         => new()
         {
-            RelationType = DirectiveRelationTypeDto.Command,
-            Confidence = DirectiveRelationConfidenceDto.High,
+            RelationType = CommandContourRelationTypeDto.Command,
+            Confidence = CommandContourConfidenceDto.High,
             IsManual = true
         };
 }

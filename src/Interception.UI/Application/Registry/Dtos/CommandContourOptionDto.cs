@@ -8,7 +8,7 @@ namespace Interception.UI.Application.Registry.Dtos;
 /// Варіант вибору особи у формі створення зв'язку керування.
 /// Це може бути або канонічна особа, або поодинокий підтверджений запис.
 /// </summary>
-public sealed class PersonDirectiveRelationOptionDto
+public sealed class CommandContourOptionDto
 {
     public Guid IdentityId { get; init; }
     public bool IsCanonicalPerson { get; init; }

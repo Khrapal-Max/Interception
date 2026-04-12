@@ -7,23 +7,29 @@ using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Pages.Analytics.DirectiveRelations;
+namespace Interception.UI.Components.Pages.Registry.CommandContour;
 
 /// <summary>
 /// Проста сторінка ручного ведення зв'язків структурного керування.
 /// </summary>
-public partial class DirectiveRelationsPage : ComponentBase
+public partial class CommandContourPage : ComponentBase
 {
-    [Inject] private IPersonDirectiveRelationService PersonDirectiveRelationService { get; set; } = default!;
+    [Inject] private ICommandContourService CommandContourService { get; set; } = default!;
     [Inject] private ToastService Toasts { get; set; } = default!;
 
-    protected IReadOnlyList<PersonDirectiveRelationListItemDto> _rows = [];
-    protected IReadOnlyList<PersonDirectiveRelationOptionDto> _options = [];
-    protected PersonDirectiveRelationSaveDto _form = CreateDefaultForm();
+    protected IReadOnlyList<CommandContourListItemDto> _rows = [];
+    protected IReadOnlyList<CommandContourOptionDto> _options = [];
+    protected CommandContourSaveDto _form = CreateDefaultForm();
     protected bool _loading;
     protected bool _saving;
     protected string? _fromSelection;
     protected string? _toSelection;
+    protected CommandContourListItemDto? _detailsRow;
+    protected bool _detailsOpen;
+    protected bool _deleteConfirmOpen;
+    protected Guid? _pendingDeleteId;
+    protected bool _deleteInProgress;
+    protected string? _deleteReason;
 
     protected override async Task OnInitializedAsync()
         => await LoadAsync();
@@ -35,8 +41,8 @@ public partial class DirectiveRelationsPage : ComponentBase
 
         try
         {
-            _rows = await PersonDirectiveRelationService.GetAllAsync();
-            _options = await PersonDirectiveRelationService.GetIdentityOptionsAsync();
+            _rows = await CommandContourService.GetAllAsync();
+            _options = await CommandContourService.GetIdentityOptionsAsync(null);
         }
         catch (Exception ex)
         {
@@ -62,7 +68,7 @@ public partial class DirectiveRelationsPage : ComponentBase
         _saving = true;
         try
         {
-            await PersonDirectiveRelationService.SaveAsync(_form);
+            await CommandContourService.SaveAsync(_form);
             Toasts.Success("Зв'язок збережено", "Контур керування оновлено.");
 
             _form = CreateDefaultForm();
@@ -82,17 +88,63 @@ public partial class DirectiveRelationsPage : ComponentBase
         }
     }
 
-    protected async Task DeleteAsync(Guid id)
+    protected void OpenDetails(CommandContourListItemDto row)
     {
+        _detailsRow = row;
+        _detailsOpen = true;
+    }
+
+    protected void CloseDetails()
+    {
+        _detailsOpen = false;
+        _detailsRow = null;
+    }
+
+    protected void AskDelete(Guid id)
+    {
+        _pendingDeleteId = id;
+        _deleteReason = null;
+        _deleteConfirmOpen = true;
+    }
+
+    protected void CancelDelete()
+    {
+        if (_deleteInProgress)
+            return;
+
+        _deleteConfirmOpen = false;
+        _pendingDeleteId = null;
+        _deleteReason = null;
+    }
+
+    protected async Task ConfirmDeleteAsync()
+    {
+        if (_pendingDeleteId is null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_deleteReason))
+        {
+            Toasts.Warning("Потрібна причина", "Вкажіть коротку причину видалення.");
+            return;
+        }
+
+        _deleteInProgress = true;
         try
         {
-            await PersonDirectiveRelationService.DeleteAsync(id);
-            Toasts.Success("Зв'язок видалено", "Запис контуру керування прибрано.");
+            await CommandContourService.DeleteAsync(_pendingDeleteId.Value);
+            Toasts.Success("Зв'язок видалено", $"Запис прибрано. Причина: {_deleteReason.Trim()}.");
+            _deleteConfirmOpen = false;
+            _pendingDeleteId = null;
+            _deleteReason = null;
             await LoadAsync();
         }
         catch (Exception ex)
         {
             Toasts.Error("Помилка видалення", ex.Message);
+        }
+        finally
+        {
+            _deleteInProgress = false;
         }
     }
 
@@ -108,31 +160,31 @@ public partial class DirectiveRelationsPage : ComponentBase
         ApplySelection(_toSelection, isFrom: false);
     }
 
-    protected static string BuildRelationTypeLabel(DirectiveRelationTypeDto relationType)
+    protected static string BuildRelationTypeLabel(CommandContourRelationTypeDto relationType)
         => relationType switch
         {
-            DirectiveRelationTypeDto.Command => "Наказ / завдання",
-            DirectiveRelationTypeDto.ReportUp => "Доповідь вгору",
-            DirectiveRelationTypeDto.Control => "Контроль",
-            DirectiveRelationTypeDto.Correction => "Коригування",
-            DirectiveRelationTypeDto.Coordination => "Координація",
-            DirectiveRelationTypeDto.Other => "Інше",
+            CommandContourRelationTypeDto.Command => "Наказ / завдання",
+            CommandContourRelationTypeDto.ReportUp => "Доповідь вгору",
+            CommandContourRelationTypeDto.Control => "Контроль",
+            CommandContourRelationTypeDto.Correction => "Коригування",
+            CommandContourRelationTypeDto.Coordination => "Координація",
+            CommandContourRelationTypeDto.Other => "Інше",
             _ => relationType.ToString()
         };
 
-    protected static string BuildConfidenceLabel(DirectiveRelationConfidenceDto confidence)
+    protected static string BuildConfidenceLabel(CommandContourConfidenceDto confidence)
         => confidence switch
         {
-            DirectiveRelationConfidenceDto.Low => "Низька",
-            DirectiveRelationConfidenceDto.Medium => "Середня",
-            DirectiveRelationConfidenceDto.High => "Висока",
+            CommandContourConfidenceDto.Low => "Низька",
+            CommandContourConfidenceDto.Medium => "Середня",
+            CommandContourConfidenceDto.High => "Висока",
             _ => confidence.ToString()
         };
 
-    protected static string BuildOptionValue(PersonDirectiveRelationOptionDto option)
+    protected static string BuildOptionValue(CommandContourOptionDto option)
         => $"{(option.IsCanonicalPerson ? "canonical" : "resolved")}:{option.IdentityId}";
 
-    protected static string BuildOptionLabel(PersonDirectiveRelationOptionDto option)
+    protected static string BuildOptionLabel(CommandContourOptionDto option)
         => $"{option.DisplayName} [{option.KindLabel}]";
 
     private bool HasFromSelection()
@@ -179,11 +231,11 @@ public partial class DirectiveRelationsPage : ComponentBase
         }
     }
 
-    private static PersonDirectiveRelationSaveDto CreateDefaultForm()
+    private static CommandContourSaveDto CreateDefaultForm()
         => new()
         {
-            RelationType = DirectiveRelationTypeDto.Command,
-            Confidence = DirectiveRelationConfidenceDto.High,
+            RelationType = CommandContourRelationTypeDto.Command,
+            Confidence = CommandContourConfidenceDto.High,
             IsManual = true
         };
 }

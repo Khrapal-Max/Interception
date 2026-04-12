@@ -73,7 +73,7 @@ builder.Services.AddScoped<IPersonRegistryService, PersonRegistryService>();
 
 // Нові candidate-сервіси
 builder.Services.AddScoped<ITopologySnapshotBuilder, TopologySnapshotBuilder>();
-builder.Services.AddScoped<IPersonDirectiveRelationService, PersonDirectiveRelationService>();
+builder.Services.AddScoped<ICommandContourService, CommandContourService>();
 builder.Services.AddScoped<ICanonicalPersonAnalysisService, CanonicalPersonAnalysisService>();
 builder.Services.AddScoped<ILinkMapService, LinkMapService>();
 builder.Services.AddScoped<IGroupHierarchyService, GroupHierarchyService>();

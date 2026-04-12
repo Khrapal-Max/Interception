@@ -5,7 +5,7 @@
 namespace Interception.UI.Application.Registry.Dtos;
 
 /// <summary>Тип факту структурного зв'язку.</summary>
-public enum DirectiveRelationTypeDto
+public enum CommandContourRelationTypeDto
 {
     Command = 0,
     ReportUp = 1,

@@ -3,7 +3,6 @@
 //-----------------------------------------------------------------------------
 
 using FluentAssertions;
-using Interception.UI.Application.Interceptions.Dtos;
 using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Application.Registry.Services;
 using Interception.UI.Domain.Entities;
@@ -11,14 +10,14 @@ using Interception.UI.Domain.Enums;
 using Interception.UI.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
-namespace Interception.Tests.Application.Interceptions;
+namespace Interception.Tests.Application.Registry;
 
 /// <summary>
 /// Тести для сервісу ручного ведення фактів структурного керування.
 /// </summary>
-public sealed class PersonDirectiveRelationServiceTests
+public sealed class CommandContourServiceTests
 {
-    private static PersonDirectiveRelationService CreateService(IDbContextFactory<AppDbContext> factory)
+    private static CommandContourService CreateService(IDbContextFactory<AppDbContext> factory)
         => new(factory);
 
     [Fact]
@@ -109,12 +108,12 @@ public sealed class PersonDirectiveRelationServiceTests
             resolvedId = standaloneResolved.Id;
         }
 
-        await service.SaveAsync(new PersonDirectiveRelationSaveDto
+        await service.SaveAsync(new CommandContourSaveDto
         {
             FromCanonicalPersonId = canonicalId,
             ToResolvedParticipantId = resolvedId,
-            RelationType = DirectiveRelationTypeDto.Command,
-            Confidence = DirectiveRelationConfidenceDto.High,
+            RelationType = CommandContourRelationTypeDto.Command,
+            Confidence = CommandContourConfidenceDto.High,
             SourceObservationId = observationId,
             IsManual = true,
             Comment = "Явний наказ"
@@ -129,8 +128,8 @@ public sealed class PersonDirectiveRelationServiceTests
         item.ToResolvedParticipantId.Should().Be(resolvedId);
         item.FromDisplayName.Should().Be("ШАПКА");
         item.ToDisplayName.Should().Contain("ГРОМ");
-        item.RelationType.Should().Be(DirectiveRelationTypeDto.Command);
-        item.Confidence.Should().Be(DirectiveRelationConfidenceDto.High);
+        item.RelationType.Should().Be(CommandContourRelationTypeDto.Command);
+        item.Confidence.Should().Be(CommandContourConfidenceDto.High);
         item.SourceObservationId.Should().Be(observationId);
         item.IsManual.Should().BeTrue();
         item.Comment.Should().Be("Явний наказ");
@@ -158,22 +157,22 @@ public sealed class PersonDirectiveRelationServiceTests
             rightId = right.Id;
         }
 
-        await service.SaveAsync(new PersonDirectiveRelationSaveDto
+        await service.SaveAsync(new CommandContourSaveDto
         {
             FromResolvedParticipantId = leftId,
             ToResolvedParticipantId = rightId,
-            RelationType = DirectiveRelationTypeDto.Command,
-            Confidence = DirectiveRelationConfidenceDto.High,
+            RelationType = CommandContourRelationTypeDto.Command,
+            Confidence = CommandContourConfidenceDto.High,
             IsManual = true,
             Comment = "перше збереження"
         }, ct);
 
-        await service.SaveAsync(new PersonDirectiveRelationSaveDto
+        await service.SaveAsync(new CommandContourSaveDto
         {
             FromResolvedParticipantId = leftId,
             ToResolvedParticipantId = rightId,
-            RelationType = DirectiveRelationTypeDto.Control,
-            Confidence = DirectiveRelationConfidenceDto.Medium,
+            RelationType = CommandContourRelationTypeDto.Control,
+            Confidence = CommandContourConfidenceDto.Medium,
             IsManual = true,
             Comment = "оновлено"
         }, ct);
@@ -204,12 +203,12 @@ public sealed class PersonDirectiveRelationServiceTests
             resolvedId = resolved.Id;
         }
 
-        var act = () => service.SaveAsync(new PersonDirectiveRelationSaveDto
+        var act = () => service.SaveAsync(new CommandContourSaveDto
         {
             FromResolvedParticipantId = resolvedId,
             ToResolvedParticipantId = resolvedId,
-            RelationType = DirectiveRelationTypeDto.Command,
-            Confidence = DirectiveRelationConfidenceDto.High,
+            RelationType = CommandContourRelationTypeDto.Command,
+            Confidence = CommandContourConfidenceDto.High,
             IsManual = true
         }, ct);
 
@@ -269,7 +268,7 @@ public sealed class PersonDirectiveRelationServiceTests
         public static IDbContextFactory<AppDbContext> CreateFactory()
         {
             var options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase($"directive-relations-tests-{Guid.NewGuid()}")
+                .UseInMemoryDatabase($"command-contour-tests-{Guid.NewGuid()}")
                 .EnableSensitiveDataLogging()
                 .Options;
 

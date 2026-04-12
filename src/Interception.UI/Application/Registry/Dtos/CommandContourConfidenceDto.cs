@@ -5,7 +5,7 @@
 namespace Interception.UI.Application.Registry.Dtos;
 
 /// <summary>Рівень впевненості у факті зв'язку.</summary>
-public enum DirectiveRelationConfidenceDto
+public enum CommandContourConfidenceDto
 {
     Low = 0,
     Medium = 1,

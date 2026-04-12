@@ -55,6 +55,8 @@ public sealed class InterceptionCommandService(
         foreach (var label in form.Labels)
             message.AddLabel(label);
 
+        await EnsureParticipantsExistInRegistryAsync(db, form, roleMap, ct);
+
         await TopologySnapshotStateMarker.MarkAllCompletedSnapshotsAsStaleAsync(db, ct);
         db.InterceptionMessages.Add(message);
         await db.SaveChangesAsync(ct);
@@ -100,6 +102,8 @@ public sealed class InterceptionCommandService(
         foreach (var label in form.Labels)
             message.AddLabel(label);
 
+        await EnsureParticipantsExistInRegistryAsync(db, form, roleMap, ct);
+
         await TopologySnapshotStateMarker.MarkAllCompletedSnapshotsAsStaleAsync(db, ct);
         await db.SaveChangesAsync(ct);
         if (eventPublisher is not null)
@@ -128,5 +132,70 @@ public sealed class InterceptionCommandService(
                 DateTime.UtcNow), ct);
         }
     }
+
+    private static async Task EnsureParticipantsExistInRegistryAsync(
+        AppDbContext db,
+        InterceptionFormDto form,
+        IReadOnlyDictionary<string, string> roleMap,
+        CancellationToken ct)
+    {
+        var normalizedFrequency = FrequencyCode.Create(form.Frequency)?.Value;
+        var normalizedDivision = DivisionName.Create(form.Division)?.Value;
+
+        var participantData = form.Participants
+            .Where(p => !p.IsUnknown && !string.IsNullOrWhiteSpace(p.Name))
+            .Select(p => new
+            {
+                Name = PersonName.Create(p.Name)?.Value,
+                Role = RoleName.Create(ParticipantRoleCatalogSupport.NormalizeRole(p.Role, roleMap))?.Value
+            })
+            .Where(p => !string.IsNullOrWhiteSpace(p.Name))
+            .ToList();
+
+        if (participantData.Count == 0)
+            return;
+
+        var names = participantData
+            .Select(x => x.Name!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var candidates = await db.ResolvedParticipants
+            .Where(x => names.Contains(x.Name))
+            .ToListAsync(ct);
+
+        var knownContexts = candidates
+            .Select(x => BuildContextKey(x.Name, ReadFrequency(db, x), x.Division))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var participant in participantData)
+        {
+            var contextKey = BuildContextKey(participant.Name!, normalizedFrequency, normalizedDivision);
+            if (knownContexts.Contains(contextKey))
+                continue;
+
+            var resolved = ResolvedParticipant.Create(
+                participant.Name!,
+                confirmedBy: "auto-observation",
+                role: participant.Role,
+                division: normalizedDivision,
+                frequency: normalizedFrequency);
+
+            db.ResolvedParticipants.Add(resolved);
+            knownContexts.Add(contextKey);
+        }
+    }
+
+    private static string? ReadFrequency(AppDbContext db, ResolvedParticipant resolved)
+        => db.Entry(resolved).Property<string?>("Frequency").CurrentValue;
+
+    private static string BuildContextKey(string? name, string? frequency, string? division)
+        => string.Join('|',
+            NormalizeOptional(name),
+            NormalizeOptional(frequency),
+            NormalizeOptional(division));
+
+    private static string NormalizeOptional(string? value)
+        => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
 
 }

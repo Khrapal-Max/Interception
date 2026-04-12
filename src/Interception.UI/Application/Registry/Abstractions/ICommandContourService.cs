@@ -9,14 +9,14 @@ namespace Interception.UI.Application.Registry.Abstractions;
 /// <summary>
 /// Контур ручного ведення фактів структурного керування.
 /// </summary>
-public interface IPersonDirectiveRelationService
+public interface ICommandContourService
 {
-    Task<IReadOnlyList<PersonDirectiveRelationListItemDto>> GetAllAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<CommandContourListItemDto>> GetAllAsync(CancellationToken ct = default);
 
-    Task<IReadOnlyList<PersonDirectiveRelationOptionDto>> GetIdentityOptionsAsync(
+    Task<IReadOnlyList<CommandContourOptionDto>> GetIdentityOptionsAsync(
         IReadOnlyList<string>? participantNames = null,
         CancellationToken ct = default);
 
-    Task SaveAsync(PersonDirectiveRelationSaveDto dto, CancellationToken ct = default);
+    Task SaveAsync(CommandContourSaveDto dto, CancellationToken ct = default);
     Task DeleteAsync(Guid id, CancellationToken ct = default);
 }

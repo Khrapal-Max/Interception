@@ -3,7 +3,7 @@
 @using Interception.UI.Components.Pages.Interceptions.InterceptionRegistry.Drawers
 @using Interception.UI.Extensions
 
-<PageTitle>Реєстр спостережень</PageTitle>
+<PageTitle>Журнал спостережень</PageTitle>
 
 <div class="page-shell">
     @if (_pagedResult is not null)
@@ -15,11 +15,11 @@
         <span class="badge text-bg-warning">Фільтр активний</span>
     }
     <div class="toolbar-action-cluster toolbar-action-cluster-primary" role="group" aria-label="Пріоритетні дії">
-        <button type="button" class="btn btn-primary btn-sm" @onclick="OpenCreate">
-            <i class="bi bi-plus-lg me-1"></i>Додати
-        </button>
         <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenTextBlock">
             <i class="bi bi-text-paragraph me-1"></i>З тексту
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" @onclick="OpenCreate">
+            <i class="bi bi-plus-lg me-1"></i>Додати
         </button>
     </div>
 
