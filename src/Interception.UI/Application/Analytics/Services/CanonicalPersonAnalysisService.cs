@@ -70,6 +70,8 @@ public sealed class CanonicalPersonAnalysisService(
 
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
+        await EnsureResolvedRowsCoverObservedContextsAsync(db, candidateKey, ct);
+
         var resolvedRows = (await db.ResolvedParticipants
             .AsNoTracking()
             .Select(x => new ResolvedRow(
@@ -343,6 +345,69 @@ public sealed class CanonicalPersonAnalysisService(
     private static string BuildObservationRowKey(string? name, string? frequency, string? division)
         => $"{NormalizeCandidateKey(name)}|{NormalizeOptional(frequency)}|{NormalizeOptional(division)}";
 
+    private static string BuildResolvedContextKey(string? frequency, string? division)
+        => $"{NormalizeOptional(frequency)}|{NormalizeOptional(division)}";
+
+    private static async Task EnsureResolvedRowsCoverObservedContextsAsync(AppDbContext db, string candidateKey, CancellationToken ct)
+    {
+        var observedRows = await db.InterceptionMessages
+            .AsNoTracking()
+            .SelectMany(
+                message => message.Participants,
+                (message, participant) => new ObservationResolvedContextRow(
+                    participant.Name,
+                    participant.Role,
+                    participant.IsUnknown,
+                    message.Frequency,
+                    message.Division))
+            .Where(x => !x.IsUnknown && !string.IsNullOrWhiteSpace(x.Name))
+            .Where(x => NormalizeCandidateKey(x.Name) == candidateKey)
+            .ToListAsync(ct);
+
+        if (observedRows.Count == 0)
+            return;
+
+        var existingRows = await db.ResolvedParticipants
+            .Where(x => NormalizeCandidateKey(x.Name) == candidateKey)
+            .Select(x => new
+            {
+                x.Name,
+                Frequency = EF.Property<string?>(x, "Frequency"),
+                x.Division
+            })
+            .ToListAsync(ct);
+
+        var existingContextKeys = existingRows
+            .Select(x => BuildResolvedContextKey(x.Frequency, x.Division))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var missingContexts = observedRows
+            .GroupBy(x => BuildResolvedContextKey(x.Frequency, x.Division), StringComparer.OrdinalIgnoreCase)
+            .Where(x => !existingContextKeys.Contains(x.Key))
+            .Select(x => x
+                .OrderByDescending(v => !string.IsNullOrWhiteSpace(v.Role))
+                .ThenBy(v => v.Name, StringComparer.OrdinalIgnoreCase)
+                .First())
+            .ToList();
+
+        if (missingContexts.Count == 0)
+            return;
+
+        foreach (var context in missingContexts)
+        {
+            var resolved = ResolvedParticipant.Create(
+                context.Name.Trim(),
+                confirmedBy: "auto-observation",
+                role: context.Role,
+                division: context.Division,
+                frequency: context.Frequency);
+
+            db.ResolvedParticipants.Add(resolved);
+        }
+
+        await db.SaveChangesAsync(ct);
+    }
+
     private static async Task<ObservationContextStore> LoadObservationContextsAsync(AppDbContext db, CancellationToken ct)
     {
         var rows = await db.InterceptionMessages
@@ -407,6 +472,7 @@ public sealed class CanonicalPersonAnalysisService(
         DateTime ConfirmedAtUtc);
 
     private sealed record ObservationContextRow(string? Name, string? Frequency, string? Division);
+    private sealed record ObservationResolvedContextRow(string? Name, string? Role, bool IsUnknown, string? Frequency, string? Division);
 
     private sealed record ObservationContextSummary(
         IReadOnlyList<string> Frequencies,
