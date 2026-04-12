@@ -46,7 +46,6 @@ if (string.IsNullOrWhiteSpace(sqliteConnection))
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
 {
     options.UseSqlite(sqliteConnection);
-    options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
 });
 
 builder.Services.AddDataProtection()
