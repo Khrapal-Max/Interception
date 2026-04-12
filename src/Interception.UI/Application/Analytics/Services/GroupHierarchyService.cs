@@ -167,19 +167,22 @@ public sealed class GroupHierarchyService(
         // 2. Явні relations між особами як сильний direction hint.
         foreach (var directive in directiveHints)
         {
+            var (managerCanonicalId, managerNormalizedName, managerDisplayName, subordinateCanonicalId, subordinateNormalizedName) =
+                ResolveDirectiveHierarchyEndpoints(directive);
+
             var parents = ResolveMatchedGroups(
-                directive.FromNormalizedName,
+                managerNormalizedName,
                 canonicalByName,
                 byKeyPersonName,
                 byKeyPersonCanonical,
-                directive.FromCanonicalPersonId);
+                managerCanonicalId);
 
             var children = ResolveMatchedGroups(
-                directive.ToNormalizedName,
+                subordinateNormalizedName,
                 canonicalByName,
                 byKeyPersonName,
                 byKeyPersonCanonical,
-                directive.ToCanonicalPersonId);
+                subordinateCanonicalId);
 
             var distinctParents = parents.DistinctBy(x => x.GroupKey, StringComparer.OrdinalIgnoreCase).ToList();
             var distinctChildren = children.DistinctBy(x => x.GroupKey, StringComparer.OrdinalIgnoreCase).ToList();
@@ -204,7 +207,7 @@ public sealed class GroupHierarchyService(
                         ParentTitle: BuildGroupTitle(parent),
                         ChildGroupKey: child.GroupKey,
                         ChildTitle: BuildGroupTitle(child),
-                        ViaMemberName: directive.FromDisplayName,
+                        ViaMemberName: managerDisplayName,
                         ViaMemberRole: null,
                         Score: score,
                         IsAmbiguous: isAmbiguous,
@@ -621,6 +624,27 @@ public sealed class GroupHierarchyService(
         }
 
         return [.. matchedGroups.DistinctBy(x => x.GroupKey, StringComparer.OrdinalIgnoreCase)];
+    }
+
+    private static (Guid? ManagerCanonicalId, string ManagerNormalizedName, string ManagerDisplayName, Guid? SubordinateCanonicalId, string SubordinateNormalizedName)
+        ResolveDirectiveHierarchyEndpoints(DirectiveHint directive)
+    {
+        if (directive.RelationType == DirectiveRelationType.ReportUp)
+        {
+            return (
+                ManagerCanonicalId: directive.ToCanonicalPersonId,
+                ManagerNormalizedName: directive.ToNormalizedName,
+                ManagerDisplayName: directive.ToDisplayName,
+                SubordinateCanonicalId: directive.FromCanonicalPersonId,
+                SubordinateNormalizedName: directive.FromNormalizedName);
+        }
+
+        return (
+            ManagerCanonicalId: directive.FromCanonicalPersonId,
+            ManagerNormalizedName: directive.FromNormalizedName,
+            ManagerDisplayName: directive.FromDisplayName,
+            SubordinateCanonicalId: directive.ToCanonicalPersonId,
+            SubordinateNormalizedName: directive.ToNormalizedName);
     }
 
     private static DirectiveHint? BuildDirectiveHint(

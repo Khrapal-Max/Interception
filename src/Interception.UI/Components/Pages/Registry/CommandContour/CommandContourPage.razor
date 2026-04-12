@@ -41,7 +41,7 @@
 
                     <div class="panel-scroll px-3 py-3 d-flex flex-column gap-3 command-contour-form-scroll">
                         <div>
-                            <label class="form-label">Хто керує</label>
+                            <label class="form-label">Керуючий</label>
                             <select class="form-select rounded-0"
                                     value="@_fromSelection"
                                     @onchange="OnFromSelectionChanged">
@@ -54,7 +54,7 @@
                         </div>
 
                         <div>
-                            <label class="form-label">Ким керує</label>
+                            <label class="form-label">Підпорядкований</label>
                             <select class="form-select rounded-0"
                                     value="@_toSelection"
                                     @onchange="OnToSelectionChanged">
@@ -68,7 +68,7 @@
 
                         <div class="row g-3">
                             <div class="col-12 col-lg-6 col-xxl-12">
-                                <label class="form-label">Тип зв'язку</label>
+                                <label class="form-label">Тип комунікації</label>
                                 <select class="form-select rounded-0" @bind="_form.RelationType">
                                     @foreach (var relationType in Enum.GetValues<CommandContourRelationTypeDto>())
                                     {
@@ -138,9 +138,9 @@
                                 <table class="table table-hover table-sm align-middle data-table mb-0">
                                     <thead>
                                         <tr>
-                                            <th style="width: 26%">Хто керує</th>
-                                            <th style="width: 26%">Ким керує</th>
-                                            <th style="width: 14%">Тип</th>
+                                            <th style="width: 26%">Керуючий</th>
+                                            <th style="width: 26%">Підпорядкований</th>
+                                            <th style="width: 14%">Тип комунікації</th>
                                             <th style="width: 12%">Впевненість</th>
                                             <th style="width: 12%">Деталі</th>
                                             <th style="width: 8%"></th>
@@ -194,8 +194,8 @@
                     <button type="button" class="btn-close" aria-label="Close" @onclick="CloseDetails"></button>
                 </div>
                 <div class="modal-body">
-                    <div><strong>Хто керує:</strong> @_detailsRow.FromDisplayName</div>
-                    <div><strong>Ким керує:</strong> @_detailsRow.ToDisplayName</div>
+                    <div><strong>Керуючий:</strong> @_detailsRow.FromDisplayName</div>
+                    <div><strong>Підпорядкований:</strong> @_detailsRow.ToDisplayName</div>
                     <div><strong>Оновлено:</strong> @ConverterDateTimeExtensions.ToDisplay(_detailsRow.UpdatedAtUtc).ToString("dd.MM.yyyy HH:mm")</div>
                     <div><strong>SourceObservationId:</strong> @(_detailsRow.SourceObservationId?.ToString() ?? "—")</div>
                     <div><strong>Коментар:</strong> @(string.IsNullOrWhiteSpace(_detailsRow.Comment) ? "—" : _detailsRow.Comment)</div>
