@@ -153,6 +153,15 @@ public sealed class CanonicalPersonAnalysisService(
         };
     }
 
+    public async Task PrepareCandidateContextsAsync(string candidateKey, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(candidateKey))
+            return;
+
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+        await EnsureResolvedRowsCoverObservedContextsAsync(db, candidateKey, ct);
+    }
+
     public async Task<CanonicalPersonCandidateDetailsDto> CreateCanonicalAsync(
         string candidateKey,
         IReadOnlyCollection<Guid> resolvedParticipantIds,
@@ -350,6 +359,18 @@ public sealed class CanonicalPersonAnalysisService(
 
     private static async Task EnsureResolvedRowsCoverObservedContextsAsync(AppDbContext db, string candidateKey, CancellationToken ct)
     {
+        var hasLinkedCanonicalProfile = await db.CanonicalPersonMembers
+            .AsNoTracking()
+            .Join(
+                db.ResolvedParticipants.AsNoTracking(),
+                member => member.ResolvedParticipantId,
+                resolved => resolved.Id,
+                (member, resolved) => new { resolved.Name })
+            .AnyAsync(x => NormalizeCandidateKey(x.Name) == candidateKey, ct);
+
+        if (hasLinkedCanonicalProfile)
+            return;
+
         var observedRows = await db.InterceptionMessages
             .AsNoTracking()
             .SelectMany(

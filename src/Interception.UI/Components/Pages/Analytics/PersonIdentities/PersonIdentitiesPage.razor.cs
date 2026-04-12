@@ -192,6 +192,7 @@ public partial class PersonIdentitiesPage : ComponentBase
             return;
         }
 
+        await CanonicalPersonAnalysisService.PrepareCandidateContextsAsync(candidateKey);
         _selected = await CanonicalPersonAnalysisService.GetCandidateDetailsAsync(candidateKey);
         _displayName = _selected?.CanonicalDisplayName ?? _selected?.DisplayName;
         _note = _selected?.CanonicalNote;
