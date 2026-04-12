@@ -2,9 +2,9 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Dtos;
+using Interception.UI.Application.Registry.Dtos;
 
-namespace Interception.UI.Application.Interceptions.Abstractions;
+namespace Interception.UI.Application.Registry.Abstractions;
 
 /// <summary>
 /// Контур ручного ведення фактів структурного керування.

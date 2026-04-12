@@ -1,4 +1,4 @@
-using Interception.UI.Application.Interceptions.Dtos;
+using Interception.UI.Application.Registry.Dtos;
 using Microsoft.AspNetCore.Components;
 
 namespace Interception.UI.Components.Shared.DirectiveRelationEditor;

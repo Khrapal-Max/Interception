@@ -4,7 +4,8 @@
 
 using FluentAssertions;
 using Interception.UI.Application.Interceptions.Dtos;
-using Interception.UI.Application.Interceptions.Services;
+using Interception.UI.Application.Registry.Dtos;
+using Interception.UI.Application.Registry.Services;
 using Interception.UI.Domain.Entities;
 using Interception.UI.Domain.Enums;
 using Interception.UI.Infrastructure;

@@ -1,47 +1,39 @@
 @page "/observations"
 @using Interception.UI.Application.Exports.Models
 @using Interception.UI.Components.Pages.Interceptions.InterceptionRegistry.Drawers
-@using Interception.UI.Components.Pages.Interceptions.Toolbar
 @using Interception.UI.Extensions
 
 <PageTitle>Реєстр спостережень</PageTitle>
 
 <div class="page-shell">
+    @if (_pagedResult is not null)
+    {
+        <span>Записів: <strong>@_pagedResult.TotalCount</strong></span>
+    }
+    @if (HasActiveFilter)
+    {
+        <span class="badge text-bg-warning">Фільтр активний</span>
+    }
+    <div class="toolbar-action-cluster toolbar-action-cluster-primary" role="group" aria-label="Пріоритетні дії">
+        <button type="button" class="btn btn-primary btn-sm" @onclick="OpenCreate">
+            <i class="bi bi-plus-lg me-1"></i>Додати
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenTextBlock">
+            <i class="bi bi-text-paragraph me-1"></i>З тексту
+        </button>
+    </div>
 
-    <InterceptionsToolbar ActiveSection="observations">
-        <MetaContent>
-            @if (_pagedResult is not null)
-            {
-                <span>Записів: <strong>@_pagedResult.TotalCount</strong></span>
-            }
-            @if (HasActiveFilter)
-            {
-                <span class="badge text-bg-warning">Фільтр активний</span>
-            }
-        </MetaContent>
-        <ActionsContent>
-            <div class="toolbar-action-cluster toolbar-action-cluster-primary" role="group" aria-label="Пріоритетні дії">
-                <button type="button" class="btn btn-primary btn-sm" @onclick="OpenCreate">
-                    <i class="bi bi-plus-lg me-1"></i>Додати
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" @onclick="OpenTextBlock">
-                    <i class="bi bi-text-paragraph me-1"></i>З тексту
-                </button>
-            </div>
-
-            <div class="toolbar-action-cluster" role="group" aria-label="Дії з даними">
-                <button type="button" class="btn btn-light btn-sm" @onclick="OpenFilter">
-                    <i class="bi bi-funnel me-1"></i>Фільтр
-                </button>
-                <button type="button" class="btn btn-light btn-sm" @onclick="OpenImport">
-                    <i class="bi bi-upload me-1"></i>Імпорт
-                </button>
-                <ExportLauncher Kind="ExportKind.Interceptions"
-                                Title=".xlsx"
-                                ButtonClass="btn btn-outline-secondary btn-sm rounded-0"/>
-            </div>
-        </ActionsContent>
-    </InterceptionsToolbar>
+    <div class="toolbar-action-cluster" role="group" aria-label="Дії з даними">
+        <button type="button" class="btn btn-light btn-sm" @onclick="OpenFilter">
+            <i class="bi bi-funnel me-1"></i>Фільтр
+        </button>
+        <button type="button" class="btn btn-light btn-sm" @onclick="OpenImport">
+            <i class="bi bi-upload me-1"></i>Імпорт
+        </button>
+        <ExportLauncher Kind="ExportKind.Interceptions"
+                        Title=".xlsx"
+                        ButtonClass="btn btn-outline-secondary btn-sm rounded-0" />
+    </div>
 
     <div class="page-panel">
         @if (_loading)

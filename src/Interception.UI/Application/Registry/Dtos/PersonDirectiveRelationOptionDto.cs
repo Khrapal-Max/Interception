@@ -2,7 +2,7 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-namespace Interception.UI.Application.Interceptions.Dtos;
+namespace Interception.UI.Application.Registry.Dtos;
 
 /// <summary>
 /// Варіант вибору особи у формі створення зв'язку керування.

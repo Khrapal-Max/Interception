@@ -2,12 +2,12 @@
 // All rights by agreement of the developer. Author data on GitHub Khrapal M.G.
 //-----------------------------------------------------------------------------
 
-using Interception.UI.Application.Interceptions.Abstractions;
-using Interception.UI.Application.Interceptions.Dtos;
+using Interception.UI.Application.Registry.Abstractions;
+using Interception.UI.Application.Registry.Dtos;
 using Interception.UI.Application.Toasts;
 using Microsoft.AspNetCore.Components;
 
-namespace Interception.UI.Components.Pages.Interceptions.DirectiveRelations;
+namespace Interception.UI.Components.Pages.Registry.DirectiveRelations;
 
 /// <summary>
 /// Проста сторінка ручного ведення зв'язків структурного керування.
