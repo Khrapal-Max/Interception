@@ -97,9 +97,6 @@ public partial class ObservationJournalTextBlockDrawer : ComponentBase
         if (string.IsNullOrWhiteSpace(form.Frequency))
             return;
 
-        if (SemanticValueExtensions.IsMeaningful(form.Division))
-            return;
-
         var frequency = form.Frequency.Trim();
         var suggestions = await InterceptionSuggestionService.GetFrequencyWithDivisionAsync(frequency);
         var matched = suggestions.FirstOrDefault(x =>
@@ -108,6 +105,9 @@ public partial class ObservationJournalTextBlockDrawer : ComponentBase
         if (matched is null || !SemanticValueExtensions.IsMeaningful(matched.Division))
             return;
 
+        // Для текст-блоку значення підрозділу з реєстру (по ключу частоти) має пріоритет
+        // над тим, що витягнув парсер. Це дозволяє зберігати поточний "snapshot" контексту
+        // навіть якщо історичний/помилковий підрозділ присутній у сирому тексті.
         form.Division = matched.Division;
     }
 
