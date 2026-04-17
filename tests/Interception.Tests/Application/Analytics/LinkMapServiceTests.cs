@@ -254,6 +254,49 @@ public sealed class LinkMapServiceTests
     }
 
     [Fact]
+    public async Task BuildAsync_AggregatesAllKnownParticipantsInsideSingleFrequencyGroup_EvenWhenClustersAreDisconnected()
+    {
+        var factory = TestDbFactory.CreateFactory();
+        var service = CreateService(factory);
+        var ct = TestContext.Current.CancellationToken;
+
+        await using (var db = await factory.CreateDbContextAsync(ct))
+        {
+            var action = InterceptionAction.Create("доповідь", string.Empty);
+            db.InterceptionActions.Add(action);
+
+            var m1 = CreateMessage(action, new DateTime(2026, 03, 29, 9, 0, 0, DateTimeKind.Utc), division: null, frequency: "402.0000");
+            m1.AddParticipant("ЦЕНТР", false, "координатор", 1);
+            m1.AddParticipant("А-1", false, "оператор", 2);
+
+            var m2 = CreateMessage(action, new DateTime(2026, 03, 29, 9, 5, 0, DateTimeKind.Utc), division: null, frequency: "402.0000");
+            m2.AddParticipant("ЦЕНТР", false, "координатор", 1);
+            m2.AddParticipant("А-2", false, "оператор", 2);
+
+            var m3 = CreateMessage(action, new DateTime(2026, 03, 29, 9, 10, 0, DateTimeKind.Utc), division: null, frequency: "402.0000");
+            m3.AddParticipant("РЕЗЕРВ-ЦЕНТР", false, "координатор", 1);
+            m3.AddParticipant("Б-1", false, "оператор", 2);
+
+            var m4 = CreateMessage(action, new DateTime(2026, 03, 29, 9, 15, 0, DateTimeKind.Utc), division: null, frequency: "402.0000");
+            m4.AddParticipant("РЕЗЕРВ-ЦЕНТР", false, "координатор", 1);
+            m4.AddParticipant("Б-2", false, "оператор", 2);
+
+            db.InterceptionMessages.AddRange(m1, m2, m3, m4);
+            await db.SaveChangesAsync(ct);
+        }
+
+        var result = await service.BuildAsync(ct: CancellationToken.None);
+
+        result.Groups.Should().ContainSingle(
+            "в межах однієї частоти має бути одна агрегована група з повним складом учасників");
+
+        var group = result.Groups.Single();
+        group.Frequencies.Should().BeEquivalentTo(["402.0000"]);
+        group.Members.Should().BeEquivalentTo(["ЦЕНТР", "А-1", "А-2", "РЕЗЕРВ-ЦЕНТР", "Б-1", "Б-2"]);
+        group.KeyPersonName.Should().Be("ЦЕНТР", "лідер частоти визначається загальним ранжуванням за зв'язністю та роллю");
+    }
+
+    [Fact]
     public async Task BuildAsync_DoesNotAddBridgeOnlyFrequency_ToGroupCarrierFrequencies()
     {
         var factory = TestDbFactory.CreateFactory();
