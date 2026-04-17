@@ -152,6 +152,8 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
 
     /// <summary>
     /// Будує стійкі комунікаційні групи. Базовий carrier групи — частота, а не підрозділ.
+    /// В межах однієї частоти формується одна агрегована група з усіма відомими учасниками
+    /// цієї частоти, навіть якщо всередині є кілька незв'язаних компонент.
     /// </summary>
     private static Dictionary<string, GroupAccumulator> BuildGroupsByCommunication(
         IReadOnlyList<MessageRow> messageRows,
@@ -209,63 +211,49 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
                     person.SetUniquePartnerCount(neighbours.Count);
             }
 
-            var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var frequency = frequencyGroup.Key;
+            if (people.Count < 2)
+                continue;
 
-            foreach (var personName in people.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+            var inferredDivision = componentRows
+                .Select(row => row.EffectiveDivision)
+                .Where(IsMeaningfulDivision)
+                .GroupBy(x => x!, StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(x => x.Count())
+                .ThenBy(x => x.Key)
+                .Select(x => x.Key)
+                .FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(inferredDivision)
+                && frequencyDivisionMap.TryGetValue(frequency, out var frequencyDivision)
+                && IsMeaningfulDivision(frequencyDivision))
             {
-                if (visited.Contains(personName))
-                    continue;
-
-                var component = TraverseComponent(personName, adjacency, visited);
-                if (component.Count < 3)
-                    continue;
-
-                var componentPeople = component
-                    .Select(name => people[name])
-                    .ToList();
-
-                var inferredDivision = componentRows
-                    .Where(row => row.KnownParticipants.Any(p => component.Contains(p.Name)))
-                    .Select(row => row.EffectiveDivision)
-                    .Where(IsMeaningfulDivision)
-                    .GroupBy(x => x!, StringComparer.OrdinalIgnoreCase)
-                    .OrderByDescending(x => x.Count())
-                    .ThenBy(x => x.Key)
-                    .Select(x => x.Key)
-                    .FirstOrDefault();
-
-                if (string.IsNullOrWhiteSpace(inferredDivision)
-                    && frequencyDivisionMap.TryGetValue(frequency, out var frequencyDivision)
-                    && IsMeaningfulDivision(frequencyDivision))
-                {
-                    inferredDivision = frequencyDivision.Trim();
-                }
-
-                var group = new GroupAccumulator();
-                group.AddDivisionHint(NormalizeMeaningfulOrNull(inferredDivision));
-                group.AddFrequency(frequency);
-
-                foreach (var row in componentRows.Where(r => r.KnownParticipants.Any(p => component.Contains(p.Name))))
-                {
-                    group.AddMessageCount(1);
-                    group.AddAction(GetActionName(row.Message));
-                }
-
-                foreach (var person in componentPeople)
-                    group.AddPerson(person);
-
-                group.AddInternalConnectionWeight(componentPeople.Sum(x => x.ConnectionWeight));
-                group.FinalizeCoreProperties();
-
-                var tempGroupKey = BuildFrequencyScopedGroupKey(
-                    frequency,
-                    inferredDivision,
-                    componentPeople.Select(x => x.Name),
-                    group.KeyPersonName);
-
-                groups[tempGroupKey] = group;
+                inferredDivision = frequencyDivision.Trim();
             }
+
+            var group = new GroupAccumulator();
+            group.AddDivisionHint(NormalizeMeaningfulOrNull(inferredDivision));
+            group.AddFrequency(frequency);
+
+            foreach (var row in componentRows)
+            {
+                group.AddMessageCount(1);
+                group.AddAction(GetActionName(row.Message));
+            }
+
+            foreach (var person in people.Values)
+                group.AddPerson(person);
+
+            group.AddInternalConnectionWeight(people.Values.Sum(x => x.ConnectionWeight));
+            group.FinalizeCoreProperties();
+
+            var tempGroupKey = BuildFrequencyScopedGroupKey(
+                frequency,
+                inferredDivision,
+                people.Keys,
+                group.KeyPersonName);
+
+            groups[tempGroupKey] = group;
         }
 
         return groups;
