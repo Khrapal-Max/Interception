@@ -212,7 +212,7 @@ public sealed partial class LinkMapService(IDbContextFactory<AppDbContext> dbFac
             }
 
             var frequency = frequencyGroup.Key;
-            if (people.Count < 2)
+            if (people.Count < 3)
                 continue;
 
             var inferredDivision = componentRows
