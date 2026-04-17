@@ -222,6 +222,7 @@ internal sealed class GroupAccumulator
             .ThenByDescending(x => LinkMapService.IsCenterCandidate(x.Name, x.Role))
             .ThenByDescending(x => x.ConnectionWeight)
             .ThenByDescending(x => x.Mentions)
+            .ThenBy(x => x.Name.Length)
             .ThenByDescending(x => x.LastSeenAt)
             .ThenBy(x => x.Name)];
     }
@@ -234,6 +235,7 @@ internal sealed class GroupAccumulator
             .ThenByDescending(x => x.Mentions)
             .ThenByDescending(x => x.ConnectionWeight)
             .ThenByDescending(x => LinkMapService.IsCenterCandidate(x.Name, x.Role))
+            .ThenBy(x => x.Name.Length)
             .ThenByDescending(x => x.Frequencies.Count)
             .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)];
     }
